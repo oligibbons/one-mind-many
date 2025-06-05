@@ -36,9 +36,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAuth = async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) throw sessionError;
@@ -46,6 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!session?.user) {
         setUser(null);
         setIsAdmin(false);
+        setLoading(false);
         return;
       }
 
@@ -73,9 +71,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      
       const { error: signOutError } = await supabase.auth.signOut();
       if (signOutError) throw signOutError;
 
@@ -85,30 +80,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error('Logout error:', error);
       setError(error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
     checkAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN') {
-        await checkAuth();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, username, email, role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (!userError && userData) {
+          setUser(userData);
+          setIsAdmin(userData.role === 'admin');
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
-        navigate('/');
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   return (
     <AuthContext.Provider
