@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply font-sans antialiased;
+  }
+  
+  body {
+    @apply bg-slate-950 text-slate-100 min-h-screen;
+    background-image: 
+      radial-gradient(circle at 10% 90%, rgba(255, 86, 48, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 90% 10%, rgba(59, 130, 246, 0.08) 0%, transparent 40%);
+  }
+  
+  /* Supabase Auth UI Customization */
+  .supabase-auth-ui {
+    @apply bg-transparent;
+  }
+  
+  .supabase-auth-ui__button {
+    @apply bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-md transition-colors !important;
+  }
+  
+  .supabase-auth-ui__input {
+    @apply bg-slate-800/50 border border-slate-700 text-white rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all !important;
+  }
+  
+  .supabase-auth-ui__label {
+    @apply text-slate-300 font-medium mb-1 block !important;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading font-bold tracking-tight;
+  }
+  
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl leading-tight;
+  }
+  
+  h2 {
+    @apply text-3xl md:text-4xl leading-tight;
+  }
+  
+  h3 {
+    @apply text-2xl md:text-3xl leading-tight;
+  }
+  
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  .btn-primary {
+    @apply bg-orange-500 text-white hover:bg-orange-600 focus-visible:ring-orange-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-slate-800 text-slate-100 hover:bg-slate-700 focus-visible:ring-slate-500;
+  }
+  
+  .btn-outline {
+    @apply border border-slate-700 bg-transparent hover:bg-slate-800 focus-visible:ring-slate-500;
+  }
+  
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+  
+  .card {
+    @apply rounded-lg border border-slate-800 bg-slate-900/70 backdrop-blur-sm shadow-md overflow-hidden;
+  }
+}
+
+/* Animation classes */
+.floating {
+  animation: floating 6s ease-in-out infinite;
+}
+
+@keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.pulse {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
