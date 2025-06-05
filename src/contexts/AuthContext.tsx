@@ -88,6 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
+        setLoading(true);
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, username, email, role')
@@ -98,6 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(userData);
           setIsAdmin(userData.role === 'admin');
         }
+        setLoading(false);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
