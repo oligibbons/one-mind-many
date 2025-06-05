@@ -26,20 +26,18 @@ const LoginPage = () => {
         supabaseClient={supabase}
         appearance={{
           theme: ThemeSupa,
-          style: {
-            button: {
-              background: '#f97316',
-              color: 'white',
-              borderRadius: '6px',
+          variables: {
+            default: {
+              colors: {
+                brand: '#f97316',
+                brandAccent: '#ea580c',
+              },
             },
-            input: {
-              background: 'rgb(30 41 59 / 0.5)',
-              color: 'white',
-              borderColor: 'rgb(51 65 85)',
-            },
-            label: {
-              color: 'rgb(203 213 225)',
-            },
+          },
+          className: {
+            input: 'bg-slate-800/50 border-slate-700 text-white placeholder-slate-400',
+            label: 'text-slate-300',
+            button: 'bg-orange-500 hover:bg-orange-600 text-white',
           },
         }}
         theme="dark"
