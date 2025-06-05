@@ -36,6 +36,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAuth = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) throw sessionError;
@@ -50,36 +53,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('users')
         .select('id, username, email, role')
         .eq('id', session.user.id)
-        .maybeSingle();
+        .single();
       
       if (userError) throw userError;
 
-      // If no user profile exists, create one
-      if (!userData) {
-        const username = session.user.user_metadata.username || session.user.email?.split('@')[0];
-        const { data: newUserData, error: createError } = await supabase
-          .from('users')
-          .insert([{
-            id: session.user.id,
-            username,
-            email: session.user.email,
-            role: 'user'
-          }])
-          .select('id, username, email, role')
-          .single();
-
-        if (createError) throw createError;
-
-        setUser(newUserData);
-        setIsAdmin(newUserData.role === 'admin');
-        return;
+      if (userData) {
+        setUser(userData);
+        setIsAdmin(userData.role === 'admin');
       }
-
-      setUser(userData);
-      setIsAdmin(userData.role === 'admin');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Auth check error:', error);
-      await supabase.auth.signOut();
+      setError(error.message);
       setUser(null);
       setIsAdmin(false);
     } finally {
@@ -112,9 +96,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if (event === 'SIGNED_IN') {
         await checkAuth();
-        navigate('/game');
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
@@ -125,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <AuthContext.Provider
