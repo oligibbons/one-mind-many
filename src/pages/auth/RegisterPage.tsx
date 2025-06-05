@@ -26,24 +26,20 @@ const RegisterPage = () => {
         supabaseClient={supabase}
         appearance={{
           theme: ThemeSupa,
-          variables: {
-            default: {
-              colors: {
-                brand: '#f97316',
-                brandAccent: '#ea580c',
-                inputBackground: 'rgb(30 41 59 / 0.5)',
-                inputText: 'white',
-                inputBorder: 'rgb(51 65 85)',
-                inputBorderHover: '#f97316',
-                inputBorderFocus: '#f97316',
-              },
+          style: {
+            button: {
+              background: '#f97316',
+              color: 'white',
+              borderRadius: '6px',
             },
-          },
-          className: {
-            container: 'supabase-auth-ui',
-            button: 'supabase-auth-ui__button',
-            input: 'supabase-auth-ui__input',
-            label: 'supabase-auth-ui__label',
+            input: {
+              background: 'rgb(30 41 59 / 0.5)',
+              color: 'white',
+              borderColor: 'rgb(51 65 85)',
+            },
+            label: {
+              color: 'rgb(203 213 225)',
+            },
           },
         }}
         theme="dark"
