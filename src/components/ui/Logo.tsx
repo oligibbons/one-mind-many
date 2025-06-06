@@ -27,9 +27,10 @@ const Logo = ({ size = 'md', variant = 'full' }: LogoProps) => {
   return (
     <Link to="/">
       <motion.div 
-        className="flex items-center gap-2 logo brand"
+        className="flex items-center gap-2"
         initial="initial"
         whileHover="hover"
+        style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
       >
         <motion.div 
           className="text-orange-500"
@@ -40,8 +41,9 @@ const Logo = ({ size = 'md', variant = 'full' }: LogoProps) => {
         
         {variant === 'full' && (
           <motion.div 
-            className={`font-bold tracking-tight font-custom ${sizeClasses[size]}`}
+            className={`font-bold tracking-tight ${sizeClasses[size]}`}
             variants={textVariants}
+            style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
           >
             <span className="text-white">One Mind,</span>
             <span className="text-orange-500"> Many</span>

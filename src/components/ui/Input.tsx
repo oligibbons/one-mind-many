@@ -21,7 +21,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
       {label && (
         <label 
           htmlFor={props.id} 
-          className="block text-sm font-medium text-slate-300 font-custom"
+          className="block text-sm font-medium text-slate-300"
+          style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
         >
           {label}
         </label>
@@ -38,7 +39,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
           ref={ref}
           disabled={disabled}
           className={`
-            block w-full rounded-md border px-3 py-2 text-sm text-white font-body
+            block w-full rounded-md border px-3 py-2 text-sm text-white
             ${leftIcon ? 'pl-10' : ''}
             ${rightIcon ? 'pr-10' : ''}
             ${error 
@@ -51,6 +52,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
             transition-all duration-200
             ${className}
           `}
+          style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}
           {...props}
         />
         
@@ -62,7 +64,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
       </div>
       
       {error && (
-        <p className="text-sm text-red-500 font-body">{error}</p>
+        <p 
+          className="text-sm text-red-500"
+          style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}
+        >
+          {error}
+        </p>
       )}
     </div>
   );

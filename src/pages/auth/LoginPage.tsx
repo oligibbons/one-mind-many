@@ -58,13 +58,28 @@ const LoginPage = () => {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-white font-custom">Welcome Back</h1>
-        <p className="text-slate-400 mt-2 font-body">Sign in to continue to One Mind, Many</p>
+        <h1 
+          className="text-2xl font-bold text-white"
+          style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
+        >
+          Welcome Back
+        </h1>
+        <p 
+          className="text-slate-400 mt-2"
+          style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}
+        >
+          Sign in to continue to One Mind, Many
+        </p>
       </div>
 
       {error && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-          <p className="text-red-500 font-body">{error}</p>
+          <p 
+            className="text-red-500"
+            style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}
+          >
+            {error}
+          </p>
         </div>
       )}
 
@@ -99,9 +114,16 @@ const LoginPage = () => {
           {loading ? 'Signing in...' : 'Sign In'}
         </Button>
 
-        <p className="text-center text-slate-400 font-body">
+        <p 
+          className="text-center text-slate-400"
+          style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}
+        >
           Don't have an account?{' '}
-          <Link to="/auth/register" className="text-orange-500 hover:text-orange-600 font-custom">
+          <Link 
+            to="/auth/register" 
+            className="text-orange-500 hover:text-orange-600"
+            style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
+          >
             Create one
           </Link>
         </p>
