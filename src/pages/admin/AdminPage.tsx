@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, GamepadIcon, Settings, BarChart3, Shield, Brain, FileText, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import Card from '../components/ui/Card';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import Card from '../../components/ui/Card';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
 interface AdminStats {
   totalUsers: number;
@@ -287,7 +287,7 @@ const AdminPage = () => {
               </div>
             </div>
             <span className="text-slate-400 text-sm">1 hour ago</span>
-          </motion.div>
+          </div>
         </div>
       </Card>
     </div>
