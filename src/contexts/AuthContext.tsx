@@ -34,10 +34,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
-  const checkAuth = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+const checkAuth = async () => {
+  console.log('checkAuth is being called');
+  try {
+    setLoading(true);
+    setError(null);
+
 
       console.log('Checking auth status...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
