@@ -57,6 +57,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select('id, username, email, role')
         .eq('id', session.user.id)
         .single();
+      console.log('Fetched user data:', userData);
+
 
       console.log('User data:', userData);
       if (userError) console.error('User Query Error:', userError);
