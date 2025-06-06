@@ -47,11 +47,12 @@ const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-sm font-medium transition-colors ${
+                className={`text-sm font-medium transition-colors nav-link ${
                   isActive(link.path)
                     ? 'text-orange-500'
                     : 'text-slate-300 hover:text-white'
                 }`}
+                style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}
               >
                 {link.name}
               </Link>
@@ -59,7 +60,7 @@ const Navbar = () => {
             
             {user ? (
               <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium text-slate-300">
+                <span className="text-sm font-medium text-slate-300" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
                   <User size={16} className="inline mr-1" />
                   {user.username}
                 </span>
@@ -113,11 +114,12 @@ const Navbar = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`block py-2 text-base font-medium ${
+                  className={`block py-2 text-base font-medium nav-link ${
                     isActive(link.path)
                       ? 'text-orange-500'
                       : 'text-slate-300 hover:text-white'
                   }`}
+                  style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}
                   onClick={closeMenu}
                 >
                   {link.name}
@@ -131,7 +133,7 @@ const Navbar = () => {
                       <User size={24} className="text-orange-500" />
                     </div>
                     <div className="ml-3">
-                      <div className="text-base font-medium text-white">{user.username}</div>
+                      <div className="text-base font-medium text-white" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>{user.username}</div>
                       <div className="text-sm font-medium text-slate-400">{user.email}</div>
                     </div>
                   </div>
@@ -142,6 +144,7 @@ const Navbar = () => {
                         closeMenu();
                       }}
                       className="block w-full text-left px-4 py-2 text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800 rounded-md"
+                      style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}
                     >
                       <LogOut size={16} className="inline mr-2" />
                       Logout

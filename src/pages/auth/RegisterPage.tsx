@@ -77,7 +77,7 @@ const RegisterPage = () => {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-white">Create Account</h1>
+        <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Create Account</h1>
         <p className="text-slate-400 mt-2">Join One Mind, Many to start playing</p>
       </div>
 
@@ -131,7 +131,7 @@ const RegisterPage = () => {
 
         <p className="text-center text-slate-400">
           Already have an account?{' '}
-          <Link to="/auth/login" className="text-orange-500 hover:text-orange-600">
+          <Link to="/auth/login" className="text-orange-500 hover:text-orange-600" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
             Sign in
           </Link>
         </p>

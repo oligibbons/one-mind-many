@@ -58,7 +58,7 @@ const LoginPage = () => {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
+        <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Welcome Back</h1>
         <p className="text-slate-400 mt-2">Sign in to continue to One Mind, Many</p>
       </div>
 
@@ -101,7 +101,7 @@ const LoginPage = () => {
 
         <p className="text-center text-slate-400">
           Don't have an account?{' '}
-          <Link to="/auth/register" className="text-orange-500 hover:text-orange-600">
+          <Link to="/auth/register" className="text-orange-500 hover:text-orange-600" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
             Create one
           </Link>
         </p>

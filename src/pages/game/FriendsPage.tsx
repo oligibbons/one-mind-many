@@ -51,7 +51,7 @@ const FriendsPage = () => {
   
   const fetchFriends = async () => {
     try {
-      const response = await fetch('/api/friends', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -69,7 +69,7 @@ const FriendsPage = () => {
   
   const fetchRequests = async () => {
     try {
-      const response = await fetch('/api/friends/requests', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends/requests`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -89,7 +89,7 @@ const FriendsPage = () => {
   
   const sendFriendRequest = async () => {
     try {
-      const response = await fetch('/api/friends/request', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends/request`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -112,7 +112,7 @@ const FriendsPage = () => {
   
   const handleRequest = async (requestId: string, action: 'accept' | 'reject') => {
     try {
-      const response = await fetch(`/api/friends/request/${requestId}/${action}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends/request/${requestId}/${action}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -131,7 +131,7 @@ const FriendsPage = () => {
   
   const removeFriend = async (friendId: string) => {
     try {
-      const response = await fetch(`/api/friends/${friendId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends/${friendId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -179,7 +179,7 @@ const FriendsPage = () => {
         transition={{ duration: 0.5 }}
       >
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Friends</h1>
+          <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Friends</h1>
           <p className="text-slate-400">Manage your friends and friend requests</p>
         </div>
         
@@ -217,13 +217,13 @@ const FriendsPage = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-xl font-semibold text-white mb-4">Friend Requests</h2>
+          <h2 className="text-xl font-semibold text-white mb-4" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Friend Requests</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Incoming Requests */}
             {requests.incoming.length > 0 && (
               <Card className="p-6">
-                <h3 className="text-lg font-medium text-white mb-4">Incoming Requests</h3>
+                <h3 className="text-lg font-medium text-white mb-4" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Incoming Requests</h3>
                 <div className="space-y-4">
                   {requests.incoming.map((request) => (
                     <div key={request.id} className="flex items-center justify-between">
@@ -232,7 +232,7 @@ const FriendsPage = () => {
                           <Users size={20} className="text-orange-500" />
                         </div>
                         <div className="ml-3">
-                          <p className="text-white font-medium">{request.sender?.username}</p>
+                          <p className="text-white font-medium" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>{request.sender?.username}</p>
                           <p className="text-sm text-slate-400">
                             Sent {new Date(request.created_at).toLocaleDateString()}
                           </p>
@@ -265,7 +265,7 @@ const FriendsPage = () => {
             {/* Outgoing Requests */}
             {requests.outgoing.length > 0 && (
               <Card className="p-6">
-                <h3 className="text-lg font-medium text-white mb-4">Outgoing Requests</h3>
+                <h3 className="text-lg font-medium text-white mb-4" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Outgoing Requests</h3>
                 <div className="space-y-4">
                   {requests.outgoing.map((request) => (
                     <div key={request.id} className="flex items-center justify-between">
@@ -274,7 +274,7 @@ const FriendsPage = () => {
                           <Users size={20} className="text-orange-500" />
                         </div>
                         <div className="ml-3">
-                          <p className="text-white font-medium">{request.receiver?.username}</p>
+                          <p className="text-white font-medium" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>{request.receiver?.username}</p>
                           <p className="text-sm text-slate-400">
                             Sent {new Date(request.created_at).toLocaleDateString()}
                           </p>
@@ -327,7 +327,7 @@ const FriendsPage = () => {
                       <Users size={24} className="text-orange-500" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-lg font-medium text-white">{friend.user.username}</h3>
+                      <h3 className="text-lg font-medium text-white" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>{friend.user.username}</h3>
                       <p className="text-sm text-slate-400">
                         Friends since {new Date(friend.created_at).toLocaleDateString()}
                       </p>
@@ -358,7 +358,7 @@ const FriendsPage = () => {
       ) : (
         <div className="text-center py-12 bg-slate-900/50 rounded-lg border border-slate-800">
           <Users size={48} className="mx-auto text-slate-600 mb-4" />
-          <p className="text-xl text-slate-300">No friends found</p>
+          <p className="text-xl text-slate-300" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>No friends found</p>
           <p className="text-slate-400 mt-2">
             {searchTerm 
               ? 'Try adjusting your search terms'

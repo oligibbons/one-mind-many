@@ -65,7 +65,7 @@ const HomePage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
               One Mind, <span className="text-orange-500">Many</span>
             </h1>
             <p className="text-xl md:text-2xl text-slate-300 mb-8 leading-relaxed">
@@ -101,7 +101,7 @@ const HomePage = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent"></div>
               <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Immersive Gameplay</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Immersive Gameplay</h2>
                 <p className="text-slate-300">Experience tension and suspense as you navigate through dynamic scenarios.</p>
               </div>
             </div>
@@ -118,7 +118,7 @@ const HomePage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
               Game Features
             </h2>
             <p className="text-lg text-slate-300">
@@ -141,7 +141,7 @@ const HomePage = () => {
                 variants={itemVariants}
               >
                 <div className="mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
+                <h3 className="text-xl font-semibold text-white mb-2" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>{feature.title}</h3>
                 <p className="text-slate-400">{feature.description}</p>
               </motion.div>
             ))}
@@ -173,7 +173,7 @@ const HomePage = () => {
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
               Ready to Test Your Deception Skills?
             </h2>
             <p className="text-xl text-slate-300 mb-8">

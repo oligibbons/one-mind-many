@@ -22,6 +22,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
         <label 
           htmlFor={props.id} 
           className="block text-sm font-medium text-slate-300"
+          style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}
         >
           {label}
         </label>
@@ -51,6 +52,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
             transition-all duration-200
             ${className}
           `}
+          style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}
           {...props}
         />
         
@@ -62,7 +64,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
       </div>
       
       {error && (
-        <p className="text-sm text-red-500">{error}</p>
+        <p className="text-sm text-red-500" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>{error}</p>
       )}
     </div>
   );

@@ -30,6 +30,7 @@
   
   .supabase-auth-ui__button {
     @apply bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-md transition-colors !important;
+    font-family: 'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif !important;
   }
   
   .supabase-auth-ui__input {
@@ -38,14 +39,22 @@
   
   .supabase-auth-ui__label {
     @apply text-slate-300 font-medium mb-1 block !important;
+    font-family: 'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif !important;
   }
   
+  /* Apply custom font to all headers and important UI elements */
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-bold tracking-tight;
+    font-family: 'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif;
   }
   
-  /* Apply custom font to H1 and H2 */
-  h1, h2 {
+  /* Apply to navigation and button elements */
+  nav, .nav-link, button, .btn {
+    font-family: 'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif;
+  }
+  
+  /* Apply to logo and brand elements */
+  .logo, .brand {
     font-family: 'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif;
   }
   
@@ -69,6 +78,7 @@
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    font-family: 'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif;
   }
   
   .btn-primary {
