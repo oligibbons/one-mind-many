@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Mail, Lock } from 'lucide-react';
@@ -93,6 +92,3 @@ const LoginPage = () => {
       </form>
     </div>
   );
-};
-
-export default LoginPage;
