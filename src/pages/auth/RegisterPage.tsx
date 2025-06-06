@@ -77,13 +77,13 @@ const RegisterPage = () => {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Create Account</h1>
-        <p className="text-slate-400 mt-2">Join One Mind, Many to start playing</p>
+        <h1 className="text-2xl font-bold text-white font-custom">Create Account</h1>
+        <p className="text-slate-400 mt-2 font-body">Join One Mind, Many to start playing</p>
       </div>
 
       {error && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-          <p className="text-red-500">{error}</p>
+          <p className="text-red-500 font-body">{error}</p>
         </div>
       )}
 
@@ -129,9 +129,9 @@ const RegisterPage = () => {
           {loading ? 'Creating account...' : 'Create Account'}
         </Button>
 
-        <p className="text-center text-slate-400">
+        <p className="text-center text-slate-400 font-body">
           Already have an account?{' '}
-          <Link to="/auth/login" className="text-orange-500 hover:text-orange-600" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
+          <Link to="/auth/login" className="text-orange-500 hover:text-orange-600 font-custom">
             Sign in
           </Link>
         </p>

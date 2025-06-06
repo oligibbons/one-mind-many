@@ -65,10 +65,10 @@ const HomePage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 font-custom">
               One Mind, <span className="text-orange-500">Many</span>
             </h1>
-            <p className="text-xl md:text-2xl text-slate-300 mb-8 leading-relaxed">
+            <p className="text-xl md:text-2xl text-slate-300 mb-8 leading-relaxed font-body">
               Where deception meets strategy in a gripping social deduction game.
               Navigate through dynamic, AI-driven scenarios where survival depends
               on cunning teamwork.
@@ -101,8 +101,8 @@ const HomePage = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent"></div>
               <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Immersive Gameplay</h2>
-                <p className="text-slate-300">Experience tension and suspense as you navigate through dynamic scenarios.</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 font-custom">Immersive Gameplay</h2>
+                <p className="text-slate-300 font-body">Experience tension and suspense as you navigate through dynamic scenarios.</p>
               </div>
             </div>
           </motion.div>
@@ -118,10 +118,10 @@ const HomePage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 font-custom">
               Game Features
             </h2>
-            <p className="text-lg text-slate-300">
+            <p className="text-lg text-slate-300 font-body">
               One Mind, Many offers a unique blend of strategy, deception, and collaboration
               that keeps players coming back for more.
             </p>
@@ -141,8 +141,8 @@ const HomePage = () => {
                 variants={itemVariants}
               >
                 <div className="mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-semibold text-white mb-2" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>{feature.title}</h3>
-                <p className="text-slate-400">{feature.description}</p>
+                <h3 className="text-xl font-semibold text-white mb-2 font-custom">{feature.title}</h3>
+                <p className="text-slate-400 font-body">{feature.description}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -173,10 +173,10 @@ const HomePage = () => {
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 font-custom">
               Ready to Test Your Deception Skills?
             </h2>
-            <p className="text-xl text-slate-300 mb-8">
+            <p className="text-xl text-slate-300 mb-8 font-body">
               Join thousands of players around the world in One Mind, Many. 
               Create your account now and start playing!
             </p>

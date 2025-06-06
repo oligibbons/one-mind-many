@@ -58,13 +58,13 @@ const LoginPage = () => {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Welcome Back</h1>
-        <p className="text-slate-400 mt-2">Sign in to continue to One Mind, Many</p>
+        <h1 className="text-2xl font-bold text-white font-custom">Welcome Back</h1>
+        <p className="text-slate-400 mt-2 font-body">Sign in to continue to One Mind, Many</p>
       </div>
 
       {error && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-          <p className="text-red-500">{error}</p>
+          <p className="text-red-500 font-body">{error}</p>
         </div>
       )}
 
@@ -99,9 +99,9 @@ const LoginPage = () => {
           {loading ? 'Signing in...' : 'Sign In'}
         </Button>
 
-        <p className="text-center text-slate-400">
+        <p className="text-center text-slate-400 font-body">
           Don't have an account?{' '}
-          <Link to="/auth/register" className="text-orange-500 hover:text-orange-600" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>
+          <Link to="/auth/register" className="text-orange-500 hover:text-orange-600 font-custom">
             Create one
           </Link>
         </p>

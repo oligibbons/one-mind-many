@@ -6,6 +6,8 @@ export default {
       fontFamily: {
         sans: ['Quicksand', 'system-ui', 'sans-serif'],
         heading: ['CustomHeading', 'Quicksand', 'system-ui', 'sans-serif'],
+        body: ['Quicksand', 'system-ui', 'sans-serif'],
+        custom: ['CustomHeading', 'Quicksand', 'system-ui', 'sans-serif'],
       },
       colors: {
         primary: {
