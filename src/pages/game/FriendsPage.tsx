@@ -223,7 +223,7 @@ const FriendsPage = () => {
             {/* Incoming Requests */}
             {requests.incoming.length > 0 && (
               <Card className="p-6">
-                <h3 className="text-lg font-medium text-white mb-4" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Incoming Requests</h3>
+                <h3 className="text-lg font-medium text-white mb-4\" style={{ fontFamily: "'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif" }}>Incoming Requests</h3>
                 <div className="space-y-4">
                   {requests.incoming.map((request) => (
                     <div key={request.id} className="flex items-center justify-between">
