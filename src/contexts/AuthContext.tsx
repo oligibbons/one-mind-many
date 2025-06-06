@@ -34,21 +34,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
-const checkAuth = async () => {
-  console.log('checkAuth is being called');
-  try {
-    setLoading(true);
-    setError(null);
+  const checkAuth = async () => {
+    console.log('checkAuth is being called');
+    try {
+      setLoading(true);
+      setError(null);
 
-
-      console.log('Checking auth status...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session data:', session, 'Session error:', sessionError);
 
-      console.log('Session:', session);
-      if (sessionError) console.error('Session Error:', sessionError);
-
+      if (sessionError) throw sessionError;
       if (!session?.user) {
-        console.log('No user session found.');
         setUser(null);
         setIsAdmin(false);
         return;
@@ -59,16 +55,12 @@ const checkAuth = async () => {
         .select('id, username, email, role')
         .eq('id', session.user.id)
         .single();
-      console.log('Fetched user data:', userData);
 
-
-      console.log('User data:', userData);
-      if (userError) console.error('User Query Error:', userError);
+      if (userError) throw userError;
 
       if (userData) {
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
-        console.log('User successfully authenticated:', userData);
       }
     } catch (error: any) {
       console.error('Auth check error:', error);
@@ -126,7 +118,6 @@ const checkAuth = async () => {
           if (userData) {
             setUser(userData);
             setIsAdmin(userData.role === 'admin');
-            console.log('User signed in:', userData);
             navigate('/game');
           }
         } catch (err) {
