@@ -18,6 +18,9 @@ import ScenariosPage from './pages/game/ScenariosPage';
 import FriendsPage from './pages/game/FriendsPage';
 import SettingsPage from './pages/game/SettingsPage';
 import AdminPage from './pages/admin/AdminPage';
+import AISystemPage from './pages/admin/AISystemPage';
+import ScenarioManagementPage from './pages/admin/ScenarioManagementPage';
+import ContentManagementPage from './pages/admin/ContentManagementPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Hooks and Contexts
@@ -76,6 +79,9 @@ function App() {
           </AdminRoute>
         }>
           <Route index element={<AdminPage />} />
+          <Route path="ai" element={<AISystemPage />} />
+          <Route path="scenarios" element={<ScenarioManagementPage />} />
+          <Route path="content" element={<ContentManagementPage />} />
         </Route>
         
         {/* 404 route */}

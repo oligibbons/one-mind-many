@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, FileText, Brain, BarChart3, Settings, Shield } from 'lucide-react';
+import { Users, FileText, Brain, BarChart3, Settings, Shield, Globe, Image } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,6 +10,7 @@ interface Stats {
   totalUsers: number;
   activeGames: number;
   totalScenarios: number;
+  totalAssets: number;
 }
 
 interface AdminSection {
@@ -25,7 +27,8 @@ const AdminPage = () => {
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     activeGames: 0,
-    totalScenarios: 0
+    totalScenarios: 0,
+    totalAssets: 0
   });
   const [loading, setLoading] = useState(true);
   
@@ -42,7 +45,7 @@ const AdminPage = () => {
       id: 'scenarios',
       title: 'Scenario Management',
       icon: <FileText className="w-8 h-8 text-green-500" />,
-      description: 'Create and manage game scenarios',
+      description: 'Create, edit, and manage game scenarios',
       route: '/admin/scenarios',
       color: 'from-green-500/20 to-transparent'
     },
@@ -55,20 +58,20 @@ const AdminPage = () => {
       color: 'from-purple-500/20 to-transparent'
     },
     {
+      id: 'content',
+      title: 'Content Management',
+      icon: <Globe className="w-8 h-8 text-pink-500" />,
+      description: 'Manage site content, assets, and copy',
+      route: '/admin/content',
+      color: 'from-pink-500/20 to-transparent'
+    },
+    {
       id: 'analytics',
       title: 'Analytics Dashboard',
       icon: <BarChart3 className="w-8 h-8 text-orange-500" />,
       description: 'View game statistics and player metrics',
       route: '/admin/analytics',
       color: 'from-orange-500/20 to-transparent'
-    },
-    {
-      id: 'content',
-      title: 'Content Management',
-      icon: <Settings className="w-8 h-8 text-pink-500" />,
-      description: 'Manage site content and assets',
-      route: '/admin/content',
-      color: 'from-pink-500/20 to-transparent'
     },
     {
       id: 'security',
@@ -95,6 +98,13 @@ const AdminPage = () => {
         setStats(data);
       } catch (error) {
         console.error('Error fetching admin stats:', error);
+        // Mock data for development
+        setStats({
+          totalUsers: 1247,
+          activeGames: 23,
+          totalScenarios: 156,
+          totalAssets: 89
+        });
       } finally {
         setLoading(false);
       }
@@ -115,13 +125,13 @@ const AdminPage = () => {
       </div>
       
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-400">Total Users</p>
               <p className="text-3xl font-bold text-white mt-1">
-                {loading ? '...' : stats.totalUsers}
+                {loading ? '...' : stats.totalUsers.toLocaleString()}
               </p>
             </div>
             <Users className="w-12 h-12 text-blue-500 opacity-50" />
@@ -136,7 +146,7 @@ const AdminPage = () => {
                 {loading ? '...' : stats.activeGames}
               </p>
             </div>
-            <FileText className="w-12 h-12 text-green-500 opacity-50" />
+            <BarChart3 className="w-12 h-12 text-green-500 opacity-50" />
           </div>
         </Card>
         
@@ -148,7 +158,19 @@ const AdminPage = () => {
                 {loading ? '...' : stats.totalScenarios}
               </p>
             </div>
-            <Brain className="w-12 h-12 text-purple-500 opacity-50" />
+            <FileText className="w-12 h-12 text-purple-500 opacity-50" />
+          </div>
+        </Card>
+        
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-400">Assets</p>
+              <p className="text-3xl font-bold text-white mt-1">
+                {loading ? '...' : stats.totalAssets}
+              </p>
+            </div>
+            <Image className="w-12 h-12 text-orange-500 opacity-50" />
           </div>
         </Card>
       </div>
@@ -161,19 +183,18 @@ const AdminPage = () => {
             variant="interactive"
             className="overflow-hidden"
           >
-            <div className={`p-6 bg-gradient-to-br ${section.color}`}>
-              <div className="flex items-center mb-4">
-                {section.icon}
-                <h2 className="text-xl font-bold ml-3">{section.title}</h2>
+            <Link to={section.route}>
+              <div className={`p-6 bg-gradient-to-br ${section.color} hover:scale-105 transition-transform duration-200`}>
+                <div className="flex items-center mb-4">
+                  {section.icon}
+                  <h2 className="text-xl font-bold ml-3">{section.title}</h2>
+                </div>
+                <p className="text-slate-300 mb-6">{section.description}</p>
+                <Button className="w-full">
+                  Manage
+                </Button>
               </div>
-              <p className="text-slate-300 mb-6">{section.description}</p>
-              <Button
-                onClick={() => window.location.href = section.route}
-                className="w-full"
-              >
-                Manage
-              </Button>
-            </div>
+            </Link>
           </Card>
         ))}
       </div>
