@@ -2,7 +2,7 @@ import { HTMLAttributes, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'interactive' | 'glowing';
+  variant?: 'default' | 'interactive' | 'glowing' | 'game';
   border?: boolean;
 }
 
@@ -14,12 +14,13 @@ const Card = forwardRef<HTMLDivElement, CardProps>(({
   ...props
 }, ref) => {
   
-  const baseClasses = 'rounded-lg bg-slate-900/70 backdrop-blur-sm shadow-md overflow-hidden';
+  const baseClasses = 'rounded-lg bg-slate-900/70 backdrop-blur-sm shadow-md overflow-hidden paper-texture-dark';
   
   const variantClasses = {
     default: '',
     interactive: 'transition-all hover:shadow-lg hover:bg-slate-800/70 cursor-pointer',
     glowing: 'animate-glow',
+    game: 'game-card',
   };
   
   const borderClasses = border ? 'border border-slate-800' : '';

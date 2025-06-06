@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'game';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -20,13 +20,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
   ...props
 }, ref) => {
 
-  const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:pointer-events-none';
+  const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:pointer-events-none paper-texture';
 
   const variantClasses = {
     primary: 'bg-orange-500 text-white hover:bg-orange-600 focus-visible:ring-orange-500',
     secondary: 'bg-slate-800 text-slate-100 hover:bg-slate-700 focus-visible:ring-slate-500',
     outline: 'border border-slate-700 bg-transparent hover:bg-slate-800 focus-visible:ring-slate-500',
     ghost: 'bg-transparent hover:bg-slate-800 focus-visible:ring-slate-500',
+    game: 'game-button',
   };
 
   const sizeClasses = {
@@ -37,8 +38,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
 
   const buttonVariants = {
     initial: { scale: 1 },
-    hover: { scale: 1.03 },
-    tap: { scale: 0.97 }
+    hover: { scale: variant === 'game' ? 1.05 : 1.03 },
+    tap: { scale: variant === 'game' ? 0.95 : 0.97 }
   };
 
   return (
