@@ -66,7 +66,7 @@ const HomePage = () => {
             transition={{ duration: 0.5 }}
           >
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-              One Mind, <span className="text-orange-500">Many</span> Possibilities
+              One Mind, <span className="text-orange-500">Many</span>
             </h1>
             <p className="text-xl md:text-2xl text-slate-300 mb-8 leading-relaxed">
               Where deception meets strategy in a gripping social deduction game.
