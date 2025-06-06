@@ -5,9 +5,10 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface AdminRouteProps {
   children: ReactNode;
+  redirectTo?: string;
 }
 
-const AdminRoute = ({ children }: AdminRouteProps) => {
+const AdminRoute = ({ children, redirectTo = "/game" }: AdminRouteProps) => {
   const { user, loading, isAdmin } = useAuth();
 
   if (loading) {
@@ -15,7 +16,8 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   }
 
   if (!user || !isAdmin) {
-    return <Navigate to="/game\" replace />;
+    console.log('Redirecting non-admin user to game page.');
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <>{children}</>;
