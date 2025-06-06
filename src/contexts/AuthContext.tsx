@@ -41,7 +41,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError(null);
       console.log('Calling supabase.auth.getSession()');
       
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // Add timeout and better error handling
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+      
+      const sessionPromise = supabase.auth.getSession();
+      
+      const { data: { session }, error: sessionError } = await Promise.race([
+        sessionPromise,
+        timeoutPromise
+      ]) as any;
+      
       console.log('Session data:', session, 'Session error:', sessionError);
 
       if (sessionError) throw sessionError;
@@ -53,11 +64,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log('Fetching user data from Supabase...');
-      const { data: userData, error: userError } = await supabase
+      
+      // Add timeout for user data fetch as well
+      const userDataPromise = supabase
         .from('users')
         .select('id, username, email, role')
         .eq('id', session.user.id)
         .single();
+        
+      const { data: userData, error: userError } = await Promise.race([
+        userDataPromise,
+        timeoutPromise
+      ]) as any;
+      
       console.log('User data:', userData, 'User error:', userError);
 
       if (userError) throw userError;
@@ -69,7 +88,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error: any) {
       console.error('Auth check error:', error);
-      setError(error.message);
+      
+      // Provide more specific error messages
+      let errorMessage = error.message;
+      if (error.message === 'Failed to fetch') {
+        errorMessage = 'Unable to connect to authentication service. Please check your internet connection and try again.';
+      } else if (error.message === 'Request timeout') {
+        errorMessage = 'Authentication request timed out. Please try again.';
+      }
+      
+      setError(errorMessage);
       setUser(null);
       setIsAdmin(false);
     } finally {
