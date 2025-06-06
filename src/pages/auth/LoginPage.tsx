@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,24 +9,17 @@ import { Mail, Lock } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="lg" text="Loading..." />
-      </div>
-    );
-  }
-  
-  if (user) {
-    navigate('/game');
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      navigate('/game');
+    }
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +33,8 @@ const LoginPage = () => {
       });
       
       if (error) throw error;
-      navigate('/game');
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };

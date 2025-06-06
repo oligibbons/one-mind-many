@@ -97,10 +97,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!userError && userData) {
           setUser(userData);
           setIsAdmin(userData.role === 'admin');
+          setLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
+        setLoading(false);
       }
     });
 
