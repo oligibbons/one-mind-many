@@ -41,9 +41,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError(null);
       console.log('Calling supabase.auth.getSession()');
       
-      // Add timeout and better error handling
+      // Add timeout and better error handling - increased to 30 seconds
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 10000)
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
       );
       
       const sessionPromise = supabase.auth.getSession();
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       console.log('Fetching user data from Supabase...');
       
-      // Add timeout for user data fetch as well
+      // Add timeout for user data fetch as well - increased to 30 seconds
       const userDataPromise = supabase
         .from('users')
         .select('id, username, email, role')
