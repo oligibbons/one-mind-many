@@ -29,7 +29,7 @@ const Logo = ({ size = 'md', variant = 'full', clickable = true }: LogoProps) =>
       className="flex items-center gap-2"
       initial="initial"
       whileHover={clickable ? "hover" : "initial"}
-      style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
+    
     >
       <motion.div 
         className="text-orange-500"
