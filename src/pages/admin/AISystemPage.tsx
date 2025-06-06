@@ -103,7 +103,7 @@ const AISystemPage = () => {
       setLoading(true);
       
       // Create master AI model using Hugging Face API
-      const response = await fetch('/api/admin/ai/create-master', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/ai/create-master`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ const AISystemPage = () => {
 
   const handleTrainModel = async (modelId: string) => {
     try {
-      const response = await fetch(`/api/admin/ai/train/${modelId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/ai/train/${modelId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -149,7 +149,7 @@ const AISystemPage = () => {
 
   const handleTestModel = async (modelId: string) => {
     try {
-      const response = await fetch(`/api/admin/ai/test/${modelId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/ai/test/${modelId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

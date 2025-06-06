@@ -60,7 +60,7 @@ const ScenarioManagementPage = () => {
 
   const fetchScenarios = async () => {
     try {
-      const response = await fetch('/api/admin/scenarios', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/scenarios`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -155,8 +155,8 @@ const ScenarioManagementPage = () => {
   const handleSaveScenario = async () => {
     try {
       const url = selectedScenario 
-        ? `/api/admin/scenarios/${selectedScenario.id}`
-        : '/api/admin/scenarios';
+        ? `${import.meta.env.VITE_API_URL}/api/admin/scenarios/${selectedScenario.id}`
+        : `${import.meta.env.VITE_API_URL}/api/admin/scenarios`;
       
       const method = selectedScenario ? 'PUT' : 'POST';
 
@@ -182,7 +182,7 @@ const ScenarioManagementPage = () => {
     if (!confirm('Are you sure you want to delete this scenario?')) return;
 
     try {
-      const response = await fetch(`/api/admin/scenarios/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/scenarios/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -199,7 +199,7 @@ const ScenarioManagementPage = () => {
 
   const handleToggleFeatured = async (id: string, featured: boolean) => {
     try {
-      const response = await fetch(`/api/admin/scenarios/${id}/featured`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/scenarios/${id}/featured`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
