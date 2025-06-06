@@ -29,63 +29,57 @@ export const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const checkAuth = async () => {
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) throw sessionError;
-      
-      if (!session?.user) {
-        setUser(null);
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, username, email, role')
-        .eq('id', session.user.id)
-        .single();
-      
-      if (userError) throw userError;
-
-      if (userData) {
-        setUser(userData);
-        setIsAdmin(userData.role === 'admin');
-      }
-    } catch (error: any) {
-      console.error('Auth check error:', error);
-      setError(error.message);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
       setUser(null);
       setIsAdmin(false);
-    } finally {
       setLoading(false);
+      return;
     }
+    
+    if (!session?.user) {
+      setUser(null);
+      setIsAdmin(false);
+      setLoading(false);
+      return;
+    }
+
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, username, email, role')
+      .eq('id', session.user.id)
+      .single();
+    
+    if (userError) {
+      setUser(null);
+      setIsAdmin(false);
+      setLoading(false);
+      return;
+    }
+
+    if (userData) {
+      setUser(userData);
+      setIsAdmin(userData.role === 'admin');
+    }
+    
+    setLoading(false);
   };
 
   const logout = async () => {
-    try {
-      const { error: signOutError } = await supabase.auth.signOut();
-      if (signOutError) throw signOutError;
-
-      setUser(null);
-      setIsAdmin(false);
-      navigate('/');
-    } catch (error: any) {
-      console.error('Logout error:', error);
-      setError(error.message);
-    }
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsAdmin(false);
+    navigate('/');
   };
 
   useEffect(() => {
-    checkAuth();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         const { data: userData, error: userError } = await supabase
@@ -97,16 +91,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!userError && userData) {
           setUser(userData);
           setIsAdmin(userData.role === 'admin');
-          setLoading(false);
           navigate('/game');
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
-        setLoading(false);
         navigate('/');
       }
     });
+
+    checkAuth();
 
     return () => {
       subscription.unsubscribe();
