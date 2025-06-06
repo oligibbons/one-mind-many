@@ -39,11 +39,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       setError(null);
 
+      console.log('Checking auth status...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) throw sessionError;
-      
+
+      console.log('Session:', session);
+      if (sessionError) console.error('Session Error:', sessionError);
+
       if (!session?.user) {
+        console.log('No user session found.');
         setUser(null);
         setIsAdmin(false);
         return;
@@ -54,12 +57,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select('id, username, email, role')
         .eq('id', session.user.id)
         .single();
-      
-      if (userError) throw userError;
+
+      console.log('User data:', userData);
+      if (userError) console.error('User Query Error:', userError);
 
       if (userData) {
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
+        console.log('User successfully authenticated:', userData);
       }
     } catch (error: any) {
       console.error('Auth check error:', error);
@@ -117,6 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (userData) {
             setUser(userData);
             setIsAdmin(userData.role === 'admin');
+            console.log('User signed in:', userData);
             navigate('/game');
           }
         } catch (err) {
