@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import { User, Mail, Lock } from 'lucide-react';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -12,10 +15,11 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  if (user) {
-    navigate('/game');
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      navigate('/game');
+    }
+  }, [user, navigate]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +40,6 @@ const RegisterPage = () => {
       if (signUpError) throw signUpError;
       
       if (user) {
-        // Create user profile
         const { error: profileError } = await supabase
           .from('users')
           .insert([{
@@ -48,8 +51,6 @@ const RegisterPage = () => {
         
         if (profileError) throw profileError;
       }
-      
-      navigate('/game');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -58,65 +59,67 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6">
-      <h1 className="text-2xl font-bold text-white mb-6">Create Account</h1>
+    <div className="w-full max-w-md mx-auto">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold text-white">Create Account</h1>
+        <p className="text-slate-400 mt-2">Join One Mind, Many to start playing</p>
+      </div>
       
       {error && (
-        <div className="bg-red-500/10 border border-red-500 text-red-500 rounded p-3 mb-4">
+        <div className="bg-red-500/10 border border-red-500 text-red-500 rounded-lg p-4 mb-6">
           {error}
         </div>
       )}
       
-      <form onSubmit={handleRegister} className="space-y-4">
-        <div>
-          <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-1">
-            Username
-          </label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-3 py-2 bg-white text-black rounded border border-slate-300"
-            required
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 bg-white text-black rounded border border-slate-300"
-            required
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-1">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 bg-white text-black rounded border border-slate-300"
-            required
-          />
-        </div>
-        
-        <button
-          type="submit"
+      <form onSubmit={handleRegister} className="space-y-6">
+        <Input
+          type="text"
+          label="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Choose a username"
+          leftIcon={<User size={18} />}
+          required
           disabled={loading}
-          className="w-full bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 disabled:opacity-50"
+        />
+        
+        <Input
+          type="email"
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Enter your email"
+          leftIcon={<Mail size={18} />}
+          required
+          disabled={loading}
+        />
+        
+        <Input
+          type="password"
+          label="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Choose a password"
+          leftIcon={<Lock size={18} />}
+          required
+          disabled={loading}
+        />
+        
+        <Button
+          type="submit"
+          className="w-full"
+          isLoading={loading}
+          disabled={loading}
         >
-          {loading ? 'Loading...' : 'Create Account'}
-        </button>
+          Create Account
+        </Button>
+        
+        <p className="text-center text-slate-400 mt-4">
+          Already have an account?{' '}
+          <Link to="/auth/login" className="text-orange-500 hover:text-orange-600">
+            Sign in
+          </Link>
+        </p>
       </form>
     </div>
   );
