@@ -287,7 +287,7 @@ const AdminPage = () => {
               </div>
             </div>
             <span className="text-slate-400 text-sm">1 hour ago</span>
-          </div>
+          </motion.div>
         </div>
       </Card>
     </div>
