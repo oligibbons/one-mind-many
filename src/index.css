@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Font Face */
+@font-face {
+  font-family: 'CustomHeading';
+  src: url('/fonts/custom-font.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   html {
     @apply font-sans antialiased;
@@ -33,6 +42,11 @@
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-bold tracking-tight;
+  }
+  
+  /* Apply custom font to H1 and H2 */
+  h1, h2 {
+    font-family: 'CustomHeading', 'SpaceGrotesk', system-ui, sans-serif;
   }
   
   h1 {

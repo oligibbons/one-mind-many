@@ -5,7 +5,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['SpaceGrotesk', 'system-ui', 'sans-serif'],
-        heading: ['SpaceGrotesk', 'system-ui', 'sans-serif'],
+        heading: ['CustomHeading', 'SpaceGrotesk', 'system-ui', 'sans-serif'],
       },
       colors: {
         primary: {
