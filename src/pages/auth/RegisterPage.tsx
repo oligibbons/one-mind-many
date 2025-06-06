@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabaseClient';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { User, Mail, Lock } from 'lucide-react';
@@ -26,18 +27,22 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            username: formData.username
+          }
+        }
       });
 
-      const data = await response.json();
+      if (signUpError) {
+        throw new Error(signUpError.message);
+      }
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+      if (!data.user) {
+        throw new Error('Registration failed');
       }
 
       // Registration successful, redirect to login
