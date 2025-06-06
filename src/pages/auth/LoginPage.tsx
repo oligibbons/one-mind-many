@@ -1,104 +1,56 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import { Mail, Lock } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 
 const LoginPage = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
-      return;
-    }
-
-    setError('');
+  const handleLogin = async () => {
+    console.log('Attempting to log in...');
     setLoading(true);
+    setError('');
 
     try {
-      console.log('Attempting to log in...');
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
+      console.log('Calling supabase.auth.signInWithPassword()');
+      const { data: session, error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      console.log('Login response data:', data);
-      console.log('Login response error:', signInError);
+      console.log('Login response:', session, 'Error:', loginError);
+      if (loginError) throw loginError;
 
-      if (signInError) {
-        console.error('Sign-in error:', signInError.message);
-        throw signInError;
-      }
-
-      console.log('User successfully logged in:', data.user);
+      console.log('Login successful. User session:', session);
     } catch (err: any) {
-      console.error('Login error details:', err);
-      setError(err.message || 'Unexpected error occurred');
+      console.error('Login error:', err.message);
+      setError(err.message);
     } finally {
       setLoading(false);
+      console.log('Login attempt finished.');
     }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
-        <p className="text-slate-400 mt-2">Sign in to continue to One Mind, Many</p>
-      </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-          <p className="text-red-500">{error}</p>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Input
-          type="email"
-          label="Email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          placeholder="Enter your email"
-          leftIcon={<Mail size={18} />}
-          required
-          disabled={loading}
-        />
-
-        <Input
-          type="password"
-          label="Password"
-          value={formData.password}
-          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          placeholder="Enter your password"
-          leftIcon={<Lock size={18} />}
-          required
-          disabled={loading}
-        />
-
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={loading}
-        >
-          {loading ? 'Signing in...' : 'Sign In'}
-        </Button>
-
-        <p className="text-center text-slate-400">
-          Don't have an account?{' '}
-          <Link to="/auth/register" className="text-orange-500 hover:text-orange-600">
-            Create one
-          </Link>
-        </p>
-      </form>
+    <div>
+      <h1>Login</h1>
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <button onClick={handleLogin} disabled={loading}>
+        {loading ? 'Logging in...' : 'Login'}
+      </button>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   );
 };
