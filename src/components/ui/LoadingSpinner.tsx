@@ -24,7 +24,7 @@ const LoadingSpinner = ({
         animate={{ rotate: 360 }}
         transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
       />
-      {text && <p className="mt-4 text-slate-400" style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}>{text}</p>}
+      {text && <p className="mt-4 text-slate-400\" style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}>{text}</p>}
     </div>
   );
   
