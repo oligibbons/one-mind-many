@@ -27,32 +27,52 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
+      // First, check if username is available
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('username')
+        .eq('username', formData.username)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw new Error('Error checking username availability');
+      }
+
+      if (existingUser) {
+        throw new Error('Username already taken');
+      }
+
+      // Create auth user
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            username: formData.username
-          }
-        }
+        password: formData.password
       });
 
-      if (signUpError) {
-        throw new Error(signUpError.message);
+      if (signUpError) throw signUpError;
+      if (!data.user) throw new Error('Registration failed');
+
+      // Create user profile
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert([{
+          id: data.user.id,
+          username: formData.username,
+          email: formData.email,
+          role: 'user'
+        }]);
+
+      if (profileError) {
+        // If profile creation fails, clean up auth user
+        await supabase.auth.admin.deleteUser(data.user.id);
+        throw new Error('Failed to create user profile');
       }
 
-      if (!data.user) {
-        throw new Error('Registration failed');
-      }
-
-      // Registration successful, redirect to login
+      // Registration successful
       navigate('/auth/login', { 
-        state: { 
-          message: 'Registration successful! Please sign in with your new account.' 
-        }
+        state: { message: 'Registration successful! Please sign in.' }
       });
     } catch (err: any) {
-      setError(err.message || 'An error occurred during registration');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -123,5 +143,3 @@ const RegisterPage = () => {
     </div>
   );
 };
-
-export default RegisterPage;

@@ -36,15 +36,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAuth = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      setLoading(true);
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) throw sessionError;
 
-      if (!session) {
+      if (!session?.user) {
         setUser(null);
         setIsAdmin(false);
-        setLoading(false);
         return;
       }
 
+      // Get user profile data
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, username, email, role')
@@ -53,10 +56,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (userError) throw userError;
 
-      setUser(userData);
-      setIsAdmin(userData.role === 'admin');
-    } catch (err) {
+      if (userData) {
+        setUser(userData);
+        setIsAdmin(userData.role === 'admin');
+      }
+    } catch (err: any) {
       console.error('Auth check error:', err);
+      setError(err.message);
       setUser(null);
       setIsAdmin(false);
     } finally {
@@ -66,12 +72,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      setLoading(true);
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) throw signOutError;
+      
       setUser(null);
       setIsAdmin(false);
       navigate('/');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Logout error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -80,16 +92,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id, username, email, role')
-          .eq('id', session.user.id)
-          .single();
+        try {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('id, username, email, role')
+            .eq('id', session.user.id)
+            .single();
 
-        if (userData) {
-          setUser(userData);
-          setIsAdmin(userData.role === 'admin');
-          navigate('/game');
+          if (userError) throw userError;
+
+          if (userData) {
+            setUser(userData);
+            setIsAdmin(userData.role === 'admin');
+            navigate('/game');
+          }
+        } catch (err) {
+          console.error('Error fetching user data:', err);
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
