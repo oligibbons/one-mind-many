@@ -37,6 +37,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Use refs to prevent race conditions
   const isCheckingAuth = useRef(false);
   const mounted = useRef(true);
+  const hasInitialized = useRef(false);
 
   const checkAuth = useCallback(async () => {
     // Prevent multiple simultaneous auth checks
@@ -49,7 +50,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isCheckingAuth.current = true;
     
     try {
-      setLoading(true);
       setError(null);
       console.log('Calling supabase.auth.getSession()');
       
@@ -59,10 +59,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!mounted.current) return;
 
       if (sessionError) throw sessionError;
+      
       if (!session?.user) {
         console.log('No user in session.');
         setUser(null);
         setIsAdmin(false);
+        setLoading(false);
         return;
       }
 
@@ -133,10 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     mounted.current = true;
 
-    // Initial auth check
-    checkAuth();
-
-    // Set up auth state listener
+    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted.current) return;
 
@@ -145,6 +144,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (event === 'SIGNED_IN' && session) {
         console.log('User signed in via auth state change');
         try {
+          // Clear any existing errors
+          setError(null);
+          
           const { data: userData, error: userError } = await supabase
             .from('users')
             .select('id, username, email, role')
@@ -156,10 +158,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (userError) throw userError;
 
           if (userData) {
+            console.log('Setting user data from auth state change');
             setUser(userData);
             setIsAdmin(userData.role === 'admin');
-            setLoading(false);
-            navigate('/game');
+            setLoading(false); // Explicitly set loading to false here
+            
+            // Navigate after a short delay to ensure state is updated
+            setTimeout(() => {
+              if (mounted.current) {
+                console.log('Navigating to /game');
+                navigate('/game');
+              }
+            }, 100);
           }
         } catch (err) {
           console.error('Error fetching user data on sign in:', err);
@@ -179,8 +189,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (event === 'TOKEN_REFRESHED') {
         console.log('Token refreshed');
         // Don't need to do anything special here
+      } else if (event === 'INITIAL_SESSION') {
+        console.log('Initial session event');
+        // Handle initial session
+        if (session?.user && !hasInitialized.current) {
+          hasInitialized.current = true;
+          // Don't call checkAuth here to avoid race condition
+        } else if (!session?.user) {
+          setLoading(false);
+        }
       }
     });
+
+    // Only do initial auth check if we haven't initialized yet
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      checkAuth();
+    }
 
     return () => {
       mounted.current = false;
