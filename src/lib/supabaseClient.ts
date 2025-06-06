@@ -12,10 +12,5 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'supabase-js-v2'
-    }
   }
 });
