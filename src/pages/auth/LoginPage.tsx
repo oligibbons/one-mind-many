@@ -28,16 +28,21 @@ const LoginPage = () => {
       console.log('Attempting to log in...');
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
-        password: formData.password,
+        password: formData.password
       });
 
       console.log('Login response data:', data);
       console.log('Login response error:', signInError);
 
-      if (signInError) throw signInError;
+      if (signInError) {
+        console.error('Sign-in error:', signInError.message);
+        throw signInError;
+      }
+
+      console.log('User successfully logged in:', data.user);
     } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message);
+      console.error('Login error details:', err);
+      setError(err.message || 'Unexpected error occurred');
     } finally {
       setLoading(false);
     }
