@@ -6,18 +6,20 @@ import Input from '../../components/ui/Input';
 import { Mail, Lock } from 'lucide-react';
 
 const LoginPage = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.email || !formData.password) {
+
+    if (!formData.email.trim() || !formData.password.trim()) {
       setError('Please fill in all fields');
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -27,13 +29,13 @@ const LoginPage = () => {
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
-        password: formData.password
+        password: formData.password,
       });
 
-      if (signInError) throw signInError;
-    } catch (err: any) {
+      if (signInError) throw new Error(signInError.message || 'Login failed');
+    } catch (err) {
       console.error('Login error:', err);
-      setError(err.message);
+      setError(err.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -46,7 +48,7 @@ const LoginPage = () => {
         <p className="text-slate-400 mt-2">Sign in to continue to One Mind, Many</p>
       </div>
 
-      {error && (
+      {error && !loading && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
           <p className="text-red-500">{error}</p>
         </div>
@@ -75,11 +77,7 @@ const LoginPage = () => {
           disabled={loading}
         />
 
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={loading}
-        >
+        <Button type="submit" className="w-full" disabled={loading}>
           {loading ? 'Signing in...' : 'Sign In'}
         </Button>
 
