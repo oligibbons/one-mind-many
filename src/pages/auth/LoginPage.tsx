@@ -31,7 +31,7 @@ const LoginPage = () => {
       
       if (result.success) {
         // Simple, immediate navigation on success
-        navigate('/game');
+        navigate('/game', { replace: true });
       } else {
         setError(result.error || 'Login failed');
       }

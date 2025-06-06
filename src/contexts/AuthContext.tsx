@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = useCallback(async (email: string, password: string) => {
     try {
       setError(null);
+      setLoading(true);
       
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -50,10 +51,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, error: 'No user data returned' };
       }
 
-      // The auth state change listener will handle the rest
-      return { success: true };
+      // Fetch user profile immediately
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, username, email, role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (userError) {
+        return { success: false, error: 'Failed to load user profile' };
+      }
+
+      if (userData) {
+        setUser(userData);
+        setIsAdmin(userData.role === 'admin');
+        setLoading(false);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Failed to load user data' };
     } catch (err: any) {
       return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -61,7 +81,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setError(null);
       await supabase.auth.signOut();
-      // Auth state change listener will handle cleanup
+      setUser(null);
+      setIsAdmin(false);
     } catch (error: any) {
       console.error('Logout error:', error);
       setError(error.message);
