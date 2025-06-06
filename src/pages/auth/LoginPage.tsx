@@ -24,13 +24,17 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: formData.email,
-      password: formData.password
-    });
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
+      });
 
-    if (signInError) {
-      setError(signInError.message);
+      if (signInError) throw signInError;
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message);
+    } finally {
       setLoading(false);
     }
   };

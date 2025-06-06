@@ -37,32 +37,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkAuth = async () => {
     try {
       setLoading(true);
+      setError(null);
+
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) throw sessionError;
-
+      
       if (!session?.user) {
         setUser(null);
         setIsAdmin(false);
         return;
       }
 
-      // Get user profile data
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, username, email, role')
         .eq('id', session.user.id)
         .single();
-
+      
       if (userError) throw userError;
 
       if (userData) {
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
       }
-    } catch (err: any) {
-      console.error('Auth check error:', err);
-      setError(err.message);
+    } catch (error: any) {
+      console.error('Auth check error:', error);
+      setError(error.message);
       setUser(null);
       setIsAdmin(false);
     } finally {
@@ -73,24 +74,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       const { error: signOutError } = await supabase.auth.signOut();
       if (signOutError) throw signOutError;
-      
+
       setUser(null);
       setIsAdmin(false);
       navigate('/');
-    } catch (err: any) {
-      console.error('Logout error:', err);
-      setError(err.message);
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    checkAuth();
+    let mounted = true;
+
+    const initialize = async () => {
+      await checkAuth();
+    };
+
+    initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
       if (event === 'SIGNED_IN' && session) {
         try {
           const { data: userData, error: userError } = await supabase
@@ -98,6 +109,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .select('id, username, email, role')
             .eq('id', session.user.id)
             .single();
+
+          if (!mounted) return;
 
           if (userError) throw userError;
 
@@ -110,6 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.error('Error fetching user data:', err);
         }
       } else if (event === 'SIGNED_OUT') {
+        if (!mounted) return;
         setUser(null);
         setIsAdmin(false);
         navigate('/');
@@ -117,6 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [navigate]);

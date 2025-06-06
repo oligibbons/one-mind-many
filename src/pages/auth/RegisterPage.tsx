@@ -27,25 +27,26 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      // First, check if username is available
-      const { data: existingUser, error: checkError } = await supabase
+      // Check if username exists
+      const { data: existingUser } = await supabase
         .from('users')
         .select('username')
         .eq('username', formData.username)
         .single();
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw new Error('Error checking username availability');
-      }
-
       if (existingUser) {
         throw new Error('Username already taken');
       }
 
-      // Create auth user
+      // Sign up with Supabase Auth
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        options: {
+          data: {
+            username: formData.username
+          }
+        }
       });
 
       if (signUpError) throw signUpError;
@@ -61,17 +62,12 @@ const RegisterPage = () => {
           role: 'user'
         }]);
 
-      if (profileError) {
-        // If profile creation fails, clean up auth user
-        await supabase.auth.admin.deleteUser(data.user.id);
-        throw new Error('Failed to create user profile');
-      }
+      if (profileError) throw profileError;
 
       // Registration successful
-      navigate('/auth/login', { 
-        state: { message: 'Registration successful! Please sign in.' }
-      });
+      navigate('/auth/login');
     } catch (err: any) {
+      console.error('Registration error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -144,4 +140,4 @@ const RegisterPage = () => {
   );
 };
 
-export default RegisterPage
+export default RegisterPage;
