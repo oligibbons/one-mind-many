@@ -27,11 +27,12 @@ import AdminRoute from './components/auth/AdminRoute';
 
 function App() {
   const location = useLocation();
-  const { checkAuth } = useAuth();
+  const { user, loading } = useAuth();
   
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  // Remove the checkAuth call from here since it's handled in AuthProvider
+  // This was causing the race condition
+  
+  console.log('App render - User:', user?.username, 'Loading:', loading);
 
   return (
     <AnimatePresence mode="wait">

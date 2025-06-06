@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Mail, Lock } from 'lucide-react';
 
 const LoginPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -41,8 +42,8 @@ const LoginPage = () => {
 
       if (data.user) {
         console.log('User successfully logged in:', data.user);
-        // Optionally redirect here, if applicable:
-        // navigate('/dashboard');
+        // Don't manually navigate here - let the auth state change handler do it
+        // This prevents race conditions
       } else {
         console.error('No user object returned in the response.');
         setError('Unexpected error: No user data returned. Please try again.');

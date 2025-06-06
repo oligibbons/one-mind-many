@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 
@@ -33,27 +33,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
+  
+  // Use refs to prevent race conditions
+  const isCheckingAuth = useRef(false);
+  const mounted = useRef(true);
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
+    // Prevent multiple simultaneous auth checks
+    if (isCheckingAuth.current) {
+      console.log('Auth check already in progress, skipping...');
+      return;
+    }
+
     console.log('checkAuth is being called');
+    isCheckingAuth.current = true;
+    
     try {
       setLoading(true);
       setError(null);
       console.log('Calling supabase.auth.getSession()');
       
-      // Add timeout and better error handling - increased to 30 seconds
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 30000)
-      );
-      
-      const sessionPromise = supabase.auth.getSession();
-      
-      const { data: { session }, error: sessionError } = await Promise.race([
-        sessionPromise,
-        timeoutPromise
-      ]) as any;
-      
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       console.log('Session data:', session, 'Session error:', sessionError);
+
+      if (!mounted.current) return;
 
       if (sessionError) throw sessionError;
       if (!session?.user) {
@@ -64,20 +67,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log('Fetching user data from Supabase...');
-      
-      // Add timeout for user data fetch as well - increased to 30 seconds
-      const userDataPromise = supabase
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, username, email, role')
         .eq('id', session.user.id)
         .single();
-        
-      const { data: userData, error: userError } = await Promise.race([
-        userDataPromise,
-        timeoutPromise
-      ]) as any;
       
       console.log('User data:', userData, 'User error:', userError);
+
+      if (!mounted.current) return;
 
       if (userError) throw userError;
 
@@ -88,6 +86,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error: any) {
       console.error('Auth check error:', error);
+      
+      if (!mounted.current) return;
       
       // Provide more specific error messages
       let errorMessage = error.message;
@@ -101,10 +101,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setIsAdmin(false);
     } finally {
-      console.log('Auth check finished.');
-      setLoading(false);
+      if (mounted.current) {
+        console.log('Auth check finished.');
+        setLoading(false);
+      }
+      isCheckingAuth.current = false;
     }
-  };
+  }, []);
 
   const logout = async () => {
     try {
@@ -128,20 +131,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let mounted = true;
+    mounted.current = true;
 
-    const initialize = async () => {
-      console.log('Initializing authentication check...');
-      await checkAuth();
-    };
+    // Initial auth check
+    checkAuth();
 
-    initialize();
-
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
+      if (!mounted.current) return;
+
+      console.log('Auth state changed:', event, session?.user?.id);
 
       if (event === 'SIGNED_IN' && session) {
-        console.log('User signed in:', session);
+        console.log('User signed in via auth state change');
         try {
           const { data: userData, error: userError } = await supabase
             .from('users')
@@ -149,32 +151,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('id', session.user.id)
             .single();
 
-          if (!mounted) return;
+          if (!mounted.current) return;
 
           if (userError) throw userError;
 
           if (userData) {
             setUser(userData);
             setIsAdmin(userData.role === 'admin');
+            setLoading(false);
             navigate('/game');
           }
         } catch (err) {
-          console.error('Error fetching user data:', err);
+          console.error('Error fetching user data on sign in:', err);
+          if (mounted.current) {
+            setError('Failed to load user data');
+            setLoading(false);
+          }
         }
       } else if (event === 'SIGNED_OUT') {
-        if (!mounted) return;
-        console.log('User signed out.');
-        setUser(null);
-        setIsAdmin(false);
-        navigate('/');
+        console.log('User signed out via auth state change');
+        if (mounted.current) {
+          setUser(null);
+          setIsAdmin(false);
+          setLoading(false);
+          navigate('/');
+        }
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed');
+        // Don't need to do anything special here
       }
     });
 
     return () => {
-      mounted = false;
+      mounted.current = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [checkAuth, navigate]);
 
   return (
     <AuthContext.Provider value={{ user, loading, error, checkAuth, logout, isAdmin }}>
