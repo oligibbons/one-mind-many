@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 
 // Layouts
@@ -27,12 +27,18 @@ import AdminRoute from './components/auth/AdminRoute';
 
 function App() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, loading } = useAuth();
   
-  // Remove the checkAuth call from here since it's handled in AuthProvider
-  // This was causing the race condition
-  
-  console.log('App render - User:', user?.username, 'Loading:', loading);
+  // Handle automatic redirects for authenticated users
+  useEffect(() => {
+    if (!loading && user) {
+      // If user is authenticated and on auth pages, redirect to game
+      if (location.pathname.startsWith('/auth')) {
+        navigate('/game', { replace: true });
+      }
+    }
+  }, [user, loading, location.pathname, navigate]);
 
   return (
     <AnimatePresence mode="wait">

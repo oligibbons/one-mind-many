@@ -1,6 +1,5 @@
-import { createContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { useNavigate } from 'react-router-dom';
 
 interface User {
   id: string;
@@ -13,7 +12,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  checkAuth: () => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   isAdmin: boolean;
 }
@@ -22,7 +21,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   error: null,
-  checkAuth: async () => {},
+  login: async () => ({ success: false }),
   logout: async () => {},
   isAdmin: false,
 });
@@ -32,189 +31,130 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const navigate = useNavigate();
-  
-  // Use refs to prevent race conditions
-  const isCheckingAuth = useRef(false);
-  const mounted = useRef(true);
-  const hasInitialized = useRef(false);
 
-  const checkAuth = useCallback(async () => {
-    // Prevent multiple simultaneous auth checks
-    if (isCheckingAuth.current) {
-      console.log('Auth check already in progress, skipping...');
-      return;
-    }
-
-    console.log('checkAuth is being called');
-    isCheckingAuth.current = true;
-    
+  // Simple login function that returns success/error without navigation
+  const login = useCallback(async (email: string, password: string) => {
     try {
       setError(null);
-      console.log('Calling supabase.auth.getSession()');
       
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session data:', session, 'Session error:', sessionError);
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-      if (!mounted.current) return;
-
-      if (sessionError) throw sessionError;
-      
-      if (!session?.user) {
-        console.log('No user in session.');
-        setUser(null);
-        setIsAdmin(false);
-        setLoading(false);
-        return;
+      if (signInError) {
+        return { success: false, error: signInError.message };
       }
 
-      console.log('Fetching user data from Supabase...');
+      if (!data.user) {
+        return { success: false, error: 'No user data returned' };
+      }
+
+      // The auth state change listener will handle the rest
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      setError(null);
+      await supabase.auth.signOut();
+      // Auth state change listener will handle cleanup
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      setError(error.message);
+    }
+  }, []);
+
+  // Fetch user profile data
+  const fetchUserProfile = useCallback(async (userId: string) => {
+    try {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, username, email, role')
-        .eq('id', session.user.id)
+        .eq('id', userId)
         .single();
-      
-      console.log('User data:', userData, 'User error:', userError);
-
-      if (!mounted.current) return;
 
       if (userError) throw userError;
 
       if (userData) {
-        console.log('Setting user and isAdmin state.');
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
+        return userData;
       }
-    } catch (error: any) {
-      console.error('Auth check error:', error);
-      
-      if (!mounted.current) return;
-      
-      // Provide more specific error messages
-      let errorMessage = error.message;
-      if (error.message === 'Failed to fetch') {
-        errorMessage = 'Unable to connect to authentication service. Please check your internet connection and try again.';
-      } else if (error.message === 'Request timeout') {
-        errorMessage = 'Authentication request timed out. Please try again.';
-      }
-      
-      setError(errorMessage);
-      setUser(null);
-      setIsAdmin(false);
-    } finally {
-      if (mounted.current) {
-        console.log('Auth check finished.');
-        setLoading(false);
-      }
-      isCheckingAuth.current = false;
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+      throw err;
     }
   }, []);
 
-  const logout = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      console.log('Calling supabase.auth.signOut()');
-
-      const { error: signOutError } = await supabase.auth.signOut();
-      if (signOutError) throw signOutError;
-
-      console.log('Logout successful.');
-      setUser(null);
-      setIsAdmin(false);
-      navigate('/');
-    } catch (error: any) {
-      console.error('Logout error:', error.message);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Initialize auth state
   useEffect(() => {
-    mounted.current = true;
+    let mounted = true;
 
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted.current) return;
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
 
-      console.log('Auth state changed:', event, session?.user?.id);
-
-      if (event === 'SIGNED_IN' && session) {
-        console.log('User signed in via auth state change');
-        try {
-          // Clear any existing errors
-          setError(null);
-          
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('id, username, email, role')
-            .eq('id', session.user.id)
-            .single();
-
-          if (!mounted.current) return;
-
-          if (userError) throw userError;
-
-          if (userData) {
-            console.log('Setting user data from auth state change');
-            setUser(userData);
-            setIsAdmin(userData.role === 'admin');
-            setLoading(false); // Explicitly set loading to false here
-            
-            // Navigate after a short delay to ensure state is updated
-            setTimeout(() => {
-              if (mounted.current) {
-                console.log('Navigating to /game');
-                navigate('/game');
-              }
-            }, 100);
-          }
-        } catch (err) {
-          console.error('Error fetching user data on sign in:', err);
-          if (mounted.current) {
-            setError('Failed to load user data');
-            setLoading(false);
-          }
+        if (session?.user) {
+          await fetchUserProfile(session.user.id);
         }
-      } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out via auth state change');
-        if (mounted.current) {
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        if (mounted) {
+          setError('Failed to initialize authentication');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      console.log('Auth state changed:', event);
+
+      try {
+        if (event === 'SIGNED_IN' && session?.user) {
+          await fetchUserProfile(session.user.id);
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setIsAdmin(false);
-          setLoading(false);
-          navigate('/');
         }
-      } else if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed');
-        // Don't need to do anything special here
-      } else if (event === 'INITIAL_SESSION') {
-        console.log('Initial session event');
-        // Handle initial session
-        if (session?.user && !hasInitialized.current) {
-          hasInitialized.current = true;
-          // Don't call checkAuth here to avoid race condition
-        } else if (!session?.user) {
+      } catch (err) {
+        console.error('Auth state change error:', err);
+        setError('Authentication error occurred');
+      } finally {
+        if (mounted) {
           setLoading(false);
         }
       }
     });
 
-    // Only do initial auth check if we haven't initialized yet
-    if (!hasInitialized.current) {
-      hasInitialized.current = true;
-      checkAuth();
-    }
+    initializeAuth();
 
     return () => {
-      mounted.current = false;
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [checkAuth, navigate]);
+  }, [fetchUserProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, checkAuth, logout, isAdmin }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      error, 
+      login, 
+      logout, 
+      isAdmin 
+    }}>
       {children}
     </AuthContext.Provider>
   );

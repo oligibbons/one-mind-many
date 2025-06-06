@@ -11,15 +11,17 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, redirectTo = "/auth/login" }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
 
+  // Show loading spinner while checking auth
   if (loading) {
-    return <LoadingSpinner fullScreen />;
+    return <LoadingSpinner fullScreen text="Checking authentication..." />;
   }
 
+  // Redirect to login if not authenticated
   if (!user) {
-    console.log('Redirecting unauthenticated user to login page.');
     return <Navigate to={redirectTo} replace />;
   }
 
+  // Render protected content
   return <>{children}</>;
 };
 

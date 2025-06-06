@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Mail, Lock } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -26,31 +27,16 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      console.log('Attempting to log in...');
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
-      });
-
-      console.log('Login response data:', data);
-      console.log('Login response error:', signInError);
-
-      if (signInError) {
-        console.error('Sign-in error:', signInError.message);
-        throw signInError;
-      }
-
-      if (data.user) {
-        console.log('User successfully logged in:', data.user);
-        // Don't manually navigate here - let the auth state change handler do it
-        // This prevents race conditions
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        // Simple, immediate navigation on success
+        navigate('/game');
       } else {
-        console.error('No user object returned in the response.');
-        setError('Unexpected error: No user data returned. Please try again.');
+        setError(result.error || 'Login failed');
       }
     } catch (err: any) {
-      console.error('Login error details:', err);
-      setError(err.message || 'Unexpected error occurred. Please try again.');
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -111,6 +97,7 @@ const LoginPage = () => {
           type="submit"
           className="w-full"
           disabled={loading}
+          isLoading={loading}
         >
           {loading ? 'Signing in...' : 'Sign In'}
         </Button>
