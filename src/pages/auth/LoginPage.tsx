@@ -6,25 +6,31 @@ import Input from '../../components/ui/Input';
 import { Mail, Lock } from 'lucide-react';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.email || !formData.password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
     setError('');
     setLoading(true);
-    
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message);
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password
+    });
+
+    if (signInError) {
+      setError(signInError.message);
       setLoading(false);
     }
   };
@@ -35,46 +41,45 @@ const LoginPage = () => {
         <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
         <p className="text-slate-400 mt-2">Sign in to continue to One Mind, Many</p>
       </div>
-      
+
       {error && (
-        <div className="bg-red-500/10 border border-red-500 text-red-500 rounded-lg p-4 mb-6">
-          {error}
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
+          <p className="text-red-500">{error}</p>
         </div>
       )}
-      
-      <form onSubmit={handleLogin} className="space-y-6">
+
+      <form onSubmit={handleSubmit} className="space-y-6">
         <Input
           type="email"
           label="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           placeholder="Enter your email"
           leftIcon={<Mail size={18} />}
           required
           disabled={loading}
         />
-        
+
         <Input
           type="password"
           label="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           placeholder="Enter your password"
           leftIcon={<Lock size={18} />}
           required
           disabled={loading}
         />
-        
+
         <Button
           type="submit"
           className="w-full"
-          isLoading={loading}
           disabled={loading}
         >
-          Sign In
+          {loading ? 'Signing in...' : 'Sign In'}
         </Button>
-        
-        <p className="text-center text-slate-400 mt-4">
+
+        <p className="text-center text-slate-400">
           Don't have an account?{' '}
           <Link to="/auth/register" className="text-orange-500 hover:text-orange-600">
             Create one

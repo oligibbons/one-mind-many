@@ -29,66 +29,64 @@ export const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   const checkAuth = async () => {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      setUser(null);
-      setIsAdmin(false);
-      setLoading(false);
-      return;
-    }
-    
-    if (!session?.user) {
-      setUser(null);
-      setIsAdmin(false);
-      setLoading(false);
-      return;
-    }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
 
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, username, email, role')
-      .eq('id', session.user.id)
-      .single();
-    
-    if (userError) {
-      setUser(null);
-      setIsAdmin(false);
-      setLoading(false);
-      return;
-    }
+      if (!session) {
+        setUser(null);
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
 
-    if (userData) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, username, email, role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (userError) throw userError;
+
       setUser(userData);
       setIsAdmin(userData.role === 'admin');
+    } catch (err) {
+      console.error('Auth check error:', err);
+      setUser(null);
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setIsAdmin(false);
-    navigate('/');
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setIsAdmin(false);
+      navigate('/');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
   };
 
   useEffect(() => {
+    checkAuth();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const { data: userData, error: userError } = await supabase
+      if (event === 'SIGNED_IN' && session) {
+        const { data: userData } = await supabase
           .from('users')
           .select('id, username, email, role')
           .eq('id', session.user.id)
           .single();
-        
-        if (!userError && userData) {
+
+        if (userData) {
           setUser(userData);
           setIsAdmin(userData.role === 'admin');
           navigate('/game');
@@ -100,24 +98,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    checkAuth();
-
     return () => {
       subscription.unsubscribe();
     };
   }, [navigate]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        error,
-        checkAuth,
-        logout,
-        isAdmin,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, error, checkAuth, logout, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );
