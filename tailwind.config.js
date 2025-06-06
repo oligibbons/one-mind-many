@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['SpaceGrotesk', 'system-ui', 'sans-serif'],
-        heading: ['CustomHeading', 'SpaceGrotesk', 'system-ui', 'sans-serif'],
+        sans: ['Quicksand', 'system-ui', 'sans-serif'],
+        heading: ['CustomHeading', 'Quicksand', 'system-ui', 'sans-serif'],
       },
       colors: {
         primary: {
