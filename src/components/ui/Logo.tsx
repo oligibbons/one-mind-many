@@ -42,7 +42,7 @@ const Logo = ({ size = 'md', variant = 'full', clickable = true }: LogoProps) =>
         <motion.div 
           className={`font-bold tracking-tight ${sizeClasses[size]}`}
           variants={textVariants}
-          style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
+ 
         >
           <span className="text-white">One Mind,</span>
           <span className="text-orange-500"> Many</span>
