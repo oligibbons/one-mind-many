@@ -98,18 +98,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(userData);
           setIsAdmin(userData.role === 'admin');
           setLoading(false);
+          navigate('/game');
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
         setLoading(false);
+        navigate('/');
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <AuthContext.Provider

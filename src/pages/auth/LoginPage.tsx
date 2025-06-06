@@ -9,7 +9,7 @@ import { Mail, Lock } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -39,6 +39,14 @@ const LoginPage = () => {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <LoadingSpinner size="lg" text="Loading..." />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
@@ -61,6 +69,7 @@ const LoginPage = () => {
           placeholder="Enter your email"
           leftIcon={<Mail size={18} />}
           required
+          disabled={loading}
         />
         
         <Input
@@ -71,12 +80,14 @@ const LoginPage = () => {
           placeholder="Enter your password"
           leftIcon={<Lock size={18} />}
           required
+          disabled={loading}
         />
         
         <Button
           type="submit"
           className="w-full"
           isLoading={loading}
+          disabled={loading}
         >
           Sign In
         </Button>
