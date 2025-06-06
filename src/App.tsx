@@ -36,9 +36,13 @@ function App() {
   // Handle automatic redirects for authenticated users
   useEffect(() => {
     if (!loading && user) {
-      // If user is authenticated and on auth pages, redirect to game
+      // If user is authenticated and on auth pages, redirect based on role
       if (location.pathname.startsWith('/auth')) {
-        navigate('/game', { replace: true });
+        if (user.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/game', { replace: true });
+        }
       }
     }
   }, [user, loading, location.pathname, navigate]);

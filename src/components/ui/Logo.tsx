@@ -1,5 +1,6 @@
 import { Brain } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -29,7 +30,6 @@ const Logo = ({ size = 'md', variant = 'full', clickable = true }: LogoProps) =>
       className="flex items-center gap-2"
       initial="initial"
       whileHover={clickable ? "hover" : "initial"}
-    
     >
       <motion.div 
         className="text-orange-500"
@@ -42,7 +42,6 @@ const Logo = ({ size = 'md', variant = 'full', clickable = true }: LogoProps) =>
         <motion.div 
           className={`font-bold tracking-tight ${sizeClasses[size]}`}
           variants={textVariants}
- 
         >
           <span className="text-white">One Mind,</span>
           <span className="text-orange-500"> Many</span>
@@ -50,6 +49,14 @@ const Logo = ({ size = 'md', variant = 'full', clickable = true }: LogoProps) =>
       )}
     </motion.div>
   );
+
+  if (clickable) {
+    return (
+      <Link to="/" className="inline-block">
+        {content}
+      </Link>
+    );
+  }
 
   return content;
 };

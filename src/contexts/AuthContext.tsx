@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 interface User {
@@ -11,167 +11,102 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  error: string | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => Promise<void>;
+  logout: () => void;
   isAdmin: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  error: null,
   login: async () => ({ success: false }),
-  logout: async () => {},
+  logout: () => {},
   isAdmin: false,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Simple login function that returns success/error without navigation
-  const login = useCallback(async (email: string, password: string) => {
+  // Initialize auth state on mount
+  useEffect(() => {
+    checkAuthState();
+  }, []);
+
+  const checkAuthState = async () => {
     try {
-      setError(null);
-      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
       
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      setUser(null);
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('id, username, email, role')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      if (userData) {
+        setUser(userData);
+        setIsAdmin(userData.role === 'admin');
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      throw error;
+    }
+  };
+
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
-      if (signInError) {
-        return { success: false, error: signInError.message };
+      if (error) {
+        return { success: false, error: error.message };
       }
 
       if (!data.user) {
         return { success: false, error: 'No user data returned' };
       }
 
-      // Fetch user profile immediately
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, username, email, role')
-        .eq('id', data.user.id)
-        .single();
-
-      if (userError) {
-        return { success: false, error: 'Failed to load user profile' };
-      }
-
-      if (userData) {
-        setUser(userData);
-        setIsAdmin(userData.role === 'admin');
-        setLoading(false);
-        return { success: true };
-      }
-
-      return { success: false, error: 'Failed to load user data' };
-    } catch (err: any) {
-      return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const logout = useCallback(async () => {
-    try {
-      setError(null);
-      await supabase.auth.signOut();
-      setUser(null);
-      setIsAdmin(false);
+      // Fetch user profile
+      await fetchUserProfile(data.user.id);
+      
+      return { success: true };
     } catch (error: any) {
-      console.error('Logout error:', error);
-      setError(error.message);
+      return { success: false, error: error.message };
     }
-  }, []);
+  };
 
-  // Fetch user profile data
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    try {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, username, email, role')
-        .eq('id', userId)
-        .single();
-
-      if (userError) throw userError;
-
-      if (userData) {
-        setUser(userData);
-        setIsAdmin(userData.role === 'admin');
-        return userData;
-      }
-    } catch (err) {
-      console.error('Error fetching user profile:', err);
-      throw err;
-    }
-  }, []);
-
-  // Initialize auth state
-  useEffect(() => {
-    let mounted = true;
-
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
-        }
-      } catch (err) {
-        console.error('Auth initialization error:', err);
-        if (mounted) {
-          setError('Failed to initialize authentication');
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-
-      console.log('Auth state changed:', event);
-
-      try {
-        if (event === 'SIGNED_IN' && session?.user) {
-          await fetchUserProfile(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setIsAdmin(false);
-        }
-      } catch (err) {
-        console.error('Auth state change error:', err);
-        setError('Authentication error occurred');
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    });
-
-    initializeAuth();
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [fetchUserProfile]);
+  const logout = () => {
+    supabase.auth.signOut();
+    setUser(null);
+    setIsAdmin(false);
+  };
 
   return (
     <AuthContext.Provider value={{ 
       user, 
       loading, 
-      error, 
       login, 
       logout, 
       isAdmin 

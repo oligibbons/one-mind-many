@@ -13,7 +13,6 @@ const LoginPage = () => {
     password: ''
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,21 +23,22 @@ const LoginPage = () => {
     }
 
     setError('');
-    setLoading(true);
 
-    try {
-      const result = await login(formData.email, formData.password);
-      
-      if (result.success) {
-        // Simple, immediate navigation on success
-        navigate('/game', { replace: true });
-      } else {
-        setError(result.error || 'Login failed');
-      }
-    } catch (err: any) {
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
+    const result = await login(formData.email, formData.password);
+    
+    if (result.success) {
+      // Simple redirect logic based on user role
+      // We'll check the user role after login completes
+      setTimeout(() => {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        if (userData.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/game', { replace: true });
+        }
+      }, 100);
+    } else {
+      setError(result.error || 'Login failed');
     }
   };
 
@@ -79,7 +79,6 @@ const LoginPage = () => {
           placeholder="Enter your email"
           leftIcon={<Mail size={18} />}
           required
-          disabled={loading}
         />
 
         <Input
@@ -90,16 +89,13 @@ const LoginPage = () => {
           placeholder="Enter your password"
           leftIcon={<Lock size={18} />}
           required
-          disabled={loading}
         />
 
         <Button
           type="submit"
           className="w-full"
-          disabled={loading}
-          isLoading={loading}
         >
-          {loading ? 'Signing in...' : 'Sign In'}
+          Sign In
         </Button>
 
         <p 

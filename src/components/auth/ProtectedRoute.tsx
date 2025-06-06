@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -11,9 +10,9 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, redirectTo = "/auth/login" }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
 
-  // Show loading spinner while checking auth
+  // Show nothing while checking auth (no loading spinner to avoid issues)
   if (loading) {
-    return <LoadingSpinner fullScreen text="Checking authentication..." />;
+    return null;
   }
 
   // Redirect to login if not authenticated

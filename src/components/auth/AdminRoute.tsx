@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface AdminRouteProps {
   children: ReactNode;
@@ -11,15 +10,17 @@ interface AdminRouteProps {
 const AdminRoute = ({ children, redirectTo = "/game" }: AdminRouteProps) => {
   const { user, loading, isAdmin } = useAuth();
 
+  // Show nothing while checking auth (no loading spinner to avoid issues)
   if (loading) {
-    return <LoadingSpinner fullScreen />;
+    return null;
   }
 
+  // Redirect if not authenticated or not admin
   if (!user || !isAdmin) {
-    console.log('Redirecting non-admin user to game page.');
     return <Navigate to={redirectTo} replace />;
   }
 
+  // Render admin content
   return <>{children}</>;
 };
 

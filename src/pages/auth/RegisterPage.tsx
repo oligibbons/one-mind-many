@@ -13,7 +13,6 @@ const RegisterPage = () => {
     password: ''
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +23,6 @@ const RegisterPage = () => {
     }
 
     setError('');
-    setLoading(true);
 
     try {
       // Check if username exists
@@ -35,7 +33,8 @@ const RegisterPage = () => {
         .single();
 
       if (existingUser) {
-        throw new Error('Username already taken');
+        setError('Username already taken');
+        return;
       }
 
       // Sign up with Supabase Auth
@@ -49,8 +48,15 @@ const RegisterPage = () => {
         }
       });
 
-      if (signUpError) throw signUpError;
-      if (!data.user) throw new Error('Registration failed');
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+
+      if (!data.user) {
+        setError('Registration failed');
+        return;
+      }
 
       // Create user profile
       const { error: profileError } = await supabase
@@ -62,15 +68,16 @@ const RegisterPage = () => {
           role: 'user'
         }]);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        setError('Failed to create user profile');
+        return;
+      }
 
-      // Registration successful
+      // Registration successful - redirect to login
       navigate('/auth/login');
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Registration failed');
     }
   };
 
@@ -111,7 +118,6 @@ const RegisterPage = () => {
           placeholder="Choose a username"
           leftIcon={<User size={18} />}
           required
-          disabled={loading}
         />
 
         <Input
@@ -122,7 +128,6 @@ const RegisterPage = () => {
           placeholder="Enter your email"
           leftIcon={<Mail size={18} />}
           required
-          disabled={loading}
         />
 
         <Input
@@ -133,15 +138,13 @@ const RegisterPage = () => {
           placeholder="Choose a password"
           leftIcon={<Lock size={18} />}
           required
-          disabled={loading}
         />
 
         <Button
           type="submit"
           className="w-full"
-          disabled={loading}
         >
-          {loading ? 'Creating account...' : 'Create Account'}
+          Create Account
         </Button>
 
         <p 
