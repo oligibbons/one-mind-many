@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient';
+import { Link, useNavigate } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { User, Mail, Lock } from 'lucide-react';
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -26,29 +26,29 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      // Sign up the user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
 
-      if (signUpError) throw signUpError;
+      const data = await response.json();
 
-      if (authData.user) {
-        // Create the user profile
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([{
-            id: authData.user.id,
-            username: formData.username,
-            email: formData.email,
-            role: 'user'
-          }]);
-
-        if (profileError) throw profileError;
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
       }
+
+      // Registration successful, redirect to login
+      navigate('/auth/login', { 
+        state: { 
+          message: 'Registration successful! Please sign in with your new account.' 
+        }
+      });
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'An error occurred during registration');
+    } finally {
       setLoading(false);
     }
   };
