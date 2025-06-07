@@ -1,4 +1,3 @@
-import { Brain } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
@@ -10,43 +9,33 @@ interface LogoProps {
 
 const Logo = ({ size = 'md', variant = 'full', clickable = true }: LogoProps) => {
   const sizeClasses = {
-    sm: 'text-lg',
-    md: 'text-xl',
-    lg: 'text-2xl',
+    sm: { height: '32px', fontSize: 'text-lg' },
+    md: { height: '40px', fontSize: 'text-xl' },
+    lg: { height: '48px', fontSize: 'text-2xl' },
   };
   
-  const iconVariants = {
+  const logoVariants = {
     initial: { scale: 1 },
-    hover: { scale: 1.1 }
-  };
-  
-  const textVariants = {
-    initial: { opacity: 1 },
-    hover: { opacity: 1 }
+    hover: { scale: 1.05 }
   };
 
   const content = (
     <motion.div 
-      className="flex items-center gap-2"
+      className="flex items-center gap-3"
       initial="initial"
       whileHover={clickable ? "hover" : "initial"}
+      variants={logoVariants}
     >
-      <motion.div 
-        className="text-orange-500"
-        variants={iconVariants}
-      >
-        <Brain size={size === 'sm' ? 24 : size === 'md' ? 28 : 32} />
-      </motion.div>
-      
-      {variant === 'full' && (
-        <motion.div 
-          className={`font-bold tracking-tight ${sizeClasses[size]}`}
-          variants={textVariants}
-        >
-          <span className="text-white">One Mind,</span>
-          <span className="text-orange-500"> Many</span>
-        </motion.div>
-      )}
+      <motion.img
+        src="/OneMindMay Logo - long.png"
+        alt="One Mind, Many"
+        style={{ height: sizeClasses[size].height }}
+        className="object-contain"
+        variants={{
+          initial: { scale: 1 },
+          hover: { scale: 1.02 }
+        }}
+      />
     </motion.div>
   );
 

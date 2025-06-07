@@ -51,15 +51,18 @@ const HomePage = () => {
           >
             {/* Game Logo/Title */}
             <div className="mb-8">
-              <motion.h1 
-                className="text-5xl md:text-7xl font-bold mb-4 game-title"
-                style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
+              <motion.div
+                className="flex justify-center mb-6"
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                One Mind, <span className="game-subtitle">Many</span>
-              </motion.h1>
+                <img
+                  src="/OneMindMay Logo - long.png"
+                  alt="One Mind, Many"
+                  className="h-24 md:h-32 lg:h-40 object-contain game-title"
+                />
+              </motion.div>
               
               <motion.div
                 className="flex justify-center items-center gap-2 mb-6"
