@@ -16,8 +16,18 @@
 
 /* Paper texture data URL - rough paper texture */
 :root {
-  --paper-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3Ccircle cx='13' cy='13' r='1'/%3E%3Ccircle cx='19' cy='19' r='1'/%3E%3Ccircle cx='25' cy='25' r='1'/%3E%3Ccircle cx='31' cy='31' r='1'/%3E%3Ccircle cx='37' cy='37' r='1'/%3E%3Ccircle cx='43' cy='43' r='1'/%3E%3Ccircle cx='49' cy='49' r='1'/%3E%3Ccircle cx='55' cy='55' r='1'/%3E%3Ccircle cx='1' cy='13' r='1'/%3E%3Ccircle cx='7' cy='19' r='1'/%3E%3Ccircle cx='13' cy='25' r='1'/%3E%3Ccircle cx='19' cy='31' r='1'/%3E%3Ccircle cx='25' cy='37' r='1'/%3E%3Ccircle cx='31' cy='43' r='1'/%3E%3Ccircle cx='37' cy='49' r='1'/%3E%3Ccircle cx='43' cy='55' r='1'/%3E%3Ccircle cx='49' cy='1' r='1'/%3E%3Ccircle cx='55' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  --paper-texture-dark: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.08'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3Ccircle cx='13' cy='13' r='1'/%3E%3Ccircle cx='19' cy='19' r='1'/%3E%3Ccircle cx='25' cy='25' r='1'/%3E%3Ccircle cx='31' cy='31' r='1'/%3E%3Ccircle cx='37' cy='37' r='1'/%3E%3Ccircle cx='43' cy='43' r='1'/%3E%3Ccircle cx='49' cy='49' r='1'/%3E%3Ccircle cx='55' cy='55' r='1'/%3E%3Ccircle cx='1' cy='13' r='1'/%3E%3Ccircle cx='7' cy='19' r='1'/%3E%3Ccircle cx='13' cy='25' r='1'/%3E%3Ccircle cx='19' cy='31' r='1'/%3E%3Ccircle cx='25' cy='37' r='1'/%3E%3Ccircle cx='31' cy='43' r='1'/%3E%3Ccircle cx='37' cy='49' r='1'/%3E%3Ccircle cx='43' cy='55' r='1'/%3E%3Ccircle cx='49' cy='1' r='1'/%3E%3Ccircle cx='55' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  --paper-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23F5E5C3' fill-opacity='0.03'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3Ccircle cx='13' cy='13' r='1'/%3E%3Ccircle cx='19' cy='19' r='1'/%3E%3Ccircle cx='25' cy='25' r='1'/%3E%3Ccircle cx='31' cy='31' r='1'/%3E%3Ccircle cx='37' cy='37' r='1'/%3E%3Ccircle cx='43' cy='43' r='1'/%3E%3Ccircle cx='49' cy='49' r='1'/%3E%3Ccircle cx='55' cy='55' r='1'/%3E%3Ccircle cx='1' cy='13' r='1'/%3E%3Ccircle cx='7' cy='19' r='1'/%3E%3Ccircle cx='13' cy='25' r='1'/%3E%3Ccircle cx='19' cy='31' r='1'/%3E%3Ccircle cx='25' cy='37' r='1'/%3E%3Ccircle cx='31' cy='43' r='1'/%3E%3Ccircle cx='37' cy='49' r='1'/%3E%3Ccircle cx='43' cy='55' r='1'/%3E%3Ccircle cx='49' cy='1' r='1'/%3E%3Ccircle cx='55' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  --paper-texture-dark: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23121212' fill-opacity='0.08'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3Ccircle cx='13' cy='13' r='1'/%3E%3Ccircle cx='19' cy='19' r='1'/%3E%3Ccircle cx='25' cy='25' r='1'/%3E%3Ccircle cx='31' cy='31' r='1'/%3E%3Ccircle cx='37' cy='37' r='1'/%3E%3Ccircle cx='43' cy='43' r='1'/%3E%3Ccircle cx='49' cy='49' r='1'/%3E%3Ccircle cx='55' cy='55' r='1'/%3E%3Ccircle cx='1' cy='13' r='1'/%3E%3Ccircle cx='7' cy='19' r='1'/%3E%3Ccircle cx='13' cy='25' r='1'/%3E%3Ccircle cx='19' cy='31' r='1'/%3E%3Ccircle cx='25' cy='37' r='1'/%3E%3Ccircle cx='31' cy='43' r='1'/%3E%3Ccircle cx='37' cy='49' r='1'/%3E%3Ccircle cx='43' cy='55' r='1'/%3E%3Ccircle cx='49' cy='1' r='1'/%3E%3Ccircle cx='55' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  
+  /* Brand Color Variables */
+  --brand-navy: #2C365E;
+  --brand-charcoal: #121212;
+  --brand-orange: #D65F27;
+  --brand-cream: #F5E5C3;
+  --brand-pale-yellow: #FFE19D;
+  --brand-shadow-blue: #1A202C;
+  --brand-purple: #6B5589;
+  --brand-rusty-red: #B0413E;
 }
 
 @layer base {
@@ -27,12 +37,14 @@
   }
   
   body {
-    @apply bg-slate-950 text-slate-100 min-h-screen;
+    @apply min-h-screen;
     font-family: 'Quicksand', system-ui, sans-serif;
+    background: var(--brand-charcoal);
+    color: var(--brand-cream);
     background-image: 
       var(--paper-texture),
-      radial-gradient(circle at 10% 90%, rgba(255, 86, 48, 0.1) 0%, transparent 40%),
-      radial-gradient(circle at 90% 10%, rgba(59, 130, 246, 0.08) 0%, transparent 40%);
+      radial-gradient(circle at 10% 90%, rgba(214, 95, 39, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 90% 10%, rgba(44, 54, 94, 0.08) 0%, transparent 40%);
     background-attachment: fixed;
   }
   
@@ -48,7 +60,7 @@
   /* Default text elements use Quicksand */
   p, span, div, li, td, th, label, input, textarea {
     font-family: 'Quicksand', system-ui, sans-serif;
-    text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
   }
   
   /* Supabase Auth UI Customization */
@@ -57,28 +69,56 @@
   }
   
   .supabase-auth-ui__button {
-    @apply bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-md transition-colors !important;
+    background: var(--brand-orange) !important;
+    color: var(--brand-cream) !important;
     font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif !important;
     background-image: var(--paper-texture) !important;
+    border: none !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 0.375rem !important;
+    font-weight: 500 !important;
+    transition: all 0.2s !important;
+    box-shadow: 0 2px 4px rgba(18, 18, 18, 0.3) !important;
+  }
+  
+  .supabase-auth-ui__button:hover {
+    background: #B8501F !important;
+    box-shadow: 0 4px 8px rgba(18, 18, 18, 0.4) !important;
   }
   
   .supabase-auth-ui__input {
-    @apply bg-slate-800/50 border border-slate-700 text-white rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all !important;
+    background: rgba(44, 54, 94, 0.3) !important;
+    border: 1px solid rgba(107, 85, 137, 0.5) !important;
+    color: var(--brand-cream) !important;
+    border-radius: 0.375rem !important;
+    padding: 0.5rem 0.75rem !important;
+    width: 100% !important;
     font-family: 'Quicksand', system-ui, sans-serif !important;
     background-image: var(--paper-texture-dark) !important;
+    transition: all 0.2s !important;
+  }
+  
+  .supabase-auth-ui__input:focus {
+    outline: none !important;
+    border-color: var(--brand-orange) !important;
+    box-shadow: 0 0 0 2px rgba(214, 95, 39, 0.2) !important;
   }
   
   .supabase-auth-ui__label {
-    @apply text-slate-300 font-medium mb-1 block !important;
+    color: var(--brand-cream) !important;
+    font-weight: 500 !important;
+    margin-bottom: 0.25rem !important;
+    display: block !important;
     font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif !important;
-    text-shadow: 0 0 1px rgba(0, 0, 0, 0.2) !important;
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.4) !important;
   }
   
   /* Apply custom font to all headers and important UI elements */
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-bold tracking-tight;
     font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    color: var(--brand-cream);
+    text-shadow: 0 2px 4px rgba(18, 18, 18, 0.5);
   }
   
   /* Apply to navigation and button elements */
@@ -118,18 +158,40 @@
     @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
     background-image: var(--paper-texture);
+    color: var(--brand-cream);
   }
   
   .btn-primary {
-    @apply bg-orange-500 text-white hover:bg-orange-600 focus-visible:ring-orange-500;
+    background: var(--brand-orange);
+    color: var(--brand-cream);
+    box-shadow: 0 2px 4px rgba(18, 18, 18, 0.3);
+  }
+  
+  .btn-primary:hover {
+    background: #B8501F;
+    box-shadow: 0 4px 8px rgba(18, 18, 18, 0.4);
   }
   
   .btn-secondary {
-    @apply bg-slate-800 text-slate-100 hover:bg-slate-700 focus-visible:ring-slate-500;
+    background: var(--brand-navy);
+    color: var(--brand-cream);
+    box-shadow: 0 2px 4px rgba(18, 18, 18, 0.3);
+  }
+  
+  .btn-secondary:hover {
+    background: #243050;
+    box-shadow: 0 4px 8px rgba(18, 18, 18, 0.4);
   }
   
   .btn-outline {
-    @apply border border-slate-700 bg-transparent hover:bg-slate-800 focus-visible:ring-slate-500;
+    border: 1px solid var(--brand-purple);
+    background: transparent;
+    color: var(--brand-cream);
+  }
+  
+  .btn-outline:hover {
+    background: rgba(107, 85, 137, 0.2);
+    border-color: var(--brand-orange);
   }
   
   .btn-lg {
@@ -137,40 +199,51 @@
   }
   
   .card {
-    @apply rounded-lg border border-slate-800 bg-slate-900/70 backdrop-blur-sm shadow-md overflow-hidden;
+    @apply rounded-lg border overflow-hidden;
+    border-color: rgba(107, 85, 137, 0.3);
+    background: rgba(44, 54, 94, 0.4);
+    backdrop-filter: blur(8px);
     background-image: var(--paper-texture-dark);
+    box-shadow: 0 4px 6px rgba(18, 18, 18, 0.4);
   }
   
   /* Game-style elements */
   .game-card {
-    @apply relative overflow-hidden rounded-xl border-2 border-slate-700/50 bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm;
+    @apply relative overflow-hidden rounded-xl;
+    border: 2px solid rgba(107, 85, 137, 0.4);
+    background: linear-gradient(135deg, rgba(44, 54, 94, 0.6) 0%, rgba(26, 32, 44, 0.8) 100%);
+    backdrop-filter: blur(8px);
     background-image: var(--paper-texture-dark);
     box-shadow: 
-      0 4px 6px -1px rgba(0, 0, 0, 0.3),
-      0 2px 4px -1px rgba(0, 0, 0, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      0 4px 6px rgba(18, 18, 18, 0.5),
+      0 2px 4px rgba(18, 18, 18, 0.3),
+      inset 0 1px 0 rgba(245, 229, 195, 0.1);
   }
   
   .game-button {
-    @apply relative overflow-hidden rounded-lg px-6 py-3 font-bold text-white transition-all duration-200 transform hover:scale-105 active:scale-95;
-    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    @apply relative overflow-hidden rounded-lg px-6 py-3 font-bold transition-all duration-200 transform hover:scale-105 active:scale-95;
+    background: linear-gradient(135deg, var(--brand-orange) 0%, #B8501F 100%);
+    color: var(--brand-cream);
     background-image: var(--paper-texture);
     box-shadow: 
-      0 4px 15px rgba(249, 115, 22, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      0 4px 15px rgba(214, 95, 39, 0.4),
+      inset 0 1px 0 rgba(245, 229, 195, 0.2);
+    text-shadow: 0 1px 2px rgba(18, 18, 18, 0.5);
+    font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
   }
   
   .game-button:hover {
     box-shadow: 
-      0 6px 20px rgba(249, 115, 22, 0.6),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      0 6px 20px rgba(214, 95, 39, 0.6),
+      inset 0 1px 0 rgba(245, 229, 195, 0.2);
   }
   
   .game-stat {
-    @apply bg-gradient-to-br from-slate-700/50 to-slate-800/50 rounded-lg p-4 border border-slate-600/30;
+    background: linear-gradient(135deg, rgba(107, 85, 137, 0.3) 0%, rgba(44, 54, 94, 0.4) 100%);
+    @apply rounded-lg p-4;
+    border: 1px solid rgba(107, 85, 137, 0.2);
     background-image: var(--paper-texture-dark);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 1px 2px rgba(18, 18, 18, 0.3);
   }
   
   /* Custom font for key UI elements */
@@ -185,16 +258,26 @@
   
   /* Game-style text effects */
   .game-title {
-    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%);
+    background: linear-gradient(135deg, var(--brand-cream) 0%, #E8D5B7 50%, #D4C4A8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 4px 8px rgba(18, 18, 18, 0.5);
   }
   
   .game-subtitle {
-    color: #f97316;
-    text-shadow: 0 2px 4px rgba(249, 115, 22, 0.3);
+    color: var(--brand-orange);
+    text-shadow: 0 2px 4px rgba(214, 95, 39, 0.5);
+  }
+  
+  /* Glowing effects using pale yellow */
+  .glow-effect {
+    box-shadow: 0 0 20px rgba(255, 225, 157, 0.3);
+  }
+  
+  .glow-text {
+    color: var(--brand-pale-yellow);
+    text-shadow: 0 0 10px rgba(255, 225, 157, 0.5);
   }
 }
 
@@ -234,10 +317,10 @@
 
 @keyframes glowPulse {
   0%, 100% { 
-    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+    box-shadow: 0 0 20px rgba(214, 95, 39, 0.3);
   }
   50% { 
-    box-shadow: 0 0 30px rgba(249, 115, 22, 0.6);
+    box-shadow: 0 0 30px rgba(214, 95, 39, 0.6);
   }
 }
 
@@ -254,4 +337,47 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Ambient glow effects for focal points */
+.ambient-glow {
+  position: relative;
+}
+
+.ambient-glow::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--brand-pale-yellow), var(--brand-orange));
+  border-radius: inherit;
+  z-index: -1;
+  filter: blur(8px);
+  opacity: 0.3;
+}
+
+/* Deep shadow effects */
+.deep-shadow {
+  box-shadow: 
+    0 10px 25px rgba(18, 18, 18, 0.6),
+    0 6px 12px rgba(26, 32, 44, 0.4);
+}
+
+/* Grunge texture overlay */
+.grunge-overlay {
+  position: relative;
+}
+
+.grunge-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: var(--paper-texture-dark);
+  opacity: 0.1;
+  pointer-events: none;
 }
