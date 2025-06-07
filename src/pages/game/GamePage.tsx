@@ -43,7 +43,7 @@ const GamePage = () => {
   useEffect(() => {
     const fetchGameState = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/game/${id}`, {
+        const response = await fetch(`/api/game/${id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },
@@ -86,7 +86,7 @@ const GamePage = () => {
   
   const handleAction = async (actionType: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/game/${id}/action`, {
+      const response = await fetch(`/api/game/${id}/action`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

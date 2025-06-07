@@ -20,8 +20,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Only connect when user is authenticated
     if (user) {
-      // Create socket connection
-      const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
+      // Create socket connection using relative path (will be proxied by Vite)
+      const newSocket = io('/', {
         auth: {
           userId: user.id,
         },

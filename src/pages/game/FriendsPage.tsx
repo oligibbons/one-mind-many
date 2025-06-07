@@ -51,7 +51,7 @@ const FriendsPage = () => {
   
   const fetchFriends = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends`, {
+      const response = await fetch('/api/friends', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -69,7 +69,7 @@ const FriendsPage = () => {
   
   const fetchRequests = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends/requests`, {
+      const response = await fetch('/api/friends/requests', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -89,7 +89,7 @@ const FriendsPage = () => {
   
   const sendFriendRequest = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends/request`, {
+      const response = await fetch('/api/friends/request', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -112,7 +112,7 @@ const FriendsPage = () => {
   
   const handleRequest = async (requestId: string, action: 'accept' | 'reject') => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends/request/${requestId}/${action}`, {
+      const response = await fetch(`/api/friends/request/${requestId}/${action}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -131,7 +131,7 @@ const FriendsPage = () => {
   
   const removeFriend = async (friendId: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/friends/${friendId}`, {
+      const response = await fetch(`/api/friends/${friendId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
