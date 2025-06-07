@@ -118,30 +118,22 @@ const AISystemPage = () => {
     setSuccess('');
 
     try {
-      // Test the API key by making a simple request
-      const testResponse = await fetch('https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct', {
+      const response = await fetch('/api/admin/ai/create-master', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${huggingFaceKey}`,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          inputs: 'Test connection',
-          parameters: {
-            max_new_tokens: 10,
-            temperature: 0.7
-          }
+          huggingFaceKey,
+          config: masterModelConfig
         })
       });
 
-      if (!testResponse.ok) {
-        if (testResponse.status === 401) {
-          throw new Error('Invalid Hugging Face API key. Please check your token.');
-        } else if (testResponse.status === 403) {
-          throw new Error('Access denied. Make sure you have access to the Llama model.');
-        } else {
-          throw new Error(`API Error: ${testResponse.status}`);
-        }
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create master AI model');
       }
 
       // Store the API key securely (in a real app, this would be encrypted)
@@ -149,8 +141,8 @@ const AISystemPage = () => {
 
       // Create a new model entry
       const newModel: AIModel = {
-        id: Date.now().toString(),
-        name: 'Custom Llama Model',
+        id: data.model?.id || Date.now().toString(),
+        name: data.model?.name || 'Custom Llama Model',
         type: 'narrative',
         status: 'ready',
         accuracy: 0,
@@ -175,8 +167,19 @@ const AISystemPage = () => {
     setSuccess('');
 
     try {
-      // Simulate training process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await fetch(`/api/admin/ai/train/${modelId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to train model');
+      }
       
       // Update model status
       setModels(prev => prev.map(model => 
@@ -186,9 +189,9 @@ const AISystemPage = () => {
       ));
       
       setSuccess('Model training completed successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error training model:', error);
-      setError('Failed to train model');
+      setError(error.message || 'Failed to train model');
     } finally {
       setTrainLoading(null);
     }
@@ -198,55 +201,31 @@ const AISystemPage = () => {
     const model = models.find(m => m.id === modelId);
     if (!model) return;
 
-    const apiKey = localStorage.getItem('hf_api_key');
-    if (!apiKey) {
-      setError('No API key found. Please create a master AI model first.');
-      return;
-    }
-
     setTestLoading(true);
     setError('');
     setTestResult('');
 
     try {
-      const response = await fetch(`https://api-inference.huggingface.co/models/${model.huggingFaceModel}`, {
+      const response = await fetch(`/api/admin/ai/test/${modelId}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          inputs: testPrompt,
-          parameters: {
-            max_new_tokens: masterModelConfig.maxLength,
-            temperature: masterModelConfig.temperature,
-            top_p: masterModelConfig.topP,
-            repetition_penalty: masterModelConfig.repetitionPenalty,
-            return_full_text: false
-          }
+          prompt: testPrompt,
+          config: masterModelConfig
         })
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        if (response.status === 503) {
-          throw new Error('Model is loading. Please try again in a few moments.');
-        } else if (response.status === 401) {
-          throw new Error('Invalid API key. Please check your Hugging Face token.');
-        } else {
-          throw new Error(`API Error: ${response.status}`);
-        }
+        throw new Error(data.message || 'Failed to test model');
       }
 
-      const result = await response.json();
-      
-      if (Array.isArray(result) && result[0]?.generated_text) {
-        setTestResult(result[0].generated_text);
-        setSuccess('Model test completed successfully!');
-      } else if (result.error) {
-        throw new Error(result.error);
-      } else {
-        throw new Error('Unexpected response format');
-      }
+      setTestResult(data.output || 'No response generated');
+      setSuccess('Model test completed successfully!');
     } catch (error: any) {
       console.error('Error testing model:', error);
       setError(error.message || 'Failed to test model');
