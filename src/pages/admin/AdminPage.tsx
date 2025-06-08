@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, GamepadIcon, Settings, BarChart3, Shield, Brain, FileText, Activity } from 'lucide-react';
+import { Users, GamepadIcon, Settings, BarChart3, Shield, Brain, FileText, Activity, Gavel } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -195,7 +195,7 @@ const AdminPage = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white">Content Management</h3>
-                <p className="text-slate-400 text-sm">Manage game content, assets, and resources</p>
+                <p className="text-slate-400 text-sm">Manage website content, pages, and navigation</p>
               </div>
             </div>
           </Card>
@@ -210,6 +210,20 @@ const AdminPage = () => {
               <div>
                 <h3 className="text-lg font-semibold text-white">AI System</h3>
                 <p className="text-slate-400 text-sm">Configure AI models and narrative generation</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
+
+        <Link to="/admin/rules">
+          <Card variant="interactive" className="p-6 h-full">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-red-500/20 rounded-lg">
+                <Gavel className="w-8 h-8 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Rules Management</h3>
+                <p className="text-slate-400 text-sm">Configure and manage game rules</p>
               </div>
             </div>
           </Card>
