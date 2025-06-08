@@ -12,7 +12,9 @@ import characterRoutes from './routes/character.js';
 import actionRoutes from './routes/action.js';
 import narrativeRoutes from './routes/narrative.js';
 import adminRoutes from './routes/admin.js';
+import rulesRoutes from './routes/rules.js';
 import { authenticateJWT, isAdmin } from './middleware/auth.js';
+import { validateActionMiddleware, validateGameStateMiddleware } from './middleware/rulesValidation.js';
 
 // Load environment variables
 dotenv.config();
@@ -41,6 +43,7 @@ app.use('/api/character', authenticateJWT, characterRoutes);
 app.use('/api/action', authenticateJWT, actionRoutes);
 app.use('/api/narrative', authenticateJWT, narrativeRoutes);
 app.use('/api/admin', authenticateJWT, isAdmin, adminRoutes);
+app.use('/api/rules', authenticateJWT, rulesRoutes);
 
 // Create HTTP server
 const server = createServer(app);
@@ -141,6 +144,15 @@ io.on('connection', (socket) => {
     io.to(data.roomId).emit('chat:message', {
       userId: socket.userId,
       message: data.message,
+      timestamp: new Date(),
+    });
+  });
+
+  // Handle pause requests
+  socket.on('pause:request', (data) => {
+    io.to(`game:${data.gameId}`).emit('pause:requested', {
+      userId: socket.userId,
+      count: 1, // This would be calculated based on actual pause requests
       timestamp: new Date(),
     });
   });

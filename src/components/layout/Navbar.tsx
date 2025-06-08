@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, LogOut } from 'lucide-react';
+import { Menu, X, User, LogOut, Book } from 'lucide-react';
 import Logo from '../ui/Logo';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../ui/Button';
@@ -16,6 +16,7 @@ const Navbar = () => {
 
   const navLinks = [
     { name: 'Home', path: '/' },
+    { name: 'How to Play', path: '/how-to-play' },
     ...(user 
       ? [
           { name: 'Play', path: '/game' },

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import Logo from '../ui/Logo';
 import { motion } from 'framer-motion';
-import { Github, Twitter } from 'lucide-react';
+import { Github, Twitter, Book } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -13,6 +13,7 @@ const Footer = () => {
   
   const footerLinks = [
     { name: 'Home', href: '/' },
+    { name: 'How to Play', href: '/how-to-play' },
     { name: 'About', href: '/about' },
     { name: 'Privacy', href: '/privacy' },
     { name: 'Terms', href: '/terms' },
@@ -44,8 +45,9 @@ const Footer = () => {
                 <li key={link.name}>
                   <Link 
                     to={link.href}
-                    className="text-slate-400 hover:text-orange-500 transition-colors text-sm"
+                    className="text-slate-400 hover:text-orange-500 transition-colors text-sm flex items-center"
                   >
+                    {link.name === 'How to Play' && <Book size={16} className="mr-2" />}
                     {link.name}
                   </Link>
                 </li>

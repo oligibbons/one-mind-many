@@ -8,6 +8,7 @@ import AuthLayout from './layouts/AuthLayout';
 
 // Pages
 import HomePage from './pages/HomePage';
+import HowToPlayPage from './pages/HowToPlayPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import MainMenuPage from './pages/game/MainMenuPage';
@@ -21,6 +22,7 @@ import AdminPage from './pages/admin/AdminPage';
 import AISystemPage from './pages/admin/AISystemPage';
 import ScenarioManagementPage from './pages/admin/ScenarioManagementPage';
 import ContentManagementPage from './pages/admin/ContentManagementPage';
+import RulesManagementPage from './pages/admin/RulesManagementPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Hooks and Contexts
@@ -53,6 +55,7 @@ function App() {
         {/* Public routes */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="how-to-play" element={<HowToPlayPage />} />
         </Route>
         
         {/* Auth routes */}
@@ -86,6 +89,7 @@ function App() {
           <Route path="ai" element={<AISystemPage />} />
           <Route path="scenarios" element={<ScenarioManagementPage />} />
           <Route path="content" element={<ContentManagementPage />} />
+          <Route path="rules" element={<RulesManagementPage />} />
         </Route>
         
         {/* 404 route */}

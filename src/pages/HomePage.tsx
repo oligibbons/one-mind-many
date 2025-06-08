@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Play, Users, Brain, Zap, Trophy, Star, ArrowRight } from 'lucide-react';
+import { Play, Users, Brain, Zap, Trophy, Star, ArrowRight, Book } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
 
@@ -104,10 +104,10 @@ const HomePage = () => {
                 </button>
               </Link>
               
-              <Link to="/game/scenarios">
+              <Link to="/how-to-play">
                 <button className="game-button bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-lg px-8 py-4">
-                  <Brain className="w-6 h-6 mr-2" />
-                  View Scenarios
+                  <Book className="w-6 h-6 mr-2" />
+                  How to Play
                 </button>
               </Link>
             </motion.div>
@@ -213,13 +213,12 @@ const HomePage = () => {
                         {user ? "Find Game" : "Join Now"}
                       </button>
                     </Link>
-                    {!user && (
-                      <Link to="/auth/login">
-                        <button className="game-button bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 w-full sm:w-auto">
-                          Already Playing?
-                        </button>
-                      </Link>
-                    )}
+                    <Link to="/how-to-play">
+                      <button className="game-button bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 w-full sm:w-auto">
+                        <Book className="w-5 h-5 mr-2" />
+                        Learn Rules
+                      </button>
+                    </Link>
                   </div>
                 </div>
                 
