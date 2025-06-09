@@ -1,417 +1,524 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Save, Upload, Download, Eye, Edit, Trash2, Plus, 
-  Globe, Layout, Palette, Type, Image, Navigation,
-  Code, Settings, Monitor, Smartphone, Tablet,
-  ChevronDown, ChevronRight, FileText, Link as LinkIcon,
-  Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  List, ListOrdered, Quote, Heading1, Heading2, Heading3,
-  Undo, Redo, Search, Target, BarChart3, TrendingUp,
-  ExternalLink, Hash, Calendar, User, Tag, Zap
+  Save, Eye, Code, Smartphone, Tablet, Monitor, Search, Settings, 
+  Plus, Edit, Trash2, Image, Video, Type, Link, Bold, Italic, 
+  Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight,
+  Heading1, Heading2, Heading3, Quote, Code2, Palette, Globe,
+  FileText, Navigation, Layout, Zap, Users, Shield, Book, Home,
+  Play, UserPlus, MessageSquare, Star, Target, Brain, Trophy,
+  ChevronDown, ChevronRight, Upload, Download, Copy, ExternalLink,
+  BarChart3, TrendingUp, Activity, Clock, Tag, Hash, Layers,
+  MousePointer, Maximize2, RotateCcw, RefreshCw, Check, X,
+  AlertTriangle, Info, HelpCircle, Lightbulb, Sparkles
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
-interface Page {
+interface PageContent {
   id: string;
-  name: string;
-  path: string;
   title: string;
-  description: string;
+  slug: string;
   content: any;
-  htmlContent: string;
-  isPublic: boolean;
-  inNavigation: boolean;
-  navOrder: number;
-  template: string;
-  seoSettings: {
-    metaTitle: string;
-    metaDescription: string;
+  seo: {
+    title: string;
+    description: string;
     keywords: string[];
     ogImage: string;
-    ogTitle: string;
-    ogDescription: string;
-    twitterCard: string;
-    canonicalUrl: string;
+    canonical: string;
     robots: string;
-    structuredData: string;
+    structuredData: any;
   };
-  customCSS: string;
-  customJS: string;
-  publishedAt?: string;
+  status: 'draft' | 'published' | 'scheduled';
   lastModified: string;
   author: string;
-  status: 'draft' | 'published' | 'scheduled';
   featuredImage?: string;
   excerpt?: string;
-  readingTime?: number;
-}
-
-interface NavigationItem {
-  id: string;
-  name: string;
-  path: string;
-  icon?: string;
-  order: number;
-  isVisible: boolean;
-  children?: NavigationItem[];
+  customCSS?: string;
+  customJS?: string;
 }
 
 interface SiteSettings {
   siteName: string;
   siteDescription: string;
-  logo: string;
-  favicon: string;
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
-  fontFamily: string;
+  siteUrl: string;
+  defaultFont: string;
   headingFont: string;
   bodyFont: string;
-  customCSS: string;
-  customJS: string;
-  socialLinks: {
-    twitter: string;
-    github: string;
-    discord: string;
+  primaryColor: string;
+  secondaryColor: string;
+  logo: string;
+  favicon: string;
+  googleAnalytics: string;
+  googleSearchConsole: string;
+  bingWebmaster: string;
+  yandexWebmaster: string;
+  facebookPixel: string;
+  twitterSite: string;
+  socialMedia: {
     facebook: string;
+    twitter: string;
     instagram: string;
     linkedin: string;
-  };
-  analytics: {
-    googleAnalytics: string;
-    googleTagManager: string;
-    facebookPixel: string;
-  };
-  seo: {
-    defaultTitle: string;
-    defaultDescription: string;
-    defaultKeywords: string[];
-    siteVerification: {
-      google: string;
-      bing: string;
-      yandex: string;
-    };
+    youtube: string;
+    github: string;
   };
 }
 
-interface SEOAnalysis {
-  score: number;
-  issues: Array<{
-    type: 'error' | 'warning' | 'info';
-    message: string;
-    suggestion: string;
-  }>;
-  keywords: Array<{
-    keyword: string;
-    density: number;
-    count: number;
-  }>;
-  readability: {
-    score: number;
-    level: string;
-    avgWordsPerSentence: number;
-    avgSentencesPerParagraph: number;
-  };
+interface NavigationItem {
+  id: string;
+  label: string;
+  path: string;
+  icon?: string;
+  children?: NavigationItem[];
+  visible: boolean;
+  order: number;
+  target?: '_blank' | '_self';
 }
 
 const ContentManagementPage = () => {
   const [activeTab, setActiveTab] = useState('pages');
-  const [pages, setPages] = useState<Page[]>([]);
-  const [navigation, setNavigation] = useState<NavigationItem[]>([]);
-  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
-  const [selectedPage, setSelectedPage] = useState<Page | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [showPageEditor, setShowPageEditor] = useState(false);
+  const [selectedPage, setSelectedPage] = useState<string | null>(null);
   const [editMode, setEditMode] = useState<'visual' | 'html'>('visual');
-  const [expandedSections, setExpandedSections] = useState<string[]>(['general']);
-  const [seoAnalysis, setSeoAnalysis] = useState<SEOAnalysis | null>(null);
-  const [selectedText, setSelectedText] = useState('');
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showSEOAnalysis, setShowSEOAnalysis] = useState(false);
+
+  // All available pages on the site
+  const [allPages] = useState<PageContent[]>([
+    {
+      id: 'home',
+      title: 'Home Page',
+      slug: '/',
+      content: {
+        hero: {
+          title: 'One Mind, Many',
+          subtitle: 'The ultimate social deduction experience',
+          description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit.',
+          backgroundImage: '/OneMindMay Logo - long.png',
+          ctaText: 'Start Playing',
+          ctaLink: '/auth/register',
+          secondaryCtaText: 'How to Play',
+          secondaryCtaLink: '/how-to-play'
+        },
+        features: [
+          {
+            icon: 'Brain',
+            title: 'AI Scenarios',
+            description: 'Dynamic stories that adapt to your choices'
+          },
+          {
+            icon: 'Users',
+            title: 'Social Deduction',
+            description: 'Trust no one, suspect everyone'
+          },
+          {
+            icon: 'Zap',
+            title: 'Real-time Action',
+            description: 'Every decision matters instantly'
+          }
+        ],
+        stats: [
+          { label: 'Active Players', value: '12,847', icon: 'Users' },
+          { label: 'Games Played', value: '89,234', icon: 'Play' },
+          { label: 'Success Rate', value: '67%', icon: 'Trophy' }
+        ]
+      },
+      seo: {
+        title: 'One Mind, Many - Ultimate Social Deduction Game',
+        description: 'Experience the ultimate social deduction game with AI-driven scenarios. Trust no one, suspect everyone in this gripping multiplayer experience.',
+        keywords: ['social deduction', 'multiplayer game', 'AI scenarios', 'strategy game', 'online game'],
+        ogImage: '/OneMindMay Logo - long.png',
+        canonical: 'https://onemindmany.com/',
+        robots: 'index, follow',
+        structuredData: {
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'One Mind, Many',
+          description: 'Ultimate social deduction game with AI-driven scenarios'
+        }
+      },
+      status: 'published',
+      lastModified: new Date().toISOString(),
+      author: 'Admin'
+    },
+    {
+      id: 'how-to-play',
+      title: 'How to Play',
+      slug: '/how-to-play',
+      content: {
+        sections: [
+          {
+            id: 'overview',
+            title: 'Game Overview',
+            content: 'In One Mind, Many, deception meets strategy in a gripping social deduction game...'
+          },
+          {
+            id: 'roles',
+            title: 'Player Roles',
+            content: 'There are 3 specific roles in One Mind, Many...'
+          }
+        ]
+      },
+      seo: {
+        title: 'How to Play One Mind, Many - Complete Rules Guide',
+        description: 'Learn how to play One Mind, Many with our comprehensive rules guide. Master the art of deception and strategy.',
+        keywords: ['how to play', 'rules', 'game guide', 'tutorial', 'strategy'],
+        ogImage: '/OneMindMay Logo - long.png',
+        canonical: 'https://onemindmany.com/how-to-play',
+        robots: 'index, follow',
+        structuredData: {}
+      },
+      status: 'published',
+      lastModified: new Date().toISOString(),
+      author: 'Admin'
+    },
+    {
+      id: 'auth-login',
+      title: 'Login Page',
+      slug: '/auth/login',
+      content: {
+        title: 'Welcome Back',
+        subtitle: 'Sign in to continue to One Mind, Many',
+        backgroundImage: '',
+        showSocialLogin: false,
+        forgotPasswordLink: true
+      },
+      seo: {
+        title: 'Login - One Mind, Many',
+        description: 'Sign in to your One Mind, Many account to continue playing.',
+        keywords: ['login', 'sign in', 'account'],
+        ogImage: '',
+        canonical: 'https://onemindmany.com/auth/login',
+        robots: 'noindex, nofollow',
+        structuredData: {}
+      },
+      status: 'published',
+      lastModified: new Date().toISOString(),
+      author: 'Admin'
+    },
+    {
+      id: 'auth-register',
+      title: 'Register Page',
+      slug: '/auth/register',
+      content: {
+        title: 'Create Account',
+        subtitle: 'Join One Mind, Many to start playing',
+        backgroundImage: '',
+        showSocialLogin: false,
+        termsLink: '/terms',
+        privacyLink: '/privacy'
+      },
+      seo: {
+        title: 'Create Account - One Mind, Many',
+        description: 'Create your One Mind, Many account and start playing today.',
+        keywords: ['register', 'sign up', 'create account', 'join'],
+        ogImage: '',
+        canonical: 'https://onemindmany.com/auth/register',
+        robots: 'index, follow',
+        structuredData: {}
+      },
+      status: 'published',
+      lastModified: new Date().toISOString(),
+      author: 'Admin'
+    },
+    {
+      id: 'game-menu',
+      title: 'Game Main Menu',
+      slug: '/game',
+      content: {
+        welcomeMessage: 'Welcome, {username}',
+        subtitle: 'What would you like to do today?',
+        menuItems: [
+          { title: 'Play', description: 'Join or create a game lobby', path: '/game/play', icon: 'Play' },
+          { title: 'Scenarios', description: 'Browse available game scenarios', path: '/game/scenarios', icon: 'BookOpen' },
+          { title: 'Friends', description: 'Manage your friends list', path: '/game/friends', icon: 'Users' },
+          { title: 'Settings', description: 'Configure game preferences', path: '/game/settings', icon: 'Settings' }
+        ]
+      },
+      seo: {
+        title: 'Game Menu - One Mind, Many',
+        description: 'Access all game features from the main menu.',
+        keywords: ['game menu', 'dashboard', 'play'],
+        ogImage: '',
+        canonical: 'https://onemindmany.com/game',
+        robots: 'noindex, nofollow',
+        structuredData: {}
+      },
+      status: 'published',
+      lastModified: new Date().toISOString(),
+      author: 'Admin'
+    },
+    {
+      id: 'game-play',
+      title: 'Game Lobbies',
+      slug: '/game/play',
+      content: {
+        title: 'Game Lobbies',
+        subtitle: 'Join an existing game or create your own',
+        createButtonText: 'Create Lobby',
+        quickJoinButtonText: 'Quick Join',
+        searchPlaceholder: 'Search lobbies...'
+      },
+      seo: {
+        title: 'Game Lobbies - One Mind, Many',
+        description: 'Join or create game lobbies to start playing.',
+        keywords: ['lobbies', 'multiplayer', 'join game'],
+        ogImage: '',
+        canonical: 'https://onemindmany.com/game/play',
+        robots: 'noindex, nofollow',
+        structuredData: {}
+      },
+      status: 'published',
+      lastModified: new Date().toISOString(),
+      author: 'Admin'
+    },
+    {
+      id: 'game-scenarios',
+      title: 'Game Scenarios',
+      slug: '/game/scenarios',
+      content: {
+        title: 'Game Scenarios',
+        subtitle: 'Browse and manage available game scenarios',
+        createButtonText: 'Create Scenario',
+        searchPlaceholder: 'Search scenarios...'
+      },
+      seo: {
+        title: 'Game Scenarios - One Mind, Many',
+        description: 'Browse available game scenarios and create your own.',
+        keywords: ['scenarios', 'game modes', 'content'],
+        ogImage: '',
+        canonical: 'https://onemindmany.com/game/scenarios',
+        robots: 'noindex, nofollow',
+        structuredData: {}
+      },
+      status: 'published',
+      lastModified: new Date().toISOString(),
+      author: 'Admin'
+    },
+    {
+      id: 'game-friends',
+      title: 'Friends',
+      slug: '/game/friends',
+      content: {
+        title: 'Friends',
+        subtitle: 'Manage your friends and friend requests',
+        addFriendPlaceholder: 'Add friend by username...',
+        addFriendButtonText: 'Add Friend',
+        searchPlaceholder: 'Search friends...'
+      },
+      seo: {
+        title: 'Friends - One Mind, Many',
+        description: 'Manage your friends list and send friend requests.',
+        keywords: ['friends', 'social', 'multiplayer'],
+        ogImage: '',
+        canonical: 'https://onemindmany.com/game/friends',
+        robots: 'noindex, nofollow',
+        structuredData: {}
+      },
+      status: 'published',
+      lastModified: new Date().toISOString(),
+      author: 'Admin'
+    },
+    {
+      id: 'game-settings',
+      title: 'Game Settings',
+      slug: '/game/settings',
+      content: {
+        title: 'Settings',
+        subtitle: 'Customize your game experience',
+        sections: [
+          { title: 'Display', icon: 'Monitor' },
+          { title: 'Audio', icon: 'Volume2' },
+          { title: 'Notifications', icon: 'Bell' },
+          { title: 'Account Information', icon: 'User' }
+        ]
+      },
+      seo: {
+        title: 'Settings - One Mind, Many',
+        description: 'Customize your game settings and preferences.',
+        keywords: ['settings', 'preferences', 'configuration'],
+        ogImage: '',
+        canonical: 'https://onemindmany.com/game/settings',
+        robots: 'noindex, nofollow',
+        structuredData: {}
+      },
+      status: 'published',
+      lastModified: new Date().toISOString(),
+      author: 'Admin'
+    }
+  ]);
+
+  const [pages, setPages] = useState<PageContent[]>(allPages);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>({
+    siteName: 'One Mind, Many',
+    siteDescription: 'The ultimate social deduction game with AI-driven scenarios',
+    siteUrl: 'https://onemindmany.com',
+    defaultFont: 'Quicksand',
+    headingFont: 'CustomHeading',
+    bodyFont: 'Quicksand',
+    primaryColor: '#D65F27',
+    secondaryColor: '#2C365E',
+    logo: '/OneMindMay Logo - long.png',
+    favicon: '/favicon.svg',
+    googleAnalytics: '',
+    googleSearchConsole: '',
+    bingWebmaster: '',
+    yandexWebmaster: '',
+    facebookPixel: '',
+    twitterSite: '@onemindmany',
+    socialMedia: {
+      facebook: '',
+      twitter: '',
+      instagram: '',
+      linkedin: '',
+      youtube: '',
+      github: ''
+    }
+  });
+
+  const [navigation, setNavigation] = useState<NavigationItem[]>([
+    { id: '1', label: 'Home', path: '/', visible: true, order: 1 },
+    { id: '2', label: 'How to Play', path: '/how-to-play', icon: 'Book', visible: true, order: 2 },
+    { id: '3', label: 'Play', path: '/game', visible: true, order: 3 },
+    { id: '4', label: 'Friends', path: '/game/friends', visible: true, order: 4 },
+    { id: '5', label: 'Settings', path: '/game/settings', visible: true, order: 5 }
+  ]);
+
+  const [components] = useState([
+    { id: 'hero', name: 'Hero Section', description: 'Large banner with title and CTA' },
+    { id: 'features', name: 'Features Grid', description: 'Grid of feature cards' },
+    { id: 'stats', name: 'Statistics', description: 'Numerical stats display' },
+    { id: 'testimonials', name: 'Testimonials', description: 'Customer testimonials' },
+    { id: 'cta', name: 'Call to Action', description: 'Action-focused section' },
+    { id: 'gallery', name: 'Image Gallery', description: 'Photo gallery component' },
+    { id: 'video', name: 'Video Player', description: 'Embedded video player' },
+    { id: 'form', name: 'Contact Form', description: 'Contact/feedback form' },
+    { id: 'pricing', name: 'Pricing Table', description: 'Pricing plans display' },
+    { id: 'team', name: 'Team Section', description: 'Team member profiles' }
+  ]);
+
+  const [analytics] = useState({
+    pageViews: 45672,
+    uniqueVisitors: 12847,
+    bounceRate: 32.5,
+    avgSessionDuration: '4:32',
+    topPages: [
+      { page: '/', views: 15234, title: 'Home' },
+      { page: '/how-to-play', views: 8901, title: 'How to Play' },
+      { page: '/game/play', views: 6543, title: 'Game Lobbies' },
+      { page: '/auth/register', views: 4321, title: 'Register' }
+    ],
+    searchTerms: [
+      { term: 'social deduction game', count: 234 },
+      { term: 'multiplayer strategy', count: 189 },
+      { term: 'AI game scenarios', count: 156 },
+      { term: 'online party game', count: 134 }
+    ]
+  });
+
+  const [seoAnalysis, setSeoAnalysis] = useState({
+    score: 85,
+    issues: [
+      { type: 'warning', message: 'Meta description could be longer (current: 120 chars, recommended: 150-160)' },
+      { type: 'error', message: 'Missing alt text on 2 images' },
+      { type: 'info', message: 'Consider adding more internal links' }
+    ],
+    recommendations: [
+      'Add more relevant keywords to page content',
+      'Optimize images for faster loading',
+      'Create more internal linking opportunities',
+      'Add structured data for better search visibility'
+    ]
+  });
 
   const tabs = [
-    { id: 'pages', name: 'Pages', icon: <FileText size={18} /> },
-    { id: 'navigation', name: 'Navigation', icon: <Navigation size={18} /> },
-    { id: 'components', name: 'Components', icon: <Layout size={18} /> },
-    { id: 'styles', name: 'Styles', icon: <Palette size={18} /> },
-    { id: 'media', name: 'Media', icon: <Image size={18} /> },
-    { id: 'seo', name: 'SEO Tools', icon: <Target size={18} /> },
-    { id: 'analytics', name: 'Analytics', icon: <BarChart3 size={18} /> },
-    { id: 'settings', name: 'Site Settings', icon: <Settings size={18} /> },
-    { id: 'code', name: 'Custom Code', icon: <Code size={18} /> },
+    { id: 'pages', label: 'Pages', icon: <FileText size={18} /> },
+    { id: 'navigation', label: 'Navigation', icon: <Navigation size={18} /> },
+    { id: 'components', label: 'Components', icon: <Layout size={18} /> },
+    { id: 'media', label: 'Media Library', icon: <Image size={18} /> },
+    { id: 'seo', label: 'SEO & Analytics', icon: <BarChart3 size={18} /> },
+    { id: 'settings', label: 'Site Settings', icon: <Settings size={18} /> }
   ];
 
   const fontOptions = [
-    { value: 'Quicksand', label: 'Quicksand (Default)' },
-    { value: 'CustomHeading', label: 'Custom Heading Font' },
-    { value: 'Inter', label: 'Inter' },
-    { value: 'Roboto', label: 'Roboto' },
-    { value: 'Open Sans', label: 'Open Sans' },
-    { value: 'Poppins', label: 'Poppins' },
-    { value: 'Montserrat', label: 'Montserrat' },
-    { value: 'Lato', label: 'Lato' },
-    { value: 'Source Sans Pro', label: 'Source Sans Pro' },
-    { value: 'Nunito', label: 'Nunito' },
-    { value: 'Playfair Display', label: 'Playfair Display' },
-    { value: 'Merriweather', label: 'Merriweather' },
+    'CustomHeading',
+    'Quicksand',
+    'Inter',
+    'Roboto',
+    'Open Sans',
+    'Lato',
+    'Montserrat',
+    'Poppins',
+    'Source Sans Pro',
+    'Nunito',
+    'Raleway',
+    'Ubuntu',
+    'Merriweather',
+    'Playfair Display',
+    'Oswald',
+    'Lora'
   ];
-
-  useEffect(() => {
-    fetchContent();
-  }, []);
-
-  const fetchContent = async () => {
-    try {
-      setLoading(true);
-      
-      // Mock data for development
-      setPages([
-        {
-          id: '1',
-          name: 'Home',
-          path: '/',
-          title: 'One Mind, Many - Home',
-          description: 'The ultimate social deduction experience',
-          content: {
-            hero: {
-              title: 'One Mind, Many',
-              subtitle: 'The ultimate social deduction experience',
-              description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit.',
-              backgroundImage: '/images/hero-bg.jpg',
-              ctaText: 'Start Playing',
-              ctaLink: '/game'
-            },
-            features: [
-              {
-                title: 'AI Scenarios',
-                description: 'Dynamic stories that adapt to your choices',
-                icon: 'Brain'
-              }
-            ]
-          },
-          htmlContent: `<div class="hero-section">
-            <h1 class="text-4xl font-bold text-white mb-4">One Mind, Many</h1>
-            <p class="text-xl text-slate-300 mb-8">The ultimate social deduction experience</p>
-            <button class="game-button">Start Playing</button>
-          </div>`,
-          isPublic: true,
-          inNavigation: true,
-          navOrder: 1,
-          template: 'home',
-          seoSettings: {
-            metaTitle: 'One Mind, Many - The Ultimate Social Deduction Game',
-            metaDescription: 'Experience the thrill of deception and strategy in One Mind, Many.',
-            keywords: ['social deduction', 'strategy game', 'AI scenarios'],
-            ogImage: '/images/og-home.jpg',
-            ogTitle: 'One Mind, Many - Social Deduction Game',
-            ogDescription: 'Navigate AI-driven scenarios where survival depends on cunning teamwork.',
-            twitterCard: 'summary_large_image',
-            canonicalUrl: 'https://onemindmany.com/',
-            robots: 'index, follow',
-            structuredData: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "One Mind, Many",
-              "description": "The ultimate social deduction experience"
-            })
-          },
-          customCSS: '',
-          customJS: '',
-          lastModified: new Date().toISOString(),
-          author: 'Admin',
-          status: 'published'
-        }
-      ]);
-
-      setNavigation([
-        { id: '1', name: 'Home', path: '/', order: 1, isVisible: true },
-        { id: '2', name: 'How to Play', path: '/how-to-play', order: 2, isVisible: true },
-        { id: '3', name: 'Play', path: '/game', order: 3, isVisible: true }
-      ]);
-
-      setSiteSettings({
-        siteName: 'One Mind, Many',
-        siteDescription: 'The ultimate social deduction experience',
-        logo: '/OneMindMay Logo - long.png',
-        favicon: '/favicon.svg',
-        primaryColor: '#D65F27',
-        secondaryColor: '#2C365E',
-        accentColor: '#6B5589',
-        fontFamily: 'Quicksand',
-        headingFont: 'CustomHeading',
-        bodyFont: 'Quicksand',
-        customCSS: '',
-        customJS: '',
-        socialLinks: {
-          twitter: 'https://twitter.com/onemindmany',
-          github: 'https://github.com/onemindmany',
-          discord: 'https://discord.gg/onemindmany',
-          facebook: '',
-          instagram: '',
-          linkedin: ''
-        },
-        analytics: {
-          googleAnalytics: '',
-          googleTagManager: '',
-          facebookPixel: ''
-        },
-        seo: {
-          defaultTitle: 'One Mind, Many',
-          defaultDescription: 'The ultimate social deduction experience',
-          defaultKeywords: ['social deduction', 'strategy game', 'multiplayer'],
-          siteVerification: {
-            google: '',
-            bing: '',
-            yandex: ''
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching content:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async () => {
     setSaving(true);
-    try {
-      // Save all content
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert('Content saved successfully!');
-    } catch (error) {
-      console.error('Error saving content:', error);
-      alert('Failed to save content');
-    } finally {
-      setSaving(false);
-    }
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setSaving(false);
   };
 
-  const handleCreatePage = () => {
-    const newPage: Page = {
+  const handlePageSelect = (pageId: string) => {
+    setSelectedPage(pageId);
+  };
+
+  const handleContentChange = (pageId: string, field: string, value: any) => {
+    setPages(prev => prev.map(page => 
+      page.id === pageId 
+        ? { ...page, content: { ...page.content, [field]: value }, lastModified: new Date().toISOString() }
+        : page
+    ));
+  };
+
+  const handleSEOChange = (pageId: string, field: string, value: any) => {
+    setPages(prev => prev.map(page => 
+      page.id === pageId 
+        ? { ...page, seo: { ...page.seo, [field]: value }, lastModified: new Date().toISOString() }
+        : page
+    ));
+  };
+
+  const addNavigationItem = () => {
+    const newItem: NavigationItem = {
       id: Date.now().toString(),
-      name: 'New Page',
+      label: 'New Page',
       path: '/new-page',
-      title: 'New Page',
-      description: '',
-      content: {},
-      htmlContent: '<h1>New Page</h1><p>Start editing your content here...</p>',
-      isPublic: true,
-      inNavigation: false,
-      navOrder: pages.length + 1,
-      template: 'default',
-      seoSettings: {
-        metaTitle: '',
-        metaDescription: '',
-        keywords: [],
-        ogImage: '',
-        ogTitle: '',
-        ogDescription: '',
-        twitterCard: 'summary',
-        canonicalUrl: '',
-        robots: 'index, follow',
-        structuredData: ''
-      },
-      customCSS: '',
-      customJS: '',
-      lastModified: new Date().toISOString(),
-      author: 'Admin',
-      status: 'draft'
+      visible: true,
+      order: navigation.length + 1
     };
-    
-    setPages([...pages, newPage]);
-    setSelectedPage(newPage);
-    setShowPageEditor(true);
+    setNavigation([...navigation, newItem]);
   };
 
-  const handleDeletePage = (pageId: string) => {
-    if (confirm('Are you sure you want to delete this page?')) {
-      setPages(pages.filter(p => p.id !== pageId));
-      if (selectedPage?.id === pageId) {
-        setSelectedPage(null);
-        setShowPageEditor(false);
-      }
-    }
+  const updateNavigationItem = (id: string, updates: Partial<NavigationItem>) => {
+    setNavigation(prev => prev.map(item => 
+      item.id === id ? { ...item, ...updates } : item
+    ));
   };
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => 
-      prev.includes(section) 
-        ? prev.filter(s => s !== section)
-        : [...prev, section]
-    );
+  const removeNavigationItem = (id: string) => {
+    setNavigation(prev => prev.filter(item => item.id !== id));
   };
 
-  const applyTextFormatting = (command: string, value?: string) => {
-    document.execCommand(command, false, value);
-  };
-
-  const analyzeSEO = (page: Page) => {
-    const content = page.htmlContent || '';
-    const wordCount = content.split(/\s+/).length;
-    const sentences = content.split(/[.!?]+/).length;
-    
-    const analysis: SEOAnalysis = {
-      score: 85,
-      issues: [
-        {
-          type: 'warning',
-          message: 'Meta description is too short',
-          suggestion: 'Aim for 150-160 characters for optimal display in search results'
-        },
-        {
-          type: 'info',
-          message: 'Good use of heading tags',
-          suggestion: 'Continue using H1-H6 tags to structure your content'
-        }
-      ],
-      keywords: [
-        { keyword: 'social deduction', density: 2.1, count: 5 },
-        { keyword: 'strategy game', density: 1.8, count: 4 }
-      ],
-      readability: {
-        score: 78,
-        level: 'Good',
-        avgWordsPerSentence: 15,
-        avgSentencesPerParagraph: 4
-      }
-    };
-    
-    setSeoAnalysis(analysis);
-  };
-
-  const insertComponent = (componentType: string) => {
-    const components = {
-      hero: '<div class="hero-section"><h1>Hero Title</h1><p>Hero description</p></div>',
-      button: '<button class="game-button">Click Me</button>',
-      card: '<div class="game-card p-6"><h3>Card Title</h3><p>Card content</p></div>',
-      image: '<img src="/placeholder.jpg" alt="Description" class="w-full rounded-lg" />',
-      video: '<video controls class="w-full"><source src="/video.mp4" type="video/mp4"></video>'
-    };
-    
-    const component = components[componentType as keyof typeof components];
-    if (component && selectedPage) {
-      setSelectedPage({
-        ...selectedPage,
-        htmlContent: selectedPage.htmlContent + component
-      });
-    }
-  };
-
-  if (loading) {
-    return <LoadingSpinner fullScreen text="Loading content management..." />;
-  }
+  const selectedPageData = selectedPage ? pages.find(p => p.id === selectedPage) : null;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">Content Management System</h1>
-          <p className="text-slate-400 mt-2">Complete control over your website content</p>
+          <h1 className="text-3xl font-bold text-white">Content Management</h1>
+          <p className="text-slate-400 mt-2">Manage all website content, pages, and settings</p>
         </div>
         
         <div className="flex gap-4">
@@ -427,900 +534,738 @@ const ContentManagementPage = () => {
             isLoading={saving}
             leftIcon={<Save size={18} />}
           >
-            Save All Changes
+            Save Changes
           </Button>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tab Navigation */}
       <div className="border-b border-slate-700 mb-8">
-        <nav className="flex space-x-8 overflow-x-auto">
+        <nav className="flex space-x-8">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              className={`flex items-center py-4 px-2 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-orange-500 text-orange-500'
                   : 'border-transparent text-slate-400 hover:text-slate-300'
               }`}
             >
               {tab.icon}
-              <span>{tab.name}</span>
+              <span className="ml-2">{tab.label}</span>
             </button>
           ))}
         </nav>
       </div>
 
-      {/* Tab Content */}
-      <div className="space-y-8">
-        {/* Pages Tab */}
-        {activeTab === 'pages' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1">
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-white">Pages</h3>
-                  <Button
-                    size="sm"
-                    onClick={handleCreatePage}
-                    leftIcon={<Plus size={16} />}
+      {/* Pages Tab */}
+      {activeTab === 'pages' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Page List */}
+          <div className="lg:col-span-1">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">All Pages</h3>
+                <Button size="sm" leftIcon={<Plus size={16} />}>
+                  New Page
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                {pages.map((page) => (
+                  <button
+                    key={page.id}
+                    onClick={() => handlePageSelect(page.id)}
+                    className={`w-full text-left p-3 rounded-lg transition-colors ${
+                      selectedPage === page.id
+                        ? 'bg-orange-500/20 border border-orange-500'
+                        : 'bg-slate-800 hover:bg-slate-700'
+                    }`}
                   >
-                    New Page
-                  </Button>
-                </div>
-                
-                <div className="space-y-2">
-                  {pages.map((page) => (
-                    <div
-                      key={page.id}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedPage?.id === page.id
-                          ? 'bg-orange-500/20 border border-orange-500'
-                          : 'bg-slate-800 hover:bg-slate-700'
-                      }`}
-                      onClick={() => {
-                        setSelectedPage(page);
-                        setShowPageEditor(true);
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-white font-medium">{page.name}</h4>
-                          <p className="text-slate-400 text-sm">{page.path}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              page.status === 'published' ? 'bg-green-500/20 text-green-400' :
-                              page.status === 'draft' ? 'bg-yellow-500/20 text-yellow-400' :
-                              'bg-blue-500/20 text-blue-400'
-                            }`}>
-                              {page.status}
-                            </span>
-                            {page.isPublic && <Globe size={12} className="text-green-400" />}
-                            {page.inNavigation && <Navigation size={12} className="text-blue-400" />}
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeletePage(page.id);
-                          }}
-                          leftIcon={<Trash2 size={14} />}
-                        />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-white font-medium">{page.title}</h4>
+                        <p className="text-slate-400 text-sm">{page.slug}</p>
                       </div>
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        page.status === 'published' 
+                          ? 'bg-green-500/20 text-green-400'
+                          : page.status === 'draft'
+                          ? 'bg-yellow-500/20 text-yellow-400'
+                          : 'bg-blue-500/20 text-blue-400'
+                      }`}>
+                        {page.status}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-            
-            <div className="lg:col-span-2">
-              {selectedPage && showPageEditor ? (
-                <Card className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-white">Edit Page: {selectedPage.name}</h3>
-                    <div className="flex items-center space-x-2">
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Page Editor */}
+          <div className="lg:col-span-2">
+            {selectedPageData ? (
+              <div className="space-y-6">
+                {/* Editor Toolbar */}
+                <Card className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-white">Editing: {selectedPageData.title}</h3>
+                    <div className="flex items-center gap-2">
                       <Button
-                        size="sm"
                         variant={editMode === 'visual' ? 'primary' : 'outline'}
+                        size="sm"
                         onClick={() => setEditMode('visual')}
                       >
                         Visual
                       </Button>
                       <Button
-                        size="sm"
                         variant={editMode === 'html' ? 'primary' : 'outline'}
+                        size="sm"
                         onClick={() => setEditMode('html')}
+                        leftIcon={<Code size={16} />}
                       >
                         HTML
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPreviewMode('desktop')}
-                        leftIcon={<Monitor size={16} />}
-                        className={previewMode === 'desktop' ? 'bg-orange-500/20' : ''}
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPreviewMode('tablet')}
-                        leftIcon={<Tablet size={16} />}
-                        className={previewMode === 'tablet' ? 'bg-orange-500/20' : ''}
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPreviewMode('mobile')}
-                        leftIcon={<Smartphone size={16} />}
-                        className={previewMode === 'mobile' ? 'bg-orange-500/20' : ''}
-                      />
                     </div>
                   </div>
 
-                  {/* Rich Text Editor Toolbar */}
+                  {/* Rich Text Toolbar */}
                   {editMode === 'visual' && (
-                    <div className="border border-slate-700 rounded-lg p-3 mb-4 flex flex-wrap gap-2">
-                      <div className="flex items-center gap-1 border-r border-slate-700 pr-2">
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('undo')} leftIcon={<Undo size={14} />} />
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('redo')} leftIcon={<Redo size={14} />} />
-                      </div>
+                    <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-800 rounded-lg">
+                      <select className="bg-slate-700 text-white rounded px-2 py-1 text-sm">
+                        <option value="CustomHeading">CustomHeading</option>
+                        <option value="Quicksand">Quicksand</option>
+                        {fontOptions.map(font => (
+                          <option key={font} value={font}>{font}</option>
+                        ))}
+                      </select>
                       
-                      <div className="flex items-center gap-1 border-r border-slate-700 pr-2">
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('bold')} leftIcon={<Bold size={14} />} />
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('italic')} leftIcon={<Italic size={14} />} />
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('underline')} leftIcon={<Underline size={14} />} />
-                      </div>
+                      <div className="w-px h-6 bg-slate-600"></div>
                       
-                      <div className="flex items-center gap-1 border-r border-slate-700 pr-2">
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('justifyLeft')} leftIcon={<AlignLeft size={14} />} />
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('justifyCenter')} leftIcon={<AlignCenter size={14} />} />
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('justifyRight')} leftIcon={<AlignRight size={14} />} />
-                      </div>
+                      <Button variant="ghost" size="sm"><Bold size={16} /></Button>
+                      <Button variant="ghost" size="sm"><Italic size={16} /></Button>
+                      <Button variant="ghost" size="sm"><Underline size={16} /></Button>
                       
-                      <div className="flex items-center gap-1 border-r border-slate-700 pr-2">
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('formatBlock', 'h1')} leftIcon={<Heading1 size={14} />} />
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('formatBlock', 'h2')} leftIcon={<Heading2 size={14} />} />
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('formatBlock', 'h3')} leftIcon={<Heading3 size={14} />} />
-                      </div>
+                      <div className="w-px h-6 bg-slate-600"></div>
                       
-                      <div className="flex items-center gap-1 border-r border-slate-700 pr-2">
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('insertUnorderedList')} leftIcon={<List size={14} />} />
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('insertOrderedList')} leftIcon={<ListOrdered size={14} />} />
-                        <Button size="sm" variant="ghost" onClick={() => applyTextFormatting('formatBlock', 'blockquote')} leftIcon={<Quote size={14} />} />
-                      </div>
+                      <Button variant="ghost" size="sm"><Heading1 size={16} /></Button>
+                      <Button variant="ghost" size="sm"><Heading2 size={16} /></Button>
+                      <Button variant="ghost" size="sm"><Heading3 size={16} /></Button>
                       
-                      <div className="flex items-center gap-1">
-                        <select 
-                          className="bg-slate-800 border border-slate-700 text-white rounded px-2 py-1 text-sm"
-                          onChange={(e) => applyTextFormatting('fontName', e.target.value)}
-                        >
-                          <option value="">Font</option>
-                          {fontOptions.map(font => (
-                            <option key={font.value} value={font.value}>{font.label}</option>
-                          ))}
-                        </select>
-                        
-                        <select 
-                          className="bg-slate-800 border border-slate-700 text-white rounded px-2 py-1 text-sm"
-                          onChange={(e) => applyTextFormatting('fontSize', e.target.value)}
-                        >
-                          <option value="">Size</option>
-                          <option value="1">Small</option>
-                          <option value="3">Normal</option>
-                          <option value="5">Large</option>
-                          <option value="7">Extra Large</option>
-                        </select>
-                      </div>
+                      <div className="w-px h-6 bg-slate-600"></div>
+                      
+                      <Button variant="ghost" size="sm"><List size={16} /></Button>
+                      <Button variant="ghost" size="sm"><ListOrdered size={16} /></Button>
+                      <Button variant="ghost" size="sm"><Quote size={16} /></Button>
+                      
+                      <div className="w-px h-6 bg-slate-600"></div>
+                      
+                      <Button variant="ghost" size="sm"><AlignLeft size={16} /></Button>
+                      <Button variant="ghost" size="sm"><AlignCenter size={16} /></Button>
+                      <Button variant="ghost" size="sm"><AlignRight size={16} /></Button>
+                      
+                      <div className="w-px h-6 bg-slate-600"></div>
+                      
+                      <Button variant="ghost" size="sm"><Link size={16} /></Button>
+                      <Button variant="ghost" size="sm"><Image size={16} /></Button>
+                      <Button variant="ghost" size="sm"><Video size={16} /></Button>
+                      <Button variant="ghost" size="sm"><Code2 size={16} /></Button>
                     </div>
                   )}
+                </Card>
 
-                  {/* Component Insertion Toolbar */}
-                  <div className="border border-slate-700 rounded-lg p-3 mb-4">
-                    <h4 className="text-white font-medium mb-2">Insert Components</h4>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => insertComponent('hero')}>Hero Section</Button>
-                      <Button size="sm" variant="outline" onClick={() => insertComponent('button')}>Button</Button>
-                      <Button size="sm" variant="outline" onClick={() => insertComponent('card')}>Card</Button>
-                      <Button size="sm" variant="outline" onClick={() => insertComponent('image')}>Image</Button>
-                      <Button size="sm" variant="outline" onClick={() => insertComponent('video')}>Video</Button>
-                    </div>
-                  </div>
-                  
+                {/* Content Editor */}
+                <Card className="p-6">
                   <div className="space-y-6">
-                    {/* General Settings */}
-                    <div>
-                      <button
-                        onClick={() => toggleSection('general')}
-                        className="flex items-center justify-between w-full p-3 bg-slate-800 rounded-lg"
-                      >
-                        <span className="text-white font-medium">General Settings</span>
-                        {expandedSections.includes('general') ? 
-                          <ChevronDown size={20} /> : <ChevronRight size={20} />
-                        }
-                      </button>
-                      
-                      {expandedSections.includes('general') && (
-                        <div className="mt-4 space-y-4 p-4 bg-slate-800/50 rounded-lg">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input
-                              label="Page Name"
-                              value={selectedPage.name}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                name: e.target.value
-                              })}
-                            />
-                            <Input
-                              label="URL Path"
-                              value={selectedPage.path}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                path: e.target.value
-                              })}
-                            />
-                          </div>
-                          
+                    {/* Page Settings */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        label="Page Title"
+                        value={selectedPageData.title}
+                        onChange={(e) => handleContentChange(selectedPage!, 'title', e.target.value)}
+                      />
+                      <Input
+                        label="URL Slug"
+                        value={selectedPageData.slug}
+                        onChange={(e) => handleContentChange(selectedPage!, 'slug', e.target.value)}
+                      />
+                    </div>
+
+                    {/* Content Areas */}
+                    {selectedPageData.id === 'home' && (
+                      <div className="space-y-6">
+                        <h4 className="text-lg font-semibold text-white">Hero Section</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
-                            label="Page Title"
-                            value={selectedPage.title}
-                            onChange={(e) => setSelectedPage({
-                              ...selectedPage,
+                            label="Hero Title"
+                            value={selectedPageData.content.hero?.title || ''}
+                            onChange={(e) => handleContentChange(selectedPage!, 'hero', {
+                              ...selectedPageData.content.hero,
                               title: e.target.value
                             })}
                           />
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Description
-                            </label>
-                            <textarea
-                              value={selectedPage.description}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                description: e.target.value
-                              })}
-                              className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Status
-                            </label>
-                            <select
-                              value={selectedPage.status}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                status: e.target.value as 'draft' | 'published' | 'scheduled'
-                              })}
-                              className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
-                            >
-                              <option value="draft">Draft</option>
-                              <option value="published">Published</option>
-                              <option value="scheduled">Scheduled</option>
-                            </select>
-                          </div>
-                          
-                          <div className="flex items-center space-x-4">
-                            <label className="flex items-center">
-                              <input
-                                type="checkbox"
-                                checked={selectedPage.isPublic}
-                                onChange={(e) => setSelectedPage({
-                                  ...selectedPage,
-                                  isPublic: e.target.checked
-                                })}
-                                className="mr-2"
-                              />
-                              <span className="text-slate-300">Public Page</span>
-                            </label>
-                            
-                            <label className="flex items-center">
-                              <input
-                                type="checkbox"
-                                checked={selectedPage.inNavigation}
-                                onChange={(e) => setSelectedPage({
-                                  ...selectedPage,
-                                  inNavigation: e.target.checked
-                                })}
-                                className="mr-2"
-                              />
-                              <span className="text-slate-300">Show in Navigation</span>
-                            </label>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content Editor */}
-                    <div>
-                      <button
-                        onClick={() => toggleSection('content')}
-                        className="flex items-center justify-between w-full p-3 bg-slate-800 rounded-lg"
-                      >
-                        <span className="text-white font-medium">Page Content</span>
-                        {expandedSections.includes('content') ? 
-                          <ChevronDown size={20} /> : <ChevronRight size={20} />
-                        }
-                      </button>
-                      
-                      {expandedSections.includes('content') && (
-                        <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
-                          {editMode === 'visual' ? (
-                            <div
-                              contentEditable
-                              className="w-full min-h-96 bg-white text-black rounded-md p-4 border border-slate-700"
-                              dan
-                              gerouslySetInnerHTML={{ __html: selectedPage.htmlContent }}
-                              onBlur={(e) => setSelectedPage({
-                                ...selectedPage,
-                                htmlContent: e.currentTarget.innerHTML
-                              })}
-                              style={{ fontFamily: siteSettings?.bodyFont || 'Quicksand' }}
-                            />
-                          ) : (
-                            <textarea
-                              value={selectedPage.htmlContent}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                htmlContent: e.target.value
-                              })}
-                              className="w-full bg-slate-900 border border-slate-700 text-white rounded-md px-3 py-2 h-96 font-mono text-sm"
-                              placeholder="Enter HTML content..."
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* SEO Settings */}
-                    <div>
-                      <button
-                        onClick={() => toggleSection('seo')}
-                        className="flex items-center justify-between w-full p-3 bg-slate-800 rounded-lg"
-                      >
-                        <span className="text-white font-medium">SEO Settings</span>
-                        {expandedSections.includes('seo') ? 
-                          <ChevronDown size={20} /> : <ChevronRight size={20} />
-                        }
-                      </button>
-                      
-                      {expandedSections.includes('seo') && (
-                        <div className="mt-4 space-y-4 p-4 bg-slate-800/50 rounded-lg">
-                          <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-white font-medium">SEO Analysis</h4>
-                            <Button
-                              size="sm"
-                              onClick={() => analyzeSEO(selectedPage)}
-                              leftIcon={<Search size={16} />}
-                            >
-                              Analyze
-                            </Button>
-                          </div>
-
-                          {seoAnalysis && (
-                            <div className="bg-slate-900 rounded-lg p-4 mb-4">
-                              <div className="flex items-center justify-between mb-3">
-                                <span className="text-white font-medium">SEO Score</span>
-                                <span className={`text-2xl font-bold ${
-                                  seoAnalysis.score >= 80 ? 'text-green-400' :
-                                  seoAnalysis.score >= 60 ? 'text-yellow-400' : 'text-red-400'
-                                }`}>
-                                  {seoAnalysis.score}/100
-                                </span>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                {seoAnalysis.issues.map((issue, index) => (
-                                  <div key={index} className={`p-2 rounded text-sm ${
-                                    issue.type === 'error' ? 'bg-red-500/20 text-red-400' :
-                                    issue.type === 'warning' ? 'bg-yellow-500/20 text-yellow-400' :
-                                    'bg-blue-500/20 text-blue-400'
-                                  }`}>
-                                    <p className="font-medium">{issue.message}</p>
-                                    <p className="text-xs opacity-80">{issue.suggestion}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
                           <Input
-                            label="Meta Title"
-                            value={selectedPage.seoSettings.metaTitle}
-                            onChange={(e) => setSelectedPage({
-                              ...selectedPage,
-                              seoSettings: {
-                                ...selectedPage.seoSettings,
-                                metaTitle: e.target.value
-                              }
+                            label="Hero Subtitle"
+                            value={selectedPageData.content.hero?.subtitle || ''}
+                            onChange={(e) => handleContentChange(selectedPage!, 'hero', {
+                              ...selectedPageData.content.hero,
+                              subtitle: e.target.value
                             })}
                           />
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Meta Description
-                            </label>
-                            <textarea
-                              value={selectedPage.seoSettings.metaDescription}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                seoSettings: {
-                                  ...selectedPage.seoSettings,
-                                  metaDescription: e.target.value
-                                }
-                              })}
-                              className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
-                              maxLength={160}
-                            />
-                            <p className="text-xs text-slate-500 mt-1">
-                              {selectedPage.seoSettings.metaDescription.length}/160 characters
-                            </p>
-                          </div>
-                          
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">Hero Description</label>
+                          <textarea
+                            value={selectedPageData.content.hero?.description || ''}
+                            onChange={(e) => handleContentChange(selectedPage!, 'hero', {
+                              ...selectedPageData.content.hero,
+                              description: e.target.value
+                            })}
+                            className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
-                            label="Keywords (comma-separated)"
-                            value={selectedPage.seoSettings.keywords.join(', ')}
-                            onChange={(e) => setSelectedPage({
-                              ...selectedPage,
-                              seoSettings: {
-                                ...selectedPage.seoSettings,
-                                keywords: e.target.value.split(',').map(k => k.trim())
-                              }
+                            label="Primary CTA Text"
+                            value={selectedPageData.content.hero?.ctaText || ''}
+                            onChange={(e) => handleContentChange(selectedPage!, 'hero', {
+                              ...selectedPageData.content.hero,
+                              ctaText: e.target.value
                             })}
                           />
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input
-                              label="Canonical URL"
-                              value={selectedPage.seoSettings.canonicalUrl}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                seoSettings: {
-                                  ...selectedPage.seoSettings,
-                                  canonicalUrl: e.target.value
-                                }
-                              })}
-                            />
-                            
-                            <div>
-                              <label className="block text-sm font-medium text-slate-300 mb-2">
-                                Robots
-                              </label>
-                              <select
-                                value={selectedPage.seoSettings.robots}
-                                onChange={(e) => setSelectedPage({
-                                  ...selectedPage,
-                                  seoSettings: {
-                                    ...selectedPage.seoSettings,
-                                    robots: e.target.value
-                                  }
-                                })}
-                                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
-                              >
-                                <option value="index, follow">Index, Follow</option>
-                                <option value="noindex, follow">No Index, Follow</option>
-                                <option value="index, nofollow">Index, No Follow</option>
-                                <option value="noindex, nofollow">No Index, No Follow</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input
-                              label="OG Title"
-                              value={selectedPage.seoSettings.ogTitle}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                seoSettings: {
-                                  ...selectedPage.seoSettings,
-                                  ogTitle: e.target.value
-                                }
-                              })}
-                            />
-                            
-                            <Input
-                              label="OG Image URL"
-                              value={selectedPage.seoSettings.ogImage}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                seoSettings: {
-                                  ...selectedPage.seoSettings,
-                                  ogImage: e.target.value
-                                }
-                              })}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Structured Data (JSON-LD)
-                            </label>
-                            <textarea
-                              value={selectedPage.seoSettings.structuredData}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                seoSettings: {
-                                  ...selectedPage.seoSettings,
-                                  structuredData: e.target.value
-                                }
-                              })}
-                              className="w-full bg-slate-900 border border-slate-700 text-white rounded-md px-3 py-2 h-32 font-mono text-sm"
-                              placeholder='{"@context": "https://schema.org", "@type": "WebPage"}'
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Custom Code */}
-                    <div>
-                      <button
-                        onClick={() => toggleSection('code')}
-                        className="flex items-center justify-between w-full p-3 bg-slate-800 rounded-lg"
-                      >
-                        <span className="text-white font-medium">Custom Code</span>
-                        {expandedSections.includes('code') ? 
-                          <ChevronDown size={20} /> : <ChevronRight size={20} />
-                        }
-                      </button>
-                      
-                      {expandedSections.includes('code') && (
-                        <div className="mt-4 space-y-4 p-4 bg-slate-800/50 rounded-lg">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Custom CSS
-                            </label>
-                            <textarea
-                              value={selectedPage.customCSS}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                customCSS: e.target.value
-                              })}
-                              className="w-full bg-slate-900 border border-slate-700 text-white rounded-md px-3 py-2 h-32 font-mono text-sm"
-                              placeholder="/* Custom CSS for this page */"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Custom JavaScript
-                            </label>
-                            <textarea
-                              value={selectedPage.customJS}
-                              onChange={(e) => setSelectedPage({
-                                ...selectedPage,
-                                customJS: e.target.value
-                              })}
-                              className="w-full bg-slate-900 border border-slate-700 text-white rounded-md px-3 py-2 h-32 font-mono text-sm"
-                              placeholder="// Custom JavaScript for this page"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ) : (
-                <Card className="p-6">
-                  <div className="text-center text-slate-400">
-                    <FileText size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>Select a page to edit or create a new one</p>
-                  </div>
-                </Card>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* SEO Tools Tab */}
-        {activeTab === 'seo' && (
-          <div className="space-y-8">
-            <Card className="p-6">
-              <h2 className="text-xl font-bold text-white mb-6">SEO Overview</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-slate-800/50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-400">Overall SEO Score</span>
-                    <TrendingUp className="w-5 h-5 text-green-400" />
-                  </div>
-                  <div className="text-2xl font-bold text-green-400">87/100</div>
-                  <div className="text-sm text-slate-500">Good performance</div>
-                </div>
-                
-                <div className="bg-slate-800/50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-400">Pages Indexed</span>
-                    <Globe className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div className="text-2xl font-bold text-blue-400">12/15</div>
-                  <div className="text-sm text-slate-500">3 pages need attention</div>
-                </div>
-                
-                <div className="bg-slate-800/50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-400">Avg. Load Time</span>
-                    <Zap className="w-5 h-5 text-orange-400" />
-                  </div>
-                  <div className="text-2xl font-bold text-orange-400">1.2s</div>
-                  <div className="text-sm text-slate-500">Excellent speed</div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Site-wide SEO Settings</h3>
-                  
-                  {siteSettings && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input
-                        label="Default Title Template"
-                        value={siteSettings.seo.defaultTitle}
-                        onChange={(e) => setSiteSettings({
-                          ...siteSettings,
-                          seo: {
-                            ...siteSettings.seo,
-                            defaultTitle: e.target.value
-                          }
-                        })}
-                        placeholder="%page_title% | Site Name"
-                      />
-                      
-                      <Input
-                        label="Default Meta Description"
-                        value={siteSettings.seo.defaultDescription}
-                        onChange={(e) => setSiteSettings({
-                          ...siteSettings,
-                          seo: {
-                            ...siteSettings.seo,
-                            defaultDescription: e.target.value
-                          }
-                        })}
-                      />
-                      
-                      <Input
-                        label="Google Search Console"
-                        value={siteSettings.seo.siteVerification.google}
-                        onChange={(e) => setSiteSettings({
-                          ...siteSettings,
-                          seo: {
-                            ...siteSettings.seo,
-                            siteVerification: {
-                              ...siteSettings.seo.siteVerification,
-                              google: e.target.value
-                            }
-                          }
-                        })}
-                        placeholder="google-site-verification=..."
-                      />
-                      
-                      <Input
-                        label="Bing Webmaster Tools"
-                        value={siteSettings.seo.siteVerification.bing}
-                        onChange={(e) => setSiteSettings({
-                          ...siteSettings,
-                          seo: {
-                            ...siteSettings.seo,
-                            siteVerification: {
-                              ...siteSettings.seo.siteVerification,
-                              bing: e.target.value
-                            }
-                          }
-                        })}
-                        placeholder="msvalidate.01=..."
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Page-by-Page Analysis</h3>
-                  
-                  <div className="space-y-3">
-                    {pages.map((page) => (
-                      <div key={page.id} className="bg-slate-800/50 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="text-white font-medium">{page.name}</h4>
-                            <p className="text-slate-400 text-sm">{page.path}</p>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-green-400">85</div>
-                              <div className="text-xs text-slate-500">SEO Score</div>
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                setSelectedPage(page);
-                                analyzeSEO(page);
-                                setActiveTab('pages');
-                                setShowPageEditor(true);
-                                toggleSection('seo');
-                              }}
-                              leftIcon={<Target size={16} />}
-                            >
-                              Optimize
-                            </Button>
-                          </div>
+                          <Input
+                            label="Primary CTA Link"
+                            value={selectedPageData.content.hero?.ctaLink || ''}
+                            onChange={(e) => handleContentChange(selectedPage!, 'hero', {
+                              ...selectedPageData.content.hero,
+                              ctaLink: e.target.value
+                            })}
+                          />
                         </div>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Generic Content Editor */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Page Content {editMode === 'html' && '(HTML)'}
+                      </label>
+                      {editMode === 'visual' ? (
+                        <div className="bg-slate-800 border border-slate-700 rounded-md p-4 min-h-[300px] text-white">
+                          <div contentEditable className="outline-none">
+                            {JSON.stringify(selectedPageData.content, null, 2)}
+                          </div>
+                        </div>
+                      ) : (
+                        <textarea
+                          value={JSON.stringify(selectedPageData.content, null, 2)}
+                          onChange={(e) => {
+                            try {
+                              const content = JSON.parse(e.target.value);
+                              handleContentChange(selectedPage!, 'content', content);
+                            } catch (error) {
+                              // Invalid JSON, don't update
+                            }
+                          }}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-64 font-mono text-sm"
+                        />
+                      )}
+                    </div>
+
+                    {/* Custom CSS/JS */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Custom CSS</label>
+                        <textarea
+                          value={selectedPageData.customCSS || ''}
+                          onChange={(e) => handleContentChange(selectedPage!, 'customCSS', e.target.value)}
+                          placeholder="/* Custom CSS for this page */"
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-32 font-mono text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Custom JavaScript</label>
+                        <textarea
+                          value={selectedPageData.customJS || ''}
+                          onChange={(e) => handleContentChange(selectedPage!, 'customJS', e.target.value)}
+                          placeholder="// Custom JavaScript for this page"
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-32 font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* SEO Settings */}
+                <Card className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-white">SEO Settings</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSEOAnalysis(!showSEOAnalysis)}
+                      leftIcon={<BarChart3 size={16} />}
+                    >
+                      SEO Analysis
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Input
+                      label="SEO Title"
+                      value={selectedPageData.seo.title}
+                      onChange={(e) => handleSEOChange(selectedPage!, 'title', e.target.value)}
+                      placeholder="Page title for search engines"
+                    />
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Meta Description</label>
+                      <textarea
+                        value={selectedPageData.seo.description}
+                        onChange={(e) => handleSEOChange(selectedPage!, 'description', e.target.value)}
+                        placeholder="Brief description for search results"
+                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20"
+                        maxLength={160}
+                      />
+                      <p className="text-xs text-slate-400 mt-1">
+                        {selectedPageData.seo.description.length}/160 characters
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Keywords</label>
+                      <Input
+                        value={selectedPageData.seo.keywords.join(', ')}
+                        onChange={(e) => handleSEOChange(selectedPage!, 'keywords', e.target.value.split(', '))}
+                        placeholder="keyword1, keyword2, keyword3"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        label="Canonical URL"
+                        value={selectedPageData.seo.canonical}
+                        onChange={(e) => handleSEOChange(selectedPage!, 'canonical', e.target.value)}
+                        placeholder="https://example.com/page"
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Robots</label>
+                        <select
+                          value={selectedPageData.seo.robots}
+                          onChange={(e) => handleSEOChange(selectedPage!, 'robots', e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+                        >
+                          <option value="index, follow">Index, Follow</option>
+                          <option value="noindex, nofollow">No Index, No Follow</option>
+                          <option value="index, nofollow">Index, No Follow</option>
+                          <option value="noindex, follow">No Index, Follow</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {showSEOAnalysis && (
+                      <div className="mt-6 p-4 bg-slate-800 rounded-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <h5 className="font-semibold text-white">SEO Analysis</h5>
+                          <div className="flex items-center">
+                            <span className="text-2xl font-bold text-green-400">{seoAnalysis.score}</span>
+                            <span className="text-slate-400 ml-1">/100</span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {seoAnalysis.issues.map((issue, index) => (
+                            <div key={index} className="flex items-start">
+                              {issue.type === 'error' && <X className="w-4 h-4 text-red-500 mr-2 mt-0.5" />}
+                              {issue.type === 'warning' && <AlertTriangle className="w-4 h-4 text-yellow-500 mr-2 mt-0.5" />}
+                              {issue.type === 'info' && <Info className="w-4 h-4 text-blue-500 mr-2 mt-0.5" />}
+                              <span className="text-slate-300 text-sm">{issue.message}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+            ) : (
+              <Card className="p-12 text-center">
+                <FileText size={48} className="mx-auto text-slate-600 mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">Select a Page to Edit</h3>
+                <p className="text-slate-400">Choose a page from the list to start editing its content</p>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Tab */}
+      {activeTab === 'navigation' && (
+        <div className="space-y-6">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">Navigation Menu</h3>
+              <Button onClick={addNavigationItem} leftIcon={<Plus size={18} />}>
+                Add Menu Item
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {navigation.map((item) => (
+                <div key={item.id} className="bg-slate-800 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                    <Input
+                      label="Label"
+                      value={item.label}
+                      onChange={(e) => updateNavigationItem(item.id, { label: e.target.value })}
+                    />
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Path</label>
+                      <select
+                        value={item.path}
+                        onChange={(e) => updateNavigationItem(item.id, { path: e.target.value })}
+                        className="w-full bg-slate-700 border border-slate-600 text-white rounded-md px-3 py-2"
+                      >
+                        {allPages.map(page => (
+                          <option key={page.id} value={page.slug}>{page.title}</option>
+                        ))}
+                        <option value="/custom">Custom URL...</option>
+                      </select>
+                    </div>
+                    <Input
+                      label="Order"
+                      type="number"
+                      value={item.order}
+                      onChange={(e) => updateNavigationItem(item.id, { order: parseInt(e.target.value) })}
+                    />
+                    <div className="flex items-center space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={item.visible}
+                          onChange={(e) => updateNavigationItem(item.id, { visible: e.target.checked })}
+                          className="mr-2"
+                        />
+                        <span className="text-slate-300 text-sm">Visible</span>
+                      </label>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeNavigationItem(item.id)}
+                      leftIcon={<Trash2 size={16} />}
+                    >
+                      Remove
+                    </Button>
                   </div>
                 </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Components Tab */}
+      {activeTab === 'components' && (
+        <div className="space-y-6">
+          <Card className="p-6">
+            <h3 className="text-xl font-bold text-white mb-6">Available Components</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {components.map((component) => (
+                <div key={component.id} className="bg-slate-800 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-white mb-2">{component.name}</h4>
+                  <p className="text-slate-400 text-sm mb-4">{component.description}</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" leftIcon={<Plus size={16} />}>
+                      Insert
+                    </Button>
+                    <Button variant="outline" size="sm" leftIcon={<Edit size={16} />}>
+                      Customize
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Media Library Tab */}
+      {activeTab === 'media' && (
+        <div className="space-y-6">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">Media Library</h3>
+              <Button leftIcon={<Upload size={18} />}>
+                Upload Files
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="bg-slate-800 rounded-lg p-4 text-center">
+                  <div className="w-full h-24 bg-slate-700 rounded mb-2 flex items-center justify-center">
+                    <Image size={24} className="text-slate-500" />
+                  </div>
+                  <p className="text-slate-300 text-sm truncate">image-{i}.jpg</p>
+                  <p className="text-slate-500 text-xs">2.4 MB</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* SEO & Analytics Tab */}
+      {activeTab === 'seo' && (
+        <div className="space-y-6">
+          {/* Analytics Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-400">Page Views</p>
+                  <p className="text-3xl font-bold text-white">{analytics.pageViews.toLocaleString()}</p>
+                </div>
+                <BarChart3 className="w-12 h-12 text-blue-500 opacity-50" />
+              </div>
+            </Card>
+            
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-400">Unique Visitors</p>
+                  <p className="text-3xl font-bold text-white">{analytics.uniqueVisitors.toLocaleString()}</p>
+                </div>
+                <Users className="w-12 h-12 text-green-500 opacity-50" />
+              </div>
+            </Card>
+            
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-400">Bounce Rate</p>
+                  <p className="text-3xl font-bold text-white">{analytics.bounceRate}%</p>
+                </div>
+                <TrendingUp className="w-12 h-12 text-orange-500 opacity-50" />
+              </div>
+            </Card>
+            
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-400">Avg. Session</p>
+                  <p className="text-3xl font-bold text-white">{analytics.avgSessionDuration}</p>
+                </div>
+                <Clock className="w-12 h-12 text-purple-500 opacity-50" />
               </div>
             </Card>
           </div>
-        )}
 
-        {/* Styles Tab */}
-        {activeTab === 'styles' && siteSettings && (
+          {/* Top Pages */}
           <Card className="p-6">
-            <h3 className="text-lg font-bold text-white mb-6">Global Styles</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <h4 className="text-white font-medium mb-4">Colors</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Primary Color
-                      </label>
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="color"
-                          value={siteSettings.primaryColor}
-                          onChange={(e) => setSiteSettings({
-                            ...siteSettings,
-                            primaryColor: e.target.value
-                          })}
-                          className="w-12 h-12 rounded border border-slate-700"
-                        />
-                        <Input
-                          value={siteSettings.primaryColor}
-                          onChange={(e) => setSiteSettings({
-                            ...siteSettings,
-                            primaryColor: e.target.value
-                          })}
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Secondary Color
-                      </label>
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="color"
-                          value={siteSettings.secondaryColor}
-                          onChange={(e) => setSiteSettings({
-                            ...siteSettings,
-                            secondaryColor: e.target.value
-                          })}
-                          className="w-12 h-12 rounded border border-slate-700"
-                        />
-                        <Input
-                          value={siteSettings.secondaryColor}
-                          onChange={(e) => setSiteSettings({
-                            ...siteSettings,
-                            secondaryColor: e.target.value
-                          })}
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Accent Color
-                      </label>
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="color"
-                          value={siteSettings.accentColor}
-                          onChange={(e) => setSiteSettings({
-                            ...siteSettings,
-                            accentColor: e.target.value
-                          })}
-                          className="w-12 h-12 rounded border border-slate-700"
-                        />
-                        <Input
-                          value={siteSettings.accentColor}
-                          onChange={(e) => setSiteSettings({
-                            ...siteSettings,
-                            accentColor: e.target.value
-                          })}
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
+            <h3 className="text-xl font-bold text-white mb-6">Top Pages</h3>
+            <div className="space-y-4">
+              {analytics.topPages.map((page, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                  <div>
+                    <h4 className="text-white font-medium">{page.title}</h4>
+                    <p className="text-slate-400 text-sm">{page.page}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white font-bold">{page.views.toLocaleString()}</p>
+                    <p className="text-slate-400 text-sm">views</p>
                   </div>
                 </div>
-                
+              ))}
+            </div>
+          </Card>
+
+          {/* Search Terms */}
+          <Card className="p-6">
+            <h3 className="text-xl font-bold text-white mb-6">Top Search Terms</h3>
+            <div className="space-y-3">
+              {analytics.searchTerms.map((term, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <span className="text-slate-300">{term.term}</span>
+                  <span className="text-white font-medium">{term.count}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Site Settings Tab */}
+      {activeTab === 'settings' && (
+        <div className="space-y-6">
+          <Card className="p-6">
+            <h3 className="text-xl font-bold text-white mb-6">General Settings</h3>
+            
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Site Name"
+                  value={siteSettings.siteName}
+                  onChange={(e) => setSiteSettings(prev => ({ ...prev, siteName: e.target.value }))}
+                />
+                <Input
+                  label="Site URL"
+                  value={siteSettings.siteUrl}
+                  onChange={(e) => setSiteSettings(prev => ({ ...prev, siteUrl: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Site Description</label>
+                <textarea
+                  value={siteSettings.siteDescription}
+                  onChange={(e) => setSiteSettings(prev => ({ ...prev, siteDescription: e.target.value }))}
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <h4 className="text-white font-medium mb-4">Typography</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Heading Font (H1, H2, H3, etc.)
-                      </label>
-                      <select
-                        value={siteSettings.headingFont}
-                        onChange={(e) => setSiteSettings({
-                          ...siteSettings,
-                          headingFont: e.target.value
-                        })}
-                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
-                      >
-                        {fontOptions.map(font => (
-                          <option key={font.value} value={font.value}>{font.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Body Font
-                      </label>
-                      <select
-                        value={siteSettings.bodyFont}
-                        onChange={(e) => setSiteSettings({
-                          ...siteSettings,
-                          bodyFont: e.target.value
-                        })}
-                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
-                      >
-                        {fontOptions.map(font => (
-                          <option key={font.value} value={font.value}>{font.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        General Font Family
-                      </label>
-                      <select
-                        value={siteSettings.fontFamily}
-                        onChange={(e) => setSiteSettings({
-                          ...siteSettings,
-                          fontFamily: e.target.value
-                        })}
-                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
-                      >
-                        {fontOptions.map(font => (
-                          <option key={font.value} value={font.value}>{font.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Default Font</label>
+                  <select
+                    value={siteSettings.defaultFont}
+                    onChange={(e) => setSiteSettings(prev => ({ ...prev, defaultFont: e.target.value }))}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+                  >
+                    {fontOptions.map(font => (
+                      <option key={font} value={font}>{font}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Heading Font</label>
+                  <select
+                    value={siteSettings.headingFont}
+                    onChange={(e) => setSiteSettings(prev => ({ ...prev, headingFont: e.target.value }))}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+                  >
+                    {fontOptions.map(font => (
+                      <option key={font} value={font}>{font}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Body Font</label>
+                  <select
+                    value={siteSettings.bodyFont}
+                    onChange={(e) => setSiteSettings(prev => ({ ...prev, bodyFont: e.target.value }))}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+                  >
+                    {fontOptions.map(font => (
+                      <option key={font} value={font}>{font}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-              
-              <div>
-                <h4 className="text-white font-medium mb-4">Custom CSS</h4>
-                <textarea
-                  value={siteSettings.customCSS}
-                  onChange={(e) => setSiteSettings({
-                    ...siteSettings,
-                    customCSS: e.target.value
-                  })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-md px-3 py-2 h-64 font-mono text-sm"
-                  placeholder="/* Global custom CSS */"
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Primary Color"
+                  type="color"
+                  value={siteSettings.primaryColor}
+                  onChange={(e) => setSiteSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
+                />
+                <Input
+                  label="Secondary Color"
+                  type="color"
+                  value={siteSettings.secondaryColor}
+                  onChange={(e) => setSiteSettings(prev => ({ ...prev, secondaryColor: e.target.value }))}
                 />
               </div>
             </div>
           </Card>
-        )}
 
-        {/* Other tabs remain the same... */}
-      </div>
+          {/* SEO Settings */}
+          <Card className="p-6">
+            <h3 className="text-xl font-bold text-white mb-6">SEO & Analytics</h3>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Google Analytics ID"
+                  value={siteSettings.googleAnalytics}
+                  onChange={(e) => setSiteSettings(prev => ({ ...prev, googleAnalytics: e.target.value }))}
+                  placeholder="G-XXXXXXXXXX"
+                />
+                <Input
+                  label="Google Search Console"
+                  value={siteSettings.googleSearchConsole}
+                  onChange={(e) => setSiteSettings(prev => ({ ...prev, googleSearchConsole: e.target.value }))}
+                  placeholder="Verification code"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Bing Webmaster"
+                  value={siteSettings.bingWebmaster}
+                  onChange={(e) => setSiteSettings(prev => ({ ...prev, bingWebmaster: e.target.value }))}
+                  placeholder="Verification code"
+                />
+                <Input
+                  label="Yandex Webmaster"
+                  value={siteSettings.yandexWebmaster}
+                  onChange={(e) => setSiteSettings(prev => ({ ...prev, yandexWebmaster: e.target.value }))}
+                  placeholder="Verification code"
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Social Media */}
+          <Card className="p-6">
+            <h3 className="text-xl font-bold text-white mb-6">Social Media</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Facebook"
+                value={siteSettings.socialMedia.facebook}
+                onChange={(e) => setSiteSettings(prev => ({ 
+                  ...prev, 
+                  socialMedia: { ...prev.socialMedia, facebook: e.target.value }
+                }))}
+                placeholder="https://facebook.com/yourpage"
+              />
+              <Input
+                label="Twitter"
+                value={siteSettings.socialMedia.twitter}
+                onChange={(e) => setSiteSettings(prev => ({ 
+                  ...prev, 
+                  socialMedia: { ...prev.socialMedia, twitter: e.target.value }
+                }))}
+                placeholder="https://twitter.com/youraccount"
+              />
+              <Input
+                label="Instagram"
+                value={siteSettings.socialMedia.instagram}
+                onChange={(e) => setSiteSettings(prev => ({ 
+                  ...prev, 
+                  socialMedia: { ...prev.socialMedia, instagram: e.target.value }
+                }))}
+                placeholder="https://instagram.com/youraccount"
+              />
+              <Input
+                label="GitHub"
+                value={siteSettings.socialMedia.github}
+                onChange={(e) => setSiteSettings(prev => ({ 
+                  ...prev, 
+                  socialMedia: { ...prev.socialMedia, github: e.target.value }
+                }))}
+                placeholder="https://github.com/youraccount"
+              />
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
