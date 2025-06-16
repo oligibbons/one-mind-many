@@ -151,6 +151,15 @@
   h4 {
     @apply text-xl md:text-2xl;
   }
+
+  /* Custom font utility classes */
+  .custom-font {
+    font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
+  }
+  
+  .body-font {
+    font-family: 'Quicksand', system-ui, sans-serif;
+  }
 }
 
 @layer components {
@@ -246,14 +255,29 @@
     box-shadow: inset 0 1px 2px rgba(18, 18, 18, 0.3);
   }
   
-  /* Custom font for key UI elements */
-  .custom-font {
-    font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
+  /* Custom scrollbar for game interfaces */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(214, 95, 39, 0.5) rgba(26, 32, 44, 0.5);
   }
   
-  /* Quicksand for body text */
-  .body-font {
-    font-family: 'Quicksand', system-ui, sans-serif;
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(26, 32, 44, 0.5);
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(214, 95, 39, 0.5);
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(214, 95, 39, 0.7);
   }
   
   /* Game-style text effects */
@@ -380,4 +404,20 @@
   background-image: var(--paper-texture-dark);
   opacity: 0.1;
   pointer-events: none;
+}
+
+/* Shadow glow for buttons and interactive elements */
+.shadow-glow-orange {
+  box-shadow: 0 0 15px rgba(214, 95, 39, 0.5);
+}
+
+/* Media queries for responsive design */
+@media (max-width: 640px) {
+  .game-button {
+    @apply px-3 py-2 text-sm;
+  }
+  
+  .game-card {
+    border-width: 1px;
+  }
 }
