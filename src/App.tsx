@@ -25,6 +25,7 @@ import ContentManagementPage from './pages/admin/ContentManagementPage';
 import RulesManagementPage from './pages/admin/RulesManagementPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import GameManagementPage from './pages/admin/GameManagementPage';
+import TestGameViewPage from './pages/admin/TestGameViewPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Hooks and Contexts
@@ -94,6 +95,7 @@ function App() {
           <Route path="rules" element={<RulesManagementPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="games" element={<GameManagementPage />} />
+          <Route path="test-game" element={<TestGameViewPage />} />
         </Route>
         
         {/* 404 route */}
