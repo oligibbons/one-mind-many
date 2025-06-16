@@ -3,33 +3,41 @@ import { Link } from 'react-router-dom';
 import { Play, Users, Brain, Zap, Trophy, Star, ArrowRight, Book } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
+import { useContent } from '../contexts/ContentContext';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const HomePage = () => {
   const { user } = useAuth();
+  const { content, loading } = useContent();
   
-  const gameStats = [
-    { label: 'Active Players', value: '12,847', icon: <Users className="w-5 h-5" /> },
-    { label: 'Games Played', value: '89,234', icon: <Play className="w-5 h-5" /> },
-    { label: 'Success Rate', value: '67%', icon: <Trophy className="w-5 h-5" /> },
-  ];
+  if (loading) {
+    return <LoadingSpinner fullScreen text="Loading..." />;
+  }
+
+  const homepage = content.homepage || {};
   
-  const quickFeatures = [
-    {
-      icon: <Brain className="w-8 h-8 text-orange-400" />,
-      title: 'AI Scenarios',
-      description: 'Dynamic stories that adapt to your choices'
-    },
-    {
-      icon: <Users className="w-8 h-8 text-blue-400" />,
-      title: 'Social Deduction',
-      description: 'Trust no one, suspect everyone'
-    },
-    {
-      icon: <Zap className="w-8 h-8 text-purple-400" />,
-      title: 'Real-time Action',
-      description: 'Every decision matters instantly'
-    }
-  ];
+  // Map icon names to actual icon components
+  const getIcon = (iconName: string) => {
+    const icons: Record<string, any> = {
+      Brain,
+      Users,
+      Zap,
+      Play,
+      Trophy,
+      Star
+    };
+    return icons[iconName] || Brain;
+  };
+  
+  const quickFeatures = (homepage.features || []).map((feature: any) => ({
+    ...feature,
+    iconComponent: getIcon(feature.icon)
+  }));
+
+  const gameStats = (homepage.stats || []).map((stat: any) => ({
+    ...stat,
+    iconComponent: getIcon(stat.icon)
+  }));
 
   return (
     <div className="min-h-screen overflow-hidden">
@@ -59,7 +67,7 @@ const HomePage = () => {
               >
                 <img
                   src="/OneMindMay Logo - long.png"
-                  alt="One Mind, Many"
+                  alt={homepage.hero_title || "One Mind, Many"}
                   className="h-24 md:h-32 lg:h-40 object-contain game-title"
                 />
               </motion.div>
@@ -85,9 +93,7 @@ const HomePage = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
             >
-              The ultimate social deduction experience. Navigate through AI-driven scenarios 
-              where <span className="text-orange-400 font-semibold">trust is scarce</span> and 
-              <span className="text-orange-400 font-semibold"> survival depends on wit</span>.
+              {homepage.hero_description || "The ultimate social deduction experience. Navigate through AI-driven scenarios where trust is scarce and survival depends on wit."}
             </motion.p>
             
             {/* Main CTA Buttons */}
@@ -100,14 +106,14 @@ const HomePage = () => {
               <Link to={user ? "/game" : "/auth/register"}>
                 <button className="game-button text-lg px-8 py-4 glow-pulse">
                   <Play className="w-6 h-6 mr-2" />
-                  {user ? "Enter Game" : "Start Playing"}
+                  {user ? "Enter Game" : (homepage.hero_cta_primary || "Start Playing")}
                 </button>
               </Link>
               
               <Link to="/how-to-play">
                 <button className="game-button bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-lg px-8 py-4">
                   <Book className="w-6 h-6 mr-2" />
-                  How to Play
+                  {homepage.hero_cta_secondary || "How to Play"}
                 </button>
               </Link>
             </motion.div>
@@ -119,20 +125,23 @@ const HomePage = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 1 }}
             >
-              {gameStats.map((stat, index) => (
-                <motion.div
-                  key={index}
-                  className="game-stat text-center"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <div className="flex items-center justify-center mb-2 text-orange-400">
-                    {stat.icon}
-                  </div>
-                  <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
-                  <div className="text-sm text-slate-400">{stat.label}</div>
-                </motion.div>
-              ))}
+              {gameStats.map((stat, index) => {
+                const IconComponent = stat.iconComponent;
+                return (
+                  <motion.div
+                    key={index}
+                    className="game-stat text-center"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <div className="flex items-center justify-center mb-2 text-orange-400">
+                      <IconComponent className="w-5 h-5" />
+                    </div>
+                    <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
+                    <div className="text-sm text-slate-400">{stat.label}</div>
+                  </motion.div>
+                );
+              })}
             </motion.div>
           </motion.div>
         </div>
@@ -157,28 +166,31 @@ const HomePage = () => {
           </motion.div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {quickFeatures.map((feature, index) => (
-              <motion.div
-                key={index}
-                className="game-card p-6 text-center group hover:border-orange-500/50 transition-all duration-300"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.2, duration: 0.6 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -5 }}
-              >
-                <div className="mb-4 flex justify-center group-hover:scale-110 transition-transform duration-300">
-                  {feature.icon}
-                </div>
-                <h3 
-                  className="text-xl font-bold text-white mb-2"
-                  style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
+            {quickFeatures.map((feature, index) => {
+              const IconComponent = feature.iconComponent;
+              return (
+                <motion.div
+                  key={index}
+                  className="game-card p-6 text-center group hover:border-orange-500/50 transition-all duration-300"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.2, duration: 0.6 }}
+                  viewport={{ once: true }}
+                  whileHover={{ y: -5 }}
                 >
-                  {feature.title}
-                </h3>
-                <p className="text-slate-400">{feature.description}</p>
-              </motion.div>
-            ))}
+                  <div className="mb-4 flex justify-center group-hover:scale-110 transition-transform duration-300">
+                    <IconComponent className="w-8 h-8 text-orange-400" />
+                  </div>
+                  <h3 
+                    className="text-xl font-bold text-white mb-2"
+                    style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
+                  >
+                    {feature.title}
+                  </h3>
+                  <p className="text-slate-400">{feature.description}</p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -259,15 +271,15 @@ const HomePage = () => {
               className="text-3xl md:text-4xl font-bold text-white mb-6"
               style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
             >
-              Your Next Adventure Awaits
+              {homepage.final_cta_title || "Your Next Adventure Awaits"}
             </h2>
             <p className="text-lg text-slate-300 mb-8">
-              Free to play. Easy to learn. Impossible to master.
+              {homepage.final_cta_description || "Free to play. Easy to learn. Impossible to master."}
             </p>
             <Link to={user ? "/game" : "/auth/register"}>
               <button className="game-button text-xl px-10 py-5 glow-pulse">
                 <Play className="w-6 h-6 mr-3" />
-                {user ? "Continue Playing" : "Start Your Journey"}
+                {user ? "Continue Playing" : (homepage.final_cta_button || "Start Your Journey")}
                 <ArrowRight className="w-6 h-6 ml-3" />
               </button>
             </Link>

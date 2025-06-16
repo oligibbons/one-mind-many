@@ -2,13 +2,24 @@ import { Link } from 'react-router-dom';
 import Logo from '../ui/Logo';
 import { motion } from 'framer-motion';
 import { Github, Twitter, Book } from 'lucide-react';
+import { useContent } from '../../contexts/ContentContext';
 
 const Footer = () => {
+  const { content } = useContent();
   const currentYear = new Date().getFullYear();
+  const global = content.global || {};
   
   const socialLinks = [
-    { icon: <Github size={20} />, href: '#', label: 'GitHub' },
-    { icon: <Twitter size={20} />, href: '#', label: 'Twitter' },
+    { 
+      icon: <Github size={20} />, 
+      href: global.social_links?.github || '#', 
+      label: 'GitHub' 
+    },
+    { 
+      icon: <Twitter size={20} />, 
+      href: global.social_links?.twitter || '#', 
+      label: 'Twitter' 
+    },
   ];
   
   const footerLinks = [
@@ -32,8 +43,7 @@ const Footer = () => {
           <div className="space-y-4">
             <Logo />
             <p className="text-slate-400 text-sm max-w-md">
-              One Mind, Many is a social deduction game where players navigate through dynamic, 
-              AI-driven scenarios where survival depends on cunning teamwork.
+              {global.site_description || "One Mind, Many is a social deduction game where players navigate through dynamic, AI-driven scenarios where survival depends on cunning teamwork."}
             </p>
           </div>
           
@@ -78,7 +88,7 @@ const Footer = () => {
         
         <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center">
           <p className="text-slate-500 text-sm">
-            &copy; {currentYear} One Mind, Many. All rights reserved.
+            &copy; {currentYear} {global.site_name || "One Mind, Many"}. All rights reserved.
           </p>
           <p className="text-slate-500 text-sm mt-4 sm:mt-0">
             Made with passion by game enthusiasts

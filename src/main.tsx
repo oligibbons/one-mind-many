@@ -5,13 +5,16 @@ import App from './App';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
+import { ContentProvider } from './contexts/ContentContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
         <SocketProvider>
-          <App />
+          <ContentProvider>
+            <App />
+          </ContentProvider>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>

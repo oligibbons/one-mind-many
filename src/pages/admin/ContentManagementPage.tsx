@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, Download, Eye, Edit, Plus, Trash2, Globe, FileText } from 'lucide-react';
+import { Save, Upload, Download, Eye, Edit, Plus, Trash2, Globe, FileText, RefreshCw } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { api } from '../../lib/api';
+import { useContent } from '../../contexts/ContentContext';
 
 interface ContentSection {
   id: string;
@@ -25,6 +26,7 @@ interface ContentPage {
 }
 
 const ContentManagementPage = () => {
+  const { content: globalContent, refreshContent } = useContent();
   const [pages, setPages] = useState<ContentPage[]>([]);
   const [selectedPage, setSelectedPage] = useState<string>('homepage');
   const [loading, setLoading] = useState(true);
@@ -83,6 +85,13 @@ const ContentManagementPage = () => {
   useEffect(() => {
     fetchContent();
   }, []);
+
+  // Update local content when global content changes
+  useEffect(() => {
+    if (globalContent && Object.keys(globalContent).length > 0) {
+      setContent(globalContent);
+    }
+  }, [globalContent]);
 
   const fetchContent = async () => {
     try {
@@ -150,7 +159,10 @@ const ContentManagementPage = () => {
       setSuccess('Content saved successfully!');
       setEditingSection(null);
       
-      // Refresh content
+      // Refresh content in the global context
+      await refreshContent();
+      
+      // Refresh local content
       await fetchContent();
     } catch (error) {
       console.error('Error saving content:', error);
@@ -166,13 +178,22 @@ const ContentManagementPage = () => {
       setError('');
       setSuccess('');
 
-      const response = await api.post('/api/admin/content/publish');
-      
-      if (!response.ok) {
+      // First save the content
+      const saveResponse = await api.put('/api/admin/content', content);
+      if (!saveResponse.ok) {
+        throw new Error('Failed to save content before publishing');
+      }
+
+      // Then publish it
+      const publishResponse = await api.post('/api/admin/content/publish');
+      if (!publishResponse.ok) {
         throw new Error('Failed to publish content');
       }
 
-      setSuccess('Content published successfully! Changes are now live.');
+      // Refresh the global content context to update the live site
+      await refreshContent();
+
+      setSuccess('Content published successfully! Changes are now live on the website.');
     } catch (error) {
       console.error('Error publishing content:', error);
       setError('Failed to publish content');
@@ -229,6 +250,44 @@ const ContentManagementPage = () => {
     }));
   };
 
+  const handleAddStat = () => {
+    const newStat = {
+      label: 'New Stat',
+      value: '0',
+      icon: 'Star'
+    };
+    
+    setContent(prev => ({
+      ...prev,
+      homepage: {
+        ...prev.homepage,
+        stats: [...(prev.homepage.stats || []), newStat]
+      }
+    }));
+  };
+
+  const handleRemoveStat = (index: number) => {
+    setContent(prev => ({
+      ...prev,
+      homepage: {
+        ...prev.homepage,
+        stats: prev.homepage.stats.filter((_: any, i: number) => i !== index)
+      }
+    }));
+  };
+
+  const handleUpdateStat = (index: number, field: string, value: string) => {
+    setContent(prev => ({
+      ...prev,
+      homepage: {
+        ...prev.homepage,
+        stats: prev.homepage.stats.map((stat: any, i: number) => 
+          i === index ? { ...stat, [field]: value } : stat
+        )
+      }
+    }));
+  };
+
   const currentPage = pages.find(p => p.id === selectedPage);
 
   if (loading) {
@@ -250,6 +309,14 @@ const ContentManagementPage = () => {
             leftIcon={<Eye size={18} />}
           >
             {previewMode ? 'Edit Mode' : 'Preview Mode'}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={refreshContent}
+            leftIcon={<RefreshCw size={18} />}
+          >
+            Refresh
           </Button>
           
           <Button
@@ -352,6 +419,60 @@ const ContentManagementPage = () => {
                       onChange={(e) => handleUpdateSection('homepage', 'hero_cta_secondary', e.target.value)}
                     />
                   </div>
+                </div>
+              </Card>
+
+              {/* Stats Section */}
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white">Game Statistics</h2>
+                  <Button
+                    onClick={handleAddStat}
+                    leftIcon={<Plus size={16} />}
+                    size="sm"
+                  >
+                    Add Stat
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                  {content.homepage?.stats?.map((stat: any, index: number) => (
+                    <div key={index} className="bg-slate-800/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-white">Stat {index + 1}</h3>
+                        <Button
+                          onClick={() => handleRemoveStat(index)}
+                          leftIcon={<Trash2 size={16} />}
+                          size="sm"
+                          variant="outline"
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Input
+                          label="Label"
+                          value={stat.label}
+                          onChange={(e) => handleUpdateStat(index, 'label', e.target.value)}
+                        />
+                        
+                        <Input
+                          label="Value"
+                          value={stat.value}
+                          onChange={(e) => handleUpdateStat(index, 'value', e.target.value)}
+                        />
+                        
+                        <Input
+                          label="Icon"
+                          value={stat.icon}
+                          onChange={(e) => handleUpdateStat(index, 'icon', e.target.value)}
+                          placeholder="Users, Play, Trophy, etc."
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
 

@@ -17,6 +17,54 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// In-memory content storage (in production, this would be in a database)
+let contentStore = {
+  pages: {
+    homepage: {
+      hero_title: 'One Mind, Many',
+      hero_subtitle: 'The ultimate social deduction experience',
+      hero_description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit.',
+      hero_cta_primary: 'Start Playing',
+      hero_cta_secondary: 'How to Play',
+      features: [
+        {
+          title: 'AI Scenarios',
+          description: 'Dynamic stories that adapt to your choices',
+          icon: 'Brain'
+        },
+        {
+          title: 'Social Deduction',
+          description: 'Trust no one, suspect everyone',
+          icon: 'Users'
+        },
+        {
+          title: 'Real-time Action',
+          description: 'Every decision matters instantly',
+          icon: 'Zap'
+        }
+      ],
+      stats: [
+        { label: 'Active Players', value: '12,847', icon: 'Users' },
+        { label: 'Games Played', value: '89,234', icon: 'Play' },
+        { label: 'Success Rate', value: '67%', icon: 'Trophy' }
+      ],
+      final_cta_title: 'Your Next Adventure Awaits',
+      final_cta_description: 'Free to play. Easy to learn. Impossible to master.',
+      final_cta_button: 'Start Your Journey'
+    },
+    global: {
+      site_name: 'One Mind, Many',
+      site_description: 'The ultimate social deduction game',
+      contact_email: 'contact@onemindmany.com',
+      social_links: {
+        github: '#',
+        twitter: '#',
+        discord: '#'
+      }
+    }
+  }
+};
+
 // Get admin dashboard stats
 router.get('/stats', isAdmin, async (req, res) => {
   try {
@@ -1004,32 +1052,10 @@ router.post('/scenarios/:id/featured', isAdmin, async (req, res) => {
 });
 
 // Content Management endpoints
-router.get('/content', isAdmin, async (req, res) => {
+router.get('/content', async (req, res) => {
   try {
-    // Mock implementation - replace with actual content storage
-    const content = {
-      pages: {
-        homepage: {
-          hero_title: 'One Mind, Many',
-          hero_subtitle: 'The ultimate social deduction experience',
-          hero_description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit.',
-          features: [
-            {
-              title: 'AI Scenarios',
-              description: 'Dynamic stories that adapt to your choices',
-              icon: 'Brain'
-            }
-          ]
-        }
-      },
-      global: {
-        site_name: 'One Mind, Many',
-        site_description: 'The ultimate social deduction game',
-        contact_email: 'contact@onemindmany.com'
-      }
-    };
-    
-    return res.status(200).json(content);
+    // Return the current content store
+    return res.status(200).json(contentStore.pages);
   } catch (error) {
     console.error('Error fetching content:', error);
     return res.status(500).json({ 
@@ -1043,8 +1069,13 @@ router.put('/content', isAdmin, async (req, res) => {
   try {
     const content = req.body;
     
-    // Mock implementation - replace with actual content storage
-    // This would save to database or file system
+    // Update the content store
+    contentStore.pages = {
+      ...contentStore.pages,
+      ...content
+    };
+    
+    console.log('Content updated:', contentStore.pages);
     
     return res.status(200).json({
       message: 'Content saved successfully'
@@ -1060,8 +1091,13 @@ router.put('/content', isAdmin, async (req, res) => {
 
 router.post('/content/publish', isAdmin, async (req, res) => {
   try {
-    // Mock implementation - replace with actual publishing logic
-    // This would deploy content to production
+    // In a real implementation, this would:
+    // 1. Validate the content
+    // 2. Deploy content to production
+    // 3. Clear any caches
+    // 4. Notify CDN of changes
+    
+    console.log('Content published:', contentStore.pages);
     
     return res.status(200).json({
       message: 'Content published successfully'
