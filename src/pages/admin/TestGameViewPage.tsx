@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { api } from '../../lib/api';
 
 interface TestGameState {
   game: any;
@@ -39,11 +40,7 @@ const TestGameViewPage = () => {
   const fetchTestGameState = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/test-game-state', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await api.get('/api/admin/test-game-state');
 
       if (!response.ok) throw new Error('Failed to fetch test game state');
 
@@ -60,11 +57,7 @@ const TestGameViewPage = () => {
   const fetchPostGameState = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/test-postgame-state', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await api.get('/api/admin/test-postgame-state');
 
       if (!response.ok) throw new Error('Failed to fetch test post-game state');
 

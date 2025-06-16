@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../hooks/useAuth';
+import { BACKEND_WS_URL } from '../lib/api';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -20,8 +21,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Only connect when user is authenticated
     if (user) {
-      // Create socket connection using relative path (will be proxied by Vite)
-      const newSocket = io('/', {
+      // Create socket connection using the backend URL
+      const newSocket = io(BACKEND_WS_URL, {
         auth: {
           userId: user.id,
         },

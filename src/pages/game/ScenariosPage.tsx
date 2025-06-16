@@ -6,6 +6,7 @@ import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { useAuth } from '../../hooks/useAuth';
+import { api } from '../../lib/api';
 
 interface Scenario {
   id: string;
@@ -34,11 +35,7 @@ const ScenariosPage = () => {
     const fetchScenarios = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/scenarios', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+        const response = await api.get('/api/scenarios');
         
         if (!response.ok) throw new Error('Failed to fetch scenarios');
         
@@ -67,12 +64,7 @@ const ScenariosPage = () => {
     if (!confirm('Are you sure you want to delete this scenario?')) return;
     
     try {
-      const response = await fetch(`/api/scenarios/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.delete(`/api/scenarios/${id}`);
       
       if (!response.ok) throw new Error('Failed to delete scenario');
       

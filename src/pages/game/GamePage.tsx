@@ -12,6 +12,7 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { api } from '../../lib/api';
 
 interface GameState {
   turn: number;
@@ -86,11 +87,7 @@ const GamePage = () => {
   useEffect(() => {
     const fetchGameState = async () => {
       try {
-        const response = await fetch(`/api/game/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+        const response = await api.get(`/api/game/${id}`);
         
         if (!response.ok) throw new Error('Failed to fetch game state');
         
@@ -148,16 +145,9 @@ const GamePage = () => {
     if (!selectedAction.type) return;
 
     try {
-      const response = await fetch(`/api/game/${id}/action`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          action_type: selectedAction.type,
-          action_data: selectedAction,
-        }),
+      const response = await api.post(`/api/game/${id}/action`, {
+        action_type: selectedAction.type,
+        action_data: selectedAction,
       });
       
       if (!response.ok) throw new Error('Failed to submit action');

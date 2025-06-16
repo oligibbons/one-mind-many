@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { api } from '../../lib/api';
 
 interface Friend {
   id: string;
@@ -51,11 +52,7 @@ const FriendsPage = () => {
   
   const fetchFriends = async () => {
     try {
-      const response = await fetch('/api/friends', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get('/api/friends');
       
       if (!response.ok) throw new Error('Failed to fetch friends');
       
@@ -69,11 +66,7 @@ const FriendsPage = () => {
   
   const fetchRequests = async () => {
     try {
-      const response = await fetch('/api/friends/requests', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get('/api/friends/requests');
       
       if (!response.ok) throw new Error('Failed to fetch friend requests');
       
@@ -89,14 +82,7 @@ const FriendsPage = () => {
   
   const sendFriendRequest = async () => {
     try {
-      const response = await fetch('/api/friends/request', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username: addFriendUsername }),
-      });
+      const response = await api.post('/api/friends/request', { username: addFriendUsername });
       
       if (!response.ok) {
         const error = await response.json();
@@ -112,12 +98,7 @@ const FriendsPage = () => {
   
   const handleRequest = async (requestId: string, action: 'accept' | 'reject') => {
     try {
-      const response = await fetch(`/api/friends/request/${requestId}/${action}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.post(`/api/friends/request/${requestId}/${action}`);
       
       if (!response.ok) throw new Error(`Failed to ${action} friend request`);
       
@@ -131,12 +112,7 @@ const FriendsPage = () => {
   
   const removeFriend = async (friendId: string) => {
     try {
-      const response = await fetch(`/api/friends/${friendId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.delete(`/api/friends/${friendId}`);
       
       if (!response.ok) throw new Error('Failed to remove friend');
       

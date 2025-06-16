@@ -4,6 +4,7 @@ import { Users, GamepadIcon, Settings, BarChart3, Shield, Brain, FileText, Activ
 import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { api } from '../../lib/api';
 
 interface AdminStats {
   totalUsers: number;
@@ -28,11 +29,7 @@ const AdminPage = () => {
       setLoading(true);
       setError('');
       
-      const response = await fetch('/api/admin/stats', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await api.get('/api/admin/stats');
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

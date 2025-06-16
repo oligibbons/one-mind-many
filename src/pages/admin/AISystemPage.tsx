@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { api } from '../../lib/api';
 
 interface AIModel {
   id: string;
@@ -118,16 +119,9 @@ const AISystemPage = () => {
     setSuccess('');
 
     try {
-      const response = await fetch('/api/admin/ai/create-master', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          huggingFaceKey,
-          config: masterModelConfig
-        })
+      const response = await api.post('/api/admin/ai/create-master', {
+        huggingFaceKey,
+        config: masterModelConfig
       });
 
       const data = await response.json();
@@ -167,13 +161,7 @@ const AISystemPage = () => {
     setSuccess('');
 
     try {
-      const response = await fetch(`/api/admin/ai/train/${modelId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await api.post(`/api/admin/ai/train/${modelId}`);
 
       const data = await response.json();
 
@@ -206,16 +194,9 @@ const AISystemPage = () => {
     setTestResult('');
 
     try {
-      const response = await fetch(`/api/admin/ai/test/${modelId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          prompt: testPrompt,
-          config: masterModelConfig
-        })
+      const response = await api.post(`/api/admin/ai/test/${modelId}`, {
+        prompt: testPrompt,
+        config: masterModelConfig
       });
 
       const data = await response.json();
