@@ -41,17 +41,309 @@ router.get('/stats', isAdmin, async (req, res) => {
       .select('*', { count: 'exact', head: true });
     
     if (scenariosError) throw scenariosError;
+
+    // Get active users (logged in within last 24 hours)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const { count: activeUsers, error: activeUsersError } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gte('last_login', yesterday.toISOString());
+
+    if (activeUsersError) throw activeUsersError;
+
+    // Get new users today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const { count: newUsersToday, error: newUsersError } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', today.toISOString());
+
+    if (newUsersError) throw newUsersError;
+
+    // Get banned users
+    const { count: bannedUsers, error: bannedError } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'banned');
+
+    if (bannedError) throw bannedError;
     
     return res.status(200).json({
       totalUsers: totalUsers || 0,
       activeGames: activeGames || 0,
       totalScenarios: totalScenarios || 0,
-      totalAssets: 89 // Mock data for now
+      activeUsers: activeUsers || 0,
+      newUsersToday: newUsersToday || 0,
+      bannedUsers: bannedUsers || 0
     });
   } catch (error) {
     console.error('Error fetching admin stats:', error);
     return res.status(500).json({ 
       message: 'Failed to fetch admin statistics',
+      error: error.message 
+    });
+  }
+});
+
+// User management endpoints
+router.get('/users', isAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, role, status } = req.query;
+    const offset = (page - 1) * limit;
+    
+    let query = supabase
+      .from('users')
+      .select('*', { count: 'exact' });
+    
+    if (search) {
+      query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+    
+    if (role && role !== 'all') {
+      query = query.eq('role', role);
+    }
+
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
+    }
+    
+    const { data, count, error } = await query
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return res.status(200).json({
+      users: data,
+      total: count,
+      page: parseInt(page),
+      totalPages: Math.ceil(count / limit)
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return res.status(500).json({ 
+      message: 'Failed to fetch users',
+      error: error.message 
+    });
+  }
+});
+
+router.patch('/users/:id/role', isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    
+    if (!['user', 'admin', 'moderator'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role' });
+    }
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    return res.status(200).json({ message: 'User role updated successfully' });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    return res.status(500).json({ 
+      message: 'Failed to update user role',
+      error: error.message 
+    });
+  }
+});
+
+router.patch('/users/:id/status', isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!['online', 'offline', 'banned'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ status })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    return res.status(200).json({ message: 'User status updated successfully' });
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    return res.status(500).json({ 
+      message: 'Failed to update user status',
+      error: error.message 
+    });
+  }
+});
+
+router.delete('/users/:id', isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete user from auth.users (this will cascade to public.users)
+    const { error: authError } = await supabase.auth.admin.deleteUser(id);
+    
+    if (authError) throw authError;
+    
+    return res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return res.status(500).json({ 
+      message: 'Failed to delete user',
+      error: error.message 
+    });
+  }
+});
+
+// Game management endpoints
+router.get('/games', isAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, status, difficulty } = req.query;
+    const offset = (page - 1) * limit;
+    
+    let query = supabase
+      .from('games')
+      .select(`
+        *,
+        scenario:scenario_id(id, title, difficulty),
+        players:game_players(
+          id,
+          user:user_id(id, username),
+          role,
+          is_alive
+        )
+      `, { count: 'exact' });
+    
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
+    }
+    
+    const { data, count, error } = await query
+      .range(offset, offset + limit - 1)
+      .order('started_at', { ascending: false });
+    
+    if (error) throw error;
+
+    // Transform data to match expected format
+    const transformedData = data.map(game => ({
+      ...game,
+      host: game.players?.[0]?.user || { id: '', username: 'Unknown' }
+    }));
+    
+    return res.status(200).json({
+      games: transformedData,
+      total: count,
+      page: parseInt(page),
+      totalPages: Math.ceil(count / limit)
+    });
+  } catch (error) {
+    console.error('Error fetching games:', error);
+    return res.status(500).json({ 
+      message: 'Failed to fetch games',
+      error: error.message 
+    });
+  }
+});
+
+router.get('/games/stats', isAdmin, async (req, res) => {
+  try {
+    // Get total games
+    const { count: totalGames, error: totalError } = await supabase
+      .from('games')
+      .select('*', { count: 'exact', head: true });
+
+    if (totalError) throw totalError;
+
+    // Get active games
+    const { count: activeGames, error: activeError } = await supabase
+      .from('games')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'in_progress');
+
+    if (activeError) throw activeError;
+
+    // Get completed games
+    const { count: completedGames, error: completedError } = await supabase
+      .from('games')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'completed');
+
+    if (completedError) throw completedError;
+
+    // Get average duration (mock for now)
+    const averageDuration = 45; // minutes
+
+    // Get total players across all games
+    const { count: totalPlayers, error: playersError } = await supabase
+      .from('game_players')
+      .select('*', { count: 'exact', head: true });
+
+    if (playersError) throw playersError;
+
+    return res.status(200).json({
+      totalGames: totalGames || 0,
+      activeGames: activeGames || 0,
+      completedGames: completedGames || 0,
+      averageDuration,
+      totalPlayers: totalPlayers || 0
+    });
+  } catch (error) {
+    console.error('Error fetching game stats:', error);
+    return res.status(500).json({ 
+      message: 'Failed to fetch game statistics',
+      error: error.message 
+    });
+  }
+});
+
+router.post('/games/:id/end', isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { error } = await supabase
+      .from('games')
+      .update({ 
+        status: 'abandoned',
+        ended_at: new Date().toISOString()
+      })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    return res.status(200).json({ message: 'Game ended successfully' });
+  } catch (error) {
+    console.error('Error ending game:', error);
+    return res.status(500).json({ 
+      message: 'Failed to end game',
+      error: error.message 
+    });
+  }
+});
+
+router.delete('/games/:id', isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { error } = await supabase
+      .from('games')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    return res.status(200).json({ message: 'Game deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting game:', error);
+    return res.status(500).json({ 
+      message: 'Failed to delete game',
       error: error.message 
     });
   }
@@ -478,71 +770,6 @@ router.post('/assets/upload', isAdmin, async (req, res) => {
     console.error('Error uploading asset:', error);
     return res.status(500).json({ 
       message: 'Failed to upload asset',
-      error: error.message 
-    });
-  }
-});
-
-// User management endpoints
-router.get('/users', isAdmin, async (req, res) => {
-  try {
-    const { page = 1, limit = 10, search, role } = req.query;
-    const offset = (page - 1) * limit;
-    
-    let query = supabase
-      .from('users')
-      .select('*', { count: 'exact' });
-    
-    if (search) {
-      query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`);
-    }
-    
-    if (role) {
-      query = query.eq('role', role);
-    }
-    
-    const { data, count, error } = await query
-      .range(offset, offset + limit - 1)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    return res.status(200).json({
-      users: data,
-      total: count,
-      page: parseInt(page),
-      totalPages: Math.ceil(count / limit)
-    });
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    return res.status(500).json({ 
-      message: 'Failed to fetch users',
-      error: error.message 
-    });
-  }
-});
-
-router.patch('/users/:id/role', isAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { role } = req.body;
-    
-    if (!['user', 'admin', 'moderator'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role' });
-    }
-    
-    const { error } = await supabase
-      .from('users')
-      .update({ role })
-      .eq('id', id);
-    
-    if (error) throw error;
-    
-    return res.status(200).json({ message: 'User role updated successfully' });
-  } catch (error) {
-    console.error('Error updating user role:', error);
-    return res.status(500).json({ 
-      message: 'Failed to update user role',
       error: error.message 
     });
   }

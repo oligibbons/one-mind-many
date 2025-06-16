@@ -23,6 +23,8 @@ import AISystemPage from './pages/admin/AISystemPage';
 import ScenarioManagementPage from './pages/admin/ScenarioManagementPage';
 import ContentManagementPage from './pages/admin/ContentManagementPage';
 import RulesManagementPage from './pages/admin/RulesManagementPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
+import GameManagementPage from './pages/admin/GameManagementPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Hooks and Contexts
@@ -90,6 +92,8 @@ function App() {
           <Route path="scenarios" element={<ScenarioManagementPage />} />
           <Route path="content" element={<ContentManagementPage />} />
           <Route path="rules" element={<RulesManagementPage />} />
+          <Route path="users" element={<UserManagementPage />} />
+          <Route path="games" element={<GameManagementPage />} />
         </Route>
         
         {/* 404 route */}
