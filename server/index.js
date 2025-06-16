@@ -23,8 +23,39 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CORS configuration function to handle trailing slash variations
+const corsOrigin = (origin, callback) => {
+  const allowedOrigins = [
+    'https://onemindmany.com',
+    'https://onemindmany.com/',
+    'https://www.onemindmany.com',
+    'https://www.onemindmany.com/',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173'
+  ];
+  
+  // Allow requests with no origin (like mobile apps or curl requests)
+  if (!origin) return callback(null, true);
+  
+  // Normalize origin by removing trailing slash for comparison
+  const normalizedOrigin = origin.replace(/\/$/, '');
+  const normalizedAllowed = allowedOrigins.map(o => o.replace(/\/$/, ''));
+  
+  if (normalizedAllowed.includes(normalizedOrigin)) {
+    return callback(null, true);
+  }
+  
+  return callback(new Error('Not allowed by CORS'));
+};
+
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: corsOrigin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -48,12 +79,15 @@ app.use('/api/rules', authenticateJWT, rulesRoutes);
 // Create HTTP server
 const server = createServer(app);
 
-// Initialize Socket.IO
+// Initialize Socket.IO with improved CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || '*',
+    origin: corsOrigin,
     methods: ['GET', 'POST'],
+    credentials: true
   },
+  allowEIO3: true,
+  transports: ['websocket', 'polling']
 });
 
 // Make io available to routes
