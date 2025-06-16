@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, Download, Eye, Edit, Plus, Trash2, Globe, FileText, RefreshCw } from 'lucide-react';
+import { Save, Upload, Download, Eye, Edit, Plus, Trash2, Globe, FileText, RefreshCw, Search, Tag, Image, Link } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
@@ -25,6 +25,20 @@ interface ContentPage {
   sections: ContentSection[];
 }
 
+interface SEOSettings {
+  title: string;
+  description: string;
+  keywords: string;
+  og_title: string;
+  og_description: string;
+  og_image: string;
+  twitter_title: string;
+  twitter_description: string;
+  twitter_image: string;
+  canonical_url: string;
+  robots: string;
+}
+
 const ContentManagementPage = () => {
   const { content: globalContent, refreshContent } = useContent();
   const [pages, setPages] = useState<ContentPage[]>([]);
@@ -35,6 +49,7 @@ const ContentManagementPage = () => {
   const [success, setSuccess] = useState<string>('');
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [activeTab, setActiveTab] = useState<'content' | 'seo' | 'navigation'>('content');
 
   // Content state for editing
   const [content, setContent] = useState<Record<string, any>>({
@@ -70,6 +85,29 @@ const ContentManagementPage = () => {
       final_cta_description: 'Free to play. Easy to learn. Impossible to master.',
       final_cta_button: 'Start Your Journey'
     },
+    howtoplay: {
+      page_title: 'How to Play',
+      page_subtitle: 'Master the art of deception and strategy',
+      page_description: 'Learn the rules, understand the roles, and dominate the game.',
+      sections: [
+        {
+          id: 'overview',
+          title: 'Game Overview',
+          content: 'In One Mind, Many, deception meets strategy in a gripping social deduction game...'
+        }
+      ]
+    },
+    about: {
+      page_title: 'About One Mind, Many',
+      page_subtitle: 'The story behind the game',
+      page_description: 'Learn about our mission to create the ultimate social deduction experience.',
+      team_section: {
+        title: 'Our Team',
+        description: 'Meet the passionate developers and designers behind One Mind, Many.',
+        members: []
+      },
+      mission_statement: 'To create immersive, AI-driven gaming experiences that bring people together through strategic thinking and social interaction.'
+    },
     global: {
       site_name: 'One Mind, Many',
       site_description: 'The ultimate social deduction game',
@@ -78,7 +116,62 @@ const ContentManagementPage = () => {
         github: '#',
         twitter: '#',
         discord: '#'
+      },
+      navigation: {
+        header_links: [
+          { name: 'Home', path: '/', visible: true },
+          { name: 'How to Play', path: '/how-to-play', visible: true },
+          { name: 'About', path: '/about', visible: true }
+        ],
+        footer_links: [
+          { name: 'Privacy Policy', path: '/privacy', visible: true },
+          { name: 'Terms of Service', path: '/terms', visible: true },
+          { name: 'Contact', path: '/contact', visible: true }
+        ]
       }
+    }
+  });
+
+  // SEO settings for each page
+  const [seoSettings, setSeoSettings] = useState<Record<string, SEOSettings>>({
+    homepage: {
+      title: 'One Mind, Many - The Ultimate Social Deduction Game',
+      description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit. Join thousands of players in the ultimate social deduction experience.',
+      keywords: 'social deduction, online game, AI scenarios, multiplayer, strategy game, deception, teamwork',
+      og_title: 'One Mind, Many - The Ultimate Social Deduction Game',
+      og_description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit.',
+      og_image: '/OneMindMany Icon PNG Orange.png',
+      twitter_title: 'One Mind, Many - The Ultimate Social Deduction Game',
+      twitter_description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit.',
+      twitter_image: '/OneMindMany Icon PNG Orange.png',
+      canonical_url: 'https://onemindmany.com',
+      robots: 'index, follow'
+    },
+    howtoplay: {
+      title: 'How to Play - One Mind, Many',
+      description: 'Learn the rules, understand the roles, and master the art of deception in One Mind, Many. Complete guide to gameplay mechanics and strategies.',
+      keywords: 'how to play, game rules, tutorial, strategy guide, social deduction rules',
+      og_title: 'How to Play - One Mind, Many',
+      og_description: 'Learn the rules, understand the roles, and master the art of deception in One Mind, Many.',
+      og_image: '/OneMindMany Icon PNG Orange.png',
+      twitter_title: 'How to Play - One Mind, Many',
+      twitter_description: 'Learn the rules, understand the roles, and master the art of deception in One Mind, Many.',
+      twitter_image: '/OneMindMany Icon PNG Orange.png',
+      canonical_url: 'https://onemindmany.com/how-to-play',
+      robots: 'index, follow'
+    },
+    about: {
+      title: 'About Us - One Mind, Many',
+      description: 'Learn about the team and mission behind One Mind, Many. Discover our passion for creating immersive social deduction experiences.',
+      keywords: 'about us, game developers, team, mission, company',
+      og_title: 'About Us - One Mind, Many',
+      og_description: 'Learn about the team and mission behind One Mind, Many.',
+      og_image: '/OneMindMany Icon PNG Orange.png',
+      twitter_title: 'About Us - One Mind, Many',
+      twitter_description: 'Learn about the team and mission behind One Mind, Many.',
+      twitter_image: '/OneMindMany Icon PNG Orange.png',
+      canonical_url: 'https://onemindmany.com/about',
+      robots: 'index, follow'
     }
   });
 
@@ -114,6 +207,34 @@ const ContentManagementPage = () => {
               type: typeof value === 'object' ? 'json' : 'text',
               content: value,
               page: 'homepage',
+              section: key,
+              updated_at: new Date().toISOString()
+            }))
+          },
+          {
+            id: 'howtoplay',
+            name: 'How to Play',
+            path: '/how-to-play',
+            sections: Object.entries(data.howtoplay || {}).map(([key, value]) => ({
+              id: key,
+              name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              type: typeof value === 'object' ? 'json' : 'text',
+              content: value,
+              page: 'howtoplay',
+              section: key,
+              updated_at: new Date().toISOString()
+            }))
+          },
+          {
+            id: 'about',
+            name: 'About',
+            path: '/about',
+            sections: Object.entries(data.about || {}).map(([key, value]) => ({
+              id: key,
+              name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              type: typeof value === 'object' ? 'json' : 'text',
+              content: value,
+              page: 'about',
               section: key,
               updated_at: new Date().toISOString()
             }))
@@ -212,6 +333,16 @@ const ContentManagementPage = () => {
     }));
   };
 
+  const handleUpdateSEO = (page: string, field: string, value: string) => {
+    setSeoSettings(prev => ({
+      ...prev,
+      [page]: {
+        ...prev[page],
+        [field]: value
+      }
+    }));
+  };
+
   const handleAddFeature = () => {
     const newFeature = {
       title: 'New Feature',
@@ -288,7 +419,55 @@ const ContentManagementPage = () => {
     }));
   };
 
+  const handleAddNavLink = (section: 'header_links' | 'footer_links') => {
+    const newLink = {
+      name: 'New Link',
+      path: '/',
+      visible: true
+    };
+    
+    setContent(prev => ({
+      ...prev,
+      global: {
+        ...prev.global,
+        navigation: {
+          ...prev.global.navigation,
+          [section]: [...(prev.global.navigation[section] || []), newLink]
+        }
+      }
+    }));
+  };
+
+  const handleRemoveNavLink = (section: 'header_links' | 'footer_links', index: number) => {
+    setContent(prev => ({
+      ...prev,
+      global: {
+        ...prev.global,
+        navigation: {
+          ...prev.global.navigation,
+          [section]: prev.global.navigation[section].filter((_: any, i: number) => i !== index)
+        }
+      }
+    }));
+  };
+
+  const handleUpdateNavLink = (section: 'header_links' | 'footer_links', index: number, field: string, value: any) => {
+    setContent(prev => ({
+      ...prev,
+      global: {
+        ...prev.global,
+        navigation: {
+          ...prev.global.navigation,
+          [section]: prev.global.navigation[section].map((link: any, i: number) => 
+            i === index ? { ...link, [field]: value } : link
+          )
+        }
+      }
+    }));
+  };
+
   const currentPage = pages.find(p => p.id === selectedPage);
+  const currentSEO = seoSettings[selectedPage] || seoSettings.homepage;
 
   if (loading) {
     return <LoadingSpinner fullScreen text="Loading content..." />;
@@ -296,17 +475,18 @@ const ContentManagementPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Content Management</h1>
-          <p className="text-slate-400 mt-2">Manage website content, pages, and navigation</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Content Management</h1>
+          <p className="text-slate-400 mt-2">Manage website content, SEO, and navigation</p>
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-2 md:gap-4">
           <Button
             variant="outline"
             onClick={() => setPreviewMode(!previewMode)}
             leftIcon={<Eye size={18} />}
+            size="sm"
           >
             {previewMode ? 'Edit Mode' : 'Preview Mode'}
           </Button>
@@ -315,6 +495,7 @@ const ContentManagementPage = () => {
             variant="outline"
             onClick={refreshContent}
             leftIcon={<RefreshCw size={18} />}
+            size="sm"
           >
             Refresh
           </Button>
@@ -324,6 +505,7 @@ const ContentManagementPage = () => {
             disabled={saving}
             isLoading={saving}
             leftIcon={<Save size={18} />}
+            size="sm"
           >
             Save Changes
           </Button>
@@ -334,6 +516,7 @@ const ContentManagementPage = () => {
             isLoading={saving}
             leftIcon={<Globe size={18} />}
             className="bg-green-600 hover:bg-green-700"
+            size="sm"
           >
             Publish Live
           </Button>
@@ -353,23 +536,23 @@ const ContentManagementPage = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
         {/* Page Navigation */}
         <div className="lg:col-span-1">
-          <Card className="p-6">
+          <Card className="p-4 md:p-6">
             <h3 className="text-lg font-bold text-white mb-4">Pages</h3>
             <nav className="space-y-2">
               {pages.map((page) => (
                 <button
                   key={page.id}
                   onClick={() => setSelectedPage(page.id)}
-                  className={`w-full flex items-center p-3 rounded-lg transition-colors ${
+                  className={`w-full flex items-center p-3 rounded-lg transition-colors text-left ${
                     selectedPage === page.id
                       ? 'bg-orange-500/20 text-orange-400'
                       : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
-                  <FileText size={18} className="mr-3" />
+                  <FileText size={18} className="mr-3 flex-shrink-0" />
                   <span className="font-medium">{page.name}</span>
                 </button>
               ))}
@@ -379,123 +562,510 @@ const ContentManagementPage = () => {
 
         {/* Content Editor */}
         <div className="lg:col-span-3">
-          {selectedPage === 'homepage' && (
-            <div className="space-y-6">
-              {/* Hero Section */}
-              <Card className="p-6">
-                <h2 className="text-xl font-bold text-white mb-6">Hero Section</h2>
-                <div className="space-y-4">
-                  <Input
-                    label="Hero Title"
-                    value={content.homepage?.hero_title || ''}
-                    onChange={(e) => handleUpdateSection('homepage', 'hero_title', e.target.value)}
-                  />
-                  
-                  <Input
-                    label="Hero Subtitle"
-                    value={content.homepage?.hero_subtitle || ''}
-                    onChange={(e) => handleUpdateSection('homepage', 'hero_subtitle', e.target.value)}
-                  />
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Hero Description</label>
-                    <textarea
-                      value={content.homepage?.hero_description || ''}
-                      onChange={(e) => handleUpdateSection('homepage', 'hero_description', e.target.value)}
-                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      label="Primary CTA Button"
-                      value={content.homepage?.hero_cta_primary || ''}
-                      onChange={(e) => handleUpdateSection('homepage', 'hero_cta_primary', e.target.value)}
-                    />
-                    
-                    <Input
-                      label="Secondary CTA Button"
-                      value={content.homepage?.hero_cta_secondary || ''}
-                      onChange={(e) => handleUpdateSection('homepage', 'hero_cta_secondary', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </Card>
-
-              {/* Stats Section */}
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-white">Game Statistics</h2>
-                  <Button
-                    onClick={handleAddStat}
-                    leftIcon={<Plus size={16} />}
-                    size="sm"
+          {/* Tab Navigation */}
+          <div className="mb-6">
+            <div className="border-b border-slate-700">
+              <nav className="flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('content')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'content'
+                      ? 'border-orange-500 text-orange-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-300'
+                  }`}
+                >
+                  <FileText size={16} className="inline mr-2" />
+                  Content
+                </button>
+                <button
+                  onClick={() => setActiveTab('seo')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'seo'
+                      ? 'border-orange-500 text-orange-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-300'
+                  }`}
+                >
+                  <Search size={16} className="inline mr-2" />
+                  SEO
+                </button>
+                {selectedPage === 'global' && (
+                  <button
+                    onClick={() => setActiveTab('navigation')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'navigation'
+                        ? 'border-orange-500 text-orange-400'
+                        : 'border-transparent text-slate-400 hover:text-slate-300'
+                    }`}
                   >
-                    Add Stat
-                  </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  {content.homepage?.stats?.map((stat: any, index: number) => (
-                    <div key={index} className="bg-slate-800/50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-white">Stat {index + 1}</h3>
-                        <Button
-                          onClick={() => handleRemoveStat(index)}
-                          leftIcon={<Trash2 size={16} />}
-                          size="sm"
-                          variant="outline"
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          Remove
-                        </Button>
+                    <Link size={16} className="inline mr-2" />
+                    Navigation
+                  </button>
+                )}
+              </nav>
+            </div>
+          </div>
+
+          {/* Content Tab */}
+          {activeTab === 'content' && (
+            <div className="space-y-6">
+              {selectedPage === 'homepage' && (
+                <div className="space-y-6">
+                  {/* Hero Section */}
+                  <Card className="p-4 md:p-6">
+                    <h2 className="text-xl font-bold text-white mb-6">Hero Section</h2>
+                    <div className="space-y-4">
+                      <Input
+                        label="Hero Title"
+                        value={content.homepage?.hero_title || ''}
+                        onChange={(e) => handleUpdateSection('homepage', 'hero_title', e.target.value)}
+                      />
+                      
+                      <Input
+                        label="Hero Subtitle"
+                        value={content.homepage?.hero_subtitle || ''}
+                        onChange={(e) => handleUpdateSection('homepage', 'hero_subtitle', e.target.value)}
+                      />
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Hero Description</label>
+                        <textarea
+                          value={content.homepage?.hero_description || ''}
+                          onChange={(e) => handleUpdateSection('homepage', 'hero_description', e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                        />
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
-                          label="Label"
-                          value={stat.label}
-                          onChange={(e) => handleUpdateStat(index, 'label', e.target.value)}
+                          label="Primary CTA Button"
+                          value={content.homepage?.hero_cta_primary || ''}
+                          onChange={(e) => handleUpdateSection('homepage', 'hero_cta_primary', e.target.value)}
                         />
                         
                         <Input
-                          label="Value"
-                          value={stat.value}
-                          onChange={(e) => handleUpdateStat(index, 'value', e.target.value)}
-                        />
-                        
-                        <Input
-                          label="Icon"
-                          value={stat.icon}
-                          onChange={(e) => handleUpdateStat(index, 'icon', e.target.value)}
-                          placeholder="Users, Play, Trophy, etc."
+                          label="Secondary CTA Button"
+                          value={content.homepage?.hero_cta_secondary || ''}
+                          onChange={(e) => handleUpdateSection('homepage', 'hero_cta_secondary', e.target.value)}
                         />
                       </div>
                     </div>
-                  ))}
+                  </Card>
+
+                  {/* Stats Section */}
+                  <Card className="p-4 md:p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-bold text-white">Game Statistics</h2>
+                      <Button
+                        onClick={handleAddStat}
+                        leftIcon={<Plus size={16} />}
+                        size="sm"
+                      >
+                        Add Stat
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {content.homepage?.stats?.map((stat: any, index: number) => (
+                        <div key={index} className="bg-slate-800/50 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-white">Stat {index + 1}</h3>
+                            <Button
+                              onClick={() => handleRemoveStat(index)}
+                              leftIcon={<Trash2 size={16} />}
+                              size="sm"
+                              variant="outline"
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                              label="Label"
+                              value={stat.label}
+                              onChange={(e) => handleUpdateStat(index, 'label', e.target.value)}
+                            />
+                            
+                            <Input
+                              label="Value"
+                              value={stat.value}
+                              onChange={(e) => handleUpdateStat(index, 'value', e.target.value)}
+                            />
+                            
+                            <Input
+                              label="Icon"
+                              value={stat.icon}
+                              onChange={(e) => handleUpdateStat(index, 'icon', e.target.value)}
+                              placeholder="Users, Play, Trophy, etc."
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* Features Section */}
+                  <Card className="p-4 md:p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-bold text-white">Features</h2>
+                      <Button
+                        onClick={handleAddFeature}
+                        leftIcon={<Plus size={16} />}
+                        size="sm"
+                      >
+                        Add Feature
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {content.homepage?.features?.map((feature: any, index: number) => (
+                        <div key={index} className="bg-slate-800/50 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-white">Feature {index + 1}</h3>
+                            <Button
+                              onClick={() => handleRemoveFeature(index)}
+                              leftIcon={<Trash2 size={16} />}
+                              size="sm"
+                              variant="outline"
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                              label="Title"
+                              value={feature.title}
+                              onChange={(e) => handleUpdateFeature(index, 'title', e.target.value)}
+                            />
+                            
+                            <Input
+                              label="Icon"
+                              value={feature.icon}
+                              onChange={(e) => handleUpdateFeature(index, 'icon', e.target.value)}
+                              placeholder="Brain, Users, Zap, etc."
+                            />
+                            
+                            <div>
+                              <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                              <textarea
+                                value={feature.description}
+                                onChange={(e) => handleUpdateFeature(index, 'description', e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* Final CTA Section */}
+                  <Card className="p-4 md:p-6">
+                    <h2 className="text-xl font-bold text-white mb-6">Final Call-to-Action</h2>
+                    <div className="space-y-4">
+                      <Input
+                        label="CTA Title"
+                        value={content.homepage?.final_cta_title || ''}
+                        onChange={(e) => handleUpdateSection('homepage', 'final_cta_title', e.target.value)}
+                      />
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">CTA Description</label>
+                        <textarea
+                          value={content.homepage?.final_cta_description || ''}
+                          onChange={(e) => handleUpdateSection('homepage', 'final_cta_description', e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                        />
+                      </div>
+                      
+                      <Input
+                        label="CTA Button Text"
+                        value={content.homepage?.final_cta_button || ''}
+                        onChange={(e) => handleUpdateSection('homepage', 'final_cta_button', e.target.value)}
+                      />
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {selectedPage === 'howtoplay' && (
+                <div className="space-y-6">
+                  <Card className="p-4 md:p-6">
+                    <h2 className="text-xl font-bold text-white mb-6">How to Play Page</h2>
+                    <div className="space-y-4">
+                      <Input
+                        label="Page Title"
+                        value={content.howtoplay?.page_title || ''}
+                        onChange={(e) => handleUpdateSection('howtoplay', 'page_title', e.target.value)}
+                      />
+                      
+                      <Input
+                        label="Page Subtitle"
+                        value={content.howtoplay?.page_subtitle || ''}
+                        onChange={(e) => handleUpdateSection('howtoplay', 'page_subtitle', e.target.value)}
+                      />
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Page Description</label>
+                        <textarea
+                          value={content.howtoplay?.page_description || ''}
+                          onChange={(e) => handleUpdateSection('howtoplay', 'page_description', e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {selectedPage === 'about' && (
+                <div className="space-y-6">
+                  <Card className="p-4 md:p-6">
+                    <h2 className="text-xl font-bold text-white mb-6">About Page</h2>
+                    <div className="space-y-4">
+                      <Input
+                        label="Page Title"
+                        value={content.about?.page_title || ''}
+                        onChange={(e) => handleUpdateSection('about', 'page_title', e.target.value)}
+                      />
+                      
+                      <Input
+                        label="Page Subtitle"
+                        value={content.about?.page_subtitle || ''}
+                        onChange={(e) => handleUpdateSection('about', 'page_subtitle', e.target.value)}
+                      />
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Page Description</label>
+                        <textarea
+                          value={content.about?.page_description || ''}
+                          onChange={(e) => handleUpdateSection('about', 'page_description', e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Mission Statement</label>
+                        <textarea
+                          value={content.about?.mission_statement || ''}
+                          onChange={(e) => handleUpdateSection('about', 'mission_statement', e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-32"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {selectedPage === 'global' && (
+                <div className="space-y-6">
+                  {/* Site Settings */}
+                  <Card className="p-4 md:p-6">
+                    <h2 className="text-xl font-bold text-white mb-6">Site Settings</h2>
+                    <div className="space-y-4">
+                      <Input
+                        label="Site Name"
+                        value={content.global?.site_name || ''}
+                        onChange={(e) => handleUpdateSection('global', 'site_name', e.target.value)}
+                      />
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Site Description</label>
+                        <textarea
+                          value={content.global?.site_description || ''}
+                          onChange={(e) => handleUpdateSection('global', 'site_description', e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                        />
+                      </div>
+                      
+                      <Input
+                        label="Contact Email"
+                        type="email"
+                        value={content.global?.contact_email || ''}
+                        onChange={(e) => handleUpdateSection('global', 'contact_email', e.target.value)}
+                      />
+                    </div>
+                  </Card>
+
+                  {/* Social Links */}
+                  <Card className="p-4 md:p-6">
+                    <h2 className="text-xl font-bold text-white mb-6">Social Links</h2>
+                    <div className="space-y-4">
+                      <Input
+                        label="GitHub URL"
+                        value={content.global?.social_links?.github || ''}
+                        onChange={(e) => handleUpdateSection('global', 'social_links', {
+                          ...content.global?.social_links,
+                          github: e.target.value
+                        })}
+                      />
+                      
+                      <Input
+                        label="Twitter URL"
+                        value={content.global?.social_links?.twitter || ''}
+                        onChange={(e) => handleUpdateSection('global', 'social_links', {
+                          ...content.global?.social_links,
+                          twitter: e.target.value
+                        })}
+                      />
+                      
+                      <Input
+                        label="Discord URL"
+                        value={content.global?.social_links?.discord || ''}
+                        onChange={(e) => handleUpdateSection('global', 'social_links', {
+                          ...content.global?.social_links,
+                          discord: e.target.value
+                        })}
+                      />
+                    </div>
+                  </Card>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SEO Tab */}
+          {activeTab === 'seo' && (
+            <div className="space-y-6">
+              <Card className="p-4 md:p-6">
+                <h2 className="text-xl font-bold text-white mb-6">SEO Settings for {currentPage?.name}</h2>
+                <div className="space-y-4">
+                  <Input
+                    label="Page Title"
+                    value={currentSEO.title}
+                    onChange={(e) => handleUpdateSEO(selectedPage, 'title', e.target.value)}
+                    placeholder="Page title for search engines"
+                  />
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Meta Description</label>
+                    <textarea
+                      value={currentSEO.description}
+                      onChange={(e) => handleUpdateSEO(selectedPage, 'description', e.target.value)}
+                      placeholder="Brief description for search results (150-160 characters)"
+                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">{currentSEO.description.length}/160 characters</p>
+                  </div>
+                  
+                  <Input
+                    label="Keywords"
+                    value={currentSEO.keywords}
+                    onChange={(e) => handleUpdateSEO(selectedPage, 'keywords', e.target.value)}
+                    placeholder="keyword1, keyword2, keyword3"
+                  />
+                  
+                  <Input
+                    label="Canonical URL"
+                    value={currentSEO.canonical_url}
+                    onChange={(e) => handleUpdateSEO(selectedPage, 'canonical_url', e.target.value)}
+                    placeholder="https://onemindmany.com/page"
+                  />
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Robots</label>
+                    <select
+                      value={currentSEO.robots}
+                      onChange={(e) => handleUpdateSEO(selectedPage, 'robots', e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+                    >
+                      <option value="index, follow">Index, Follow</option>
+                      <option value="noindex, follow">No Index, Follow</option>
+                      <option value="index, nofollow">Index, No Follow</option>
+                      <option value="noindex, nofollow">No Index, No Follow</option>
+                    </select>
+                  </div>
                 </div>
               </Card>
 
-              {/* Features Section */}
-              <Card className="p-6">
+              {/* Open Graph Settings */}
+              <Card className="p-4 md:p-6">
+                <h2 className="text-xl font-bold text-white mb-6">Open Graph (Facebook)</h2>
+                <div className="space-y-4">
+                  <Input
+                    label="OG Title"
+                    value={currentSEO.og_title}
+                    onChange={(e) => handleUpdateSEO(selectedPage, 'og_title', e.target.value)}
+                    placeholder="Title for social media sharing"
+                  />
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">OG Description</label>
+                    <textarea
+                      value={currentSEO.og_description}
+                      onChange={(e) => handleUpdateSEO(selectedPage, 'og_description', e.target.value)}
+                      placeholder="Description for social media sharing"
+                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20"
+                    />
+                  </div>
+                  
+                  <Input
+                    label="OG Image URL"
+                    value={currentSEO.og_image}
+                    onChange={(e) => handleUpdateSEO(selectedPage, 'og_image', e.target.value)}
+                    placeholder="/path/to/image.jpg"
+                  />
+                </div>
+              </Card>
+
+              {/* Twitter Settings */}
+              <Card className="p-4 md:p-6">
+                <h2 className="text-xl font-bold text-white mb-6">Twitter Card</h2>
+                <div className="space-y-4">
+                  <Input
+                    label="Twitter Title"
+                    value={currentSEO.twitter_title}
+                    onChange={(e) => handleUpdateSEO(selectedPage, 'twitter_title', e.target.value)}
+                    placeholder="Title for Twitter sharing"
+                  />
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Twitter Description</label>
+                    <textarea
+                      value={currentSEO.twitter_description}
+                      onChange={(e) => handleUpdateSEO(selectedPage, 'twitter_description', e.target.value)}
+                      placeholder="Description for Twitter sharing"
+                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20"
+                    />
+                  </div>
+                  
+                  <Input
+                    label="Twitter Image URL"
+                    value={currentSEO.twitter_image}
+                    onChange={(e) => handleUpdateSEO(selectedPage, 'twitter_image', e.target.value)}
+                    placeholder="/path/to/image.jpg"
+                  />
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Navigation Tab */}
+          {activeTab === 'navigation' && selectedPage === 'global' && (
+            <div className="space-y-6">
+              {/* Header Navigation */}
+              <Card className="p-4 md:p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-white">Features</h2>
+                  <h2 className="text-xl font-bold text-white">Header Navigation</h2>
                   <Button
-                    onClick={handleAddFeature}
+                    onClick={() => handleAddNavLink('header_links')}
                     leftIcon={<Plus size={16} />}
                     size="sm"
                   >
-                    Add Feature
+                    Add Link
                   </Button>
                 </div>
                 
                 <div className="space-y-4">
-                  {content.homepage?.features?.map((feature: any, index: number) => (
+                  {content.global?.navigation?.header_links?.map((link: any, index: number) => (
                     <div key={index} className="bg-slate-800/50 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-white">Feature {index + 1}</h3>
+                        <h3 className="text-lg font-semibold text-white">Link {index + 1}</h3>
                         <Button
-                          onClick={() => handleRemoveFeature(index)}
+                          onClick={() => handleRemoveNavLink('header_links', index)}
                           leftIcon={<Trash2 size={16} />}
                           size="sm"
                           variant="outline"
@@ -507,25 +1077,27 @@ const ContentManagementPage = () => {
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Input
-                          label="Title"
-                          value={feature.title}
-                          onChange={(e) => handleUpdateFeature(index, 'title', e.target.value)}
+                          label="Name"
+                          value={link.name}
+                          onChange={(e) => handleUpdateNavLink('header_links', index, 'name', e.target.value)}
                         />
                         
                         <Input
-                          label="Icon"
-                          value={feature.icon}
-                          onChange={(e) => handleUpdateFeature(index, 'icon', e.target.value)}
-                          placeholder="Brain, Users, Zap, etc."
+                          label="Path"
+                          value={link.path}
+                          onChange={(e) => handleUpdateNavLink('header_links', index, 'path', e.target.value)}
                         />
                         
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
-                          <textarea
-                            value={feature.description}
-                            onChange={(e) => handleUpdateFeature(index, 'description', e.target.value)}
-                            className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20"
-                          />
+                        <div className="flex items-center pt-6">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={link.visible}
+                              onChange={(e) => handleUpdateNavLink('header_links', index, 'visible', e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-slate-300">Visible</span>
+                          </label>
                         </div>
                       </div>
                     </div>
@@ -533,95 +1105,62 @@ const ContentManagementPage = () => {
                 </div>
               </Card>
 
-              {/* Final CTA Section */}
-              <Card className="p-6">
-                <h2 className="text-xl font-bold text-white mb-6">Final Call-to-Action</h2>
-                <div className="space-y-4">
-                  <Input
-                    label="CTA Title"
-                    value={content.homepage?.final_cta_title || ''}
-                    onChange={(e) => handleUpdateSection('homepage', 'final_cta_title', e.target.value)}
-                  />
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">CTA Description</label>
-                    <textarea
-                      value={content.homepage?.final_cta_description || ''}
-                      onChange={(e) => handleUpdateSection('homepage', 'final_cta_description', e.target.value)}
-                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
-                    />
-                  </div>
-                  
-                  <Input
-                    label="CTA Button Text"
-                    value={content.homepage?.final_cta_button || ''}
-                    onChange={(e) => handleUpdateSection('homepage', 'final_cta_button', e.target.value)}
-                  />
+              {/* Footer Navigation */}
+              <Card className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white">Footer Navigation</h2>
+                  <Button
+                    onClick={() => handleAddNavLink('footer_links')}
+                    leftIcon={<Plus size={16} />}
+                    size="sm"
+                  >
+                    Add Link
+                  </Button>
                 </div>
-              </Card>
-            </div>
-          )}
-
-          {selectedPage === 'global' && (
-            <div className="space-y-6">
-              {/* Site Settings */}
-              <Card className="p-6">
-                <h2 className="text-xl font-bold text-white mb-6">Site Settings</h2>
+                
                 <div className="space-y-4">
-                  <Input
-                    label="Site Name"
-                    value={content.global?.site_name || ''}
-                    onChange={(e) => handleUpdateSection('global', 'site_name', e.target.value)}
-                  />
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Site Description</label>
-                    <textarea
-                      value={content.global?.site_description || ''}
-                      onChange={(e) => handleUpdateSection('global', 'site_description', e.target.value)}
-                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
-                    />
-                  </div>
-                  
-                  <Input
-                    label="Contact Email"
-                    type="email"
-                    value={content.global?.contact_email || ''}
-                    onChange={(e) => handleUpdateSection('global', 'contact_email', e.target.value)}
-                  />
-                </div>
-              </Card>
-
-              {/* Social Links */}
-              <Card className="p-6">
-                <h2 className="text-xl font-bold text-white mb-6">Social Links</h2>
-                <div className="space-y-4">
-                  <Input
-                    label="GitHub URL"
-                    value={content.global?.social_links?.github || ''}
-                    onChange={(e) => handleUpdateSection('global', 'social_links', {
-                      ...content.global?.social_links,
-                      github: e.target.value
-                    })}
-                  />
-                  
-                  <Input
-                    label="Twitter URL"
-                    value={content.global?.social_links?.twitter || ''}
-                    onChange={(e) => handleUpdateSection('global', 'social_links', {
-                      ...content.global?.social_links,
-                      twitter: e.target.value
-                    })}
-                  />
-                  
-                  <Input
-                    label="Discord URL"
-                    value={content.global?.social_links?.discord || ''}
-                    onChange={(e) => handleUpdateSection('global', 'social_links', {
-                      ...content.global?.social_links,
-                      discord: e.target.value
-                    })}
-                  />
+                  {content.global?.navigation?.footer_links?.map((link: any, index: number) => (
+                    <div key={index} className="bg-slate-800/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-white">Link {index + 1}</h3>
+                        <Button
+                          onClick={() => handleRemoveNavLink('footer_links', index)}
+                          leftIcon={<Trash2 size={16} />}
+                          size="sm"
+                          variant="outline"
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Input
+                          label="Name"
+                          value={link.name}
+                          onChange={(e) => handleUpdateNavLink('footer_links', index, 'name', e.target.value)}
+                        />
+                        
+                        <Input
+                          label="Path"
+                          value={link.path}
+                          onChange={(e) => handleUpdateNavLink('footer_links', index, 'path', e.target.value)}
+                        />
+                        
+                        <div className="flex items-center pt-6">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={link.visible}
+                              onChange={(e) => handleUpdateNavLink('footer_links', index, 'visible', e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-slate-300">Visible</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
             </div>
@@ -631,20 +1170,20 @@ const ContentManagementPage = () => {
 
       {/* Preview Mode */}
       {previewMode && (
-        <Card className="p-6 mt-8">
+        <Card className="p-4 md:p-6 mt-8">
           <h2 className="text-xl font-bold text-white mb-6">Live Preview</h2>
-          <div className="bg-slate-800/50 rounded-lg p-6">
+          <div className="bg-slate-800/50 rounded-lg p-4 md:p-6">
             <div className="text-center">
-              <h1 className="text-4xl font-bold text-white mb-4">
+              <h1 className="text-2xl md:text-4xl font-bold text-white mb-4">
                 {content.homepage?.hero_title}
               </h1>
-              <p className="text-xl text-slate-300 mb-2">
+              <p className="text-lg md:text-xl text-slate-300 mb-2">
                 {content.homepage?.hero_subtitle}
               </p>
               <p className="text-slate-400 mb-6">
                 {content.homepage?.hero_description}
               </p>
-              <div className="flex gap-4 justify-center">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button className="bg-orange-500 text-white px-6 py-3 rounded-lg font-medium">
                   {content.homepage?.hero_cta_primary}
                 </button>
