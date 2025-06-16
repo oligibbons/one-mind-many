@@ -1,446 +1,217 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, Download, Eye, Edit, Plus, Trash2, Globe, FileText, RefreshCw, Search, Tag, Image, Link, Code, Monitor } from 'lucide-react';
+import { 
+  Save, Upload, Download, Eye, EyeOff, Globe, FileText, 
+  Settings, Palette, Code, Monitor, Smartphone, Tablet,
+  Plus, Edit, Trash2, RefreshCw
+} from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { api } from '../../lib/api';
 import { useContent } from '../../contexts/ContentContext';
-
-interface ContentSection {
-  id: string;
-  name: string;
-  type: 'text' | 'html' | 'image' | 'json';
-  content: any;
-  page: string;
-  section: string;
-  updated_at: string;
-}
+import { api } from '../../lib/api';
 
 interface ContentPage {
   id: string;
   name: string;
-  path: string;
-  sections: ContentSection[];
-}
-
-interface SEOSettings {
   title: string;
   description: string;
-  keywords: string;
-  og_title: string;
-  og_description: string;
-  og_image: string;
-  twitter_title: string;
-  twitter_description: string;
-  twitter_image: string;
-  canonical_url: string;
-  robots: string;
+  html_content?: string;
+  meta_title?: string;
+  meta_description?: string;
+  last_updated: string;
 }
 
 const ContentManagementPage = () => {
-  const { content: globalContent, refreshContent } = useContent();
-  const [pages, setPages] = useState<ContentPage[]>([]);
-  const [selectedPage, setSelectedPage] = useState<string>('homepage');
-  const [loading, setLoading] = useState(true);
+  const { content, loading: contentLoading, refreshContent } = useContent();
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pages' | 'global' | 'html'>('pages');
+  const [selectedPage, setSelectedPage] = useState<string>('homepage');
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
-  const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [previewMode, setPreviewMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'content' | 'seo' | 'navigation' | 'html'>('content');
-  const [htmlContent, setHtmlContent] = useState('');
-  const [htmlPreviewMode, setHtmlPreviewMode] = useState(false);
-
-  // Content state for editing
-  const [content, setContent] = useState<Record<string, any>>({
-    homepage: {
-      hero_title: 'One Mind, Many',
-      hero_subtitle: 'The ultimate social deduction experience',
-      hero_description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit.',
-      hero_cta_primary: 'Start Playing',
-      hero_cta_secondary: 'How to Play',
-      features: [
-        {
-          title: 'AI Scenarios',
-          description: 'Dynamic stories that adapt to your choices',
-          icon: 'Brain'
-        },
-        {
-          title: 'Social Deduction',
-          description: 'Trust no one, suspect everyone',
-          icon: 'Users'
-        },
-        {
-          title: 'Real-time Action',
-          description: 'Every decision matters instantly',
-          icon: 'Zap'
-        }
-      ],
-      stats: [
-        { label: 'Active Players', value: '12,847', icon: 'Users' },
-        { label: 'Games Played', value: '89,234', icon: 'Play' },
-        { label: 'Success Rate', value: '67%', icon: 'Trophy' }
-      ],
-      final_cta_title: 'Your Next Adventure Awaits',
-      final_cta_description: 'Free to play. Easy to learn. Impossible to master.',
-      final_cta_button: 'Start Your Journey'
+  
+  // Content state
+  const [pageContent, setPageContent] = useState<any>({});
+  const [globalContent, setGlobalContent] = useState<any>({});
+  const [htmlContent, setHtmlContent] = useState<string>('');
+  
+  // Available pages
+  const [pages] = useState<ContentPage[]>([
+    {
+      id: 'homepage',
+      name: 'Homepage',
+      title: 'Home Page',
+      description: 'Main landing page content',
+      html_content: '',
+      last_updated: new Date().toISOString()
     },
-    howtoplay: {
-      page_title: 'How to Play',
-      page_subtitle: 'Master the art of deception and strategy',
-      page_description: 'Learn the rules, understand the roles, and dominate the game.',
-      html_content: `
-        <div class="how-to-play-content">
-          <h2>Game Overview</h2>
-          <p>In One Mind, Many, deception meets strategy in a gripping social deduction game. Players take turns programming actions for a shared character, navigating through dynamic, AI-driven scenarios where survival depends on cunning teamwork.</p>
-          
-          <h3>Key Features</h3>
-          <ul>
-            <li><strong>AI-Driven Scenarios:</strong> Dynamic stories that adapt to your choices</li>
-            <li><strong>Social Deduction:</strong> Trust no one, suspect everyone</li>
-            <li><strong>Real-time Action:</strong> Every decision matters instantly</li>
-          </ul>
-          
-          <h2>Player Roles</h2>
-          <div class="roles-grid">
-            <div class="role-card">
-              <h4>Collaborator</h4>
-              <p>Work toward the shared character's well-intentioned goals. Use intention tags like Assist, Negotiate, Investigate, Collect, and Repair.</p>
-            </div>
-            <div class="role-card">
-              <h4>Rogue</h4>
-              <p>A neutral role where players are only out for themselves. Use intention tags like Infiltrate, Scout, Bypass, Manipulate, and Distract.</p>
-            </div>
-            <div class="role-card">
-              <h4>Saboteur</h4>
-              <p>Actively work against the Collaborators. Use intention tags like Disrupt, Obstruct, Mislead, Tamper, and Sabotage.</p>
-            </div>
-          </div>
-          
-          <h2>Game Flow</h2>
-          <ol>
-            <li><strong>Programming Phase:</strong> Players secretly program their actions</li>
-            <li><strong>Resolution Phase:</strong> Actions are resolved in turn order</li>
-            <li><strong>Narrative Update:</strong> AI provides context and updates game state</li>
-            <li><strong>Next Turn:</strong> Process repeats until end conditions are met</li>
-          </ol>
-          
-          <h2>Universal Actions</h2>
-          <div class="actions-grid">
-            <div class="action-card">
-              <h4>Move</h4>
-              <p>Moves the shared character towards a target location</p>
-            </div>
-            <div class="action-card">
-              <h4>Interact</h4>
-              <p>Interact with objects, locations, hazards, or NPCs</p>
-            </div>
-            <div class="action-card">
-              <h4>Search</h4>
-              <p>Search locations or containers for useful items</p>
-            </div>
-          </div>
-          
-          <style>
-            .how-to-play-content {
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 2rem;
-              font-family: 'Quicksand', system-ui, sans-serif;
-              line-height: 1.6;
-              color: #e2e8f0;
-            }
-            
-            .how-to-play-content h2 {
-              color: #f97316;
-              font-size: 2rem;
-              margin: 2rem 0 1rem 0;
-              font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
-            }
-            
-            .how-to-play-content h3 {
-              color: #f59e0b;
-              font-size: 1.5rem;
-              margin: 1.5rem 0 1rem 0;
-              font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
-            }
-            
-            .how-to-play-content h4 {
-              color: #fbbf24;
-              font-size: 1.25rem;
-              margin: 1rem 0 0.5rem 0;
-              font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
-            }
-            
-            .roles-grid, .actions-grid {
-              display: grid;
-              grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-              gap: 1.5rem;
-              margin: 1.5rem 0;
-            }
-            
-            .role-card, .action-card {
-              background: rgba(30, 41, 59, 0.6);
-              border: 1px solid rgba(107, 85, 137, 0.3);
-              border-radius: 0.75rem;
-              padding: 1.5rem;
-              backdrop-filter: blur(8px);
-            }
-            
-            .role-card h4, .action-card h4 {
-              margin-top: 0;
-              color: #f97316;
-            }
-            
-            .how-to-play-content ul, .how-to-play-content ol {
-              margin: 1rem 0;
-              padding-left: 2rem;
-            }
-            
-            .how-to-play-content li {
-              margin: 0.5rem 0;
-            }
-            
-            .how-to-play-content strong {
-              color: #f97316;
-            }
-          </style>
-        </div>
-      `,
-      sections: [
-        {
-          id: 'overview',
-          title: 'Game Overview',
-          content: 'In One Mind, Many, deception meets strategy in a gripping social deduction game...'
-        }
-      ]
+    {
+      id: 'howtoplay',
+      name: 'How to Play',
+      title: 'How to Play Page',
+      description: 'Game rules and instructions',
+      html_content: '',
+      last_updated: new Date().toISOString()
     },
-    about: {
-      page_title: 'About One Mind, Many',
-      page_subtitle: 'The story behind the game',
-      page_description: 'Learn about our mission to create the ultimate social deduction experience.',
-      html_content: `
-        <div class="about-content">
-          <h2>Our Mission</h2>
-          <p>To create immersive, AI-driven gaming experiences that bring people together through strategic thinking and social interaction.</p>
-          
-          <h2>The Story Behind One Mind, Many</h2>
-          <p>One Mind, Many was born from a passion for social deduction games and cutting-edge AI technology. We wanted to create an experience that combines the best of human psychology with dynamic, adaptive storytelling.</p>
-          
-          <h2>Our Team</h2>
-          <p>We're a dedicated team of game developers, AI researchers, and design enthusiasts who believe in the power of games to connect people and create memorable experiences.</p>
-          
-          <h2>What Makes Us Different</h2>
-          <ul>
-            <li><strong>AI-Driven Narratives:</strong> Every game is unique with our advanced AI storytelling</li>
-            <li><strong>Deep Strategy:</strong> Multiple layers of deception and cooperation</li>
-            <li><strong>Community Focus:</strong> Built for players, by players</li>
-          </ul>
-          
-          <style>
-            .about-content {
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 2rem;
-              font-family: 'Quicksand', system-ui, sans-serif;
-              line-height: 1.6;
-              color: #e2e8f0;
-            }
-            
-            .about-content h2 {
-              color: #f97316;
-              font-size: 2rem;
-              margin: 2rem 0 1rem 0;
-              font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
-            }
-            
-            .about-content ul {
-              margin: 1rem 0;
-              padding-left: 2rem;
-            }
-            
-            .about-content li {
-              margin: 0.5rem 0;
-            }
-            
-            .about-content strong {
-              color: #f97316;
-            }
-          </style>
-        </div>
-      `,
-      team_section: {
-        title: 'Our Team',
-        description: 'Meet the passionate developers and designers behind One Mind, Many.',
-        members: []
-      },
-      mission_statement: 'To create immersive, AI-driven gaming experiences that bring people together through strategic thinking and social interaction.'
-    },
-    global: {
-      site_name: 'One Mind, Many',
-      site_description: 'The ultimate social deduction game',
-      contact_email: 'contact@onemindmany.com',
-      social_links: {
-        github: '#',
-        twitter: '#',
-        discord: '#'
-      },
-      navigation: {
-        header_links: [
-          { name: 'Home', path: '/', visible: true },
-          { name: 'How to Play', path: '/how-to-play', visible: true },
-          { name: 'About', path: '/about', visible: true }
-        ],
-        footer_links: [
-          { name: 'Privacy Policy', path: '/privacy', visible: true },
-          { name: 'Terms of Service', path: '/terms', visible: true },
-          { name: 'Contact', path: '/contact', visible: true }
-        ]
-      }
+    {
+      id: 'about',
+      name: 'About',
+      title: 'About Page',
+      description: 'About the game and team',
+      html_content: '',
+      last_updated: new Date().toISOString()
     }
-  });
-
-  // SEO settings for each page
-  const [seoSettings, setSeoSettings] = useState<Record<string, SEOSettings>>({
-    homepage: {
-      title: 'One Mind, Many - The Ultimate Social Deduction Game',
-      description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit. Join thousands of players in the ultimate social deduction experience.',
-      keywords: 'social deduction, online game, AI scenarios, multiplayer, strategy game, deception, teamwork',
-      og_title: 'One Mind, Many - The Ultimate Social Deduction Game',
-      og_description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit.',
-      og_image: '/OneMindMany Icon PNG Orange.png',
-      twitter_title: 'One Mind, Many - The Ultimate Social Deduction Game',
-      twitter_description: 'Navigate through AI-driven scenarios where trust is scarce and survival depends on wit.',
-      twitter_image: '/OneMindMany Icon PNG Orange.png',
-      canonical_url: 'https://onemindmany.com',
-      robots: 'index, follow'
-    },
-    howtoplay: {
-      title: 'How to Play - One Mind, Many',
-      description: 'Learn the rules, understand the roles, and master the art of deception in One Mind, Many. Complete guide to gameplay mechanics and strategies.',
-      keywords: 'how to play, game rules, tutorial, strategy guide, social deduction rules',
-      og_title: 'How to Play - One Mind, Many',
-      og_description: 'Learn the rules, understand the roles, and master the art of deception in One Mind, Many.',
-      og_image: '/OneMindMany Icon PNG Orange.png',
-      twitter_title: 'How to Play - One Mind, Many',
-      twitter_description: 'Learn the rules, understand the roles, and master the art of deception in One Mind, Many.',
-      twitter_image: '/OneMindMany Icon PNG Orange.png',
-      canonical_url: 'https://onemindmany.com/how-to-play',
-      robots: 'index, follow'
-    },
-    about: {
-      title: 'About Us - One Mind, Many',
-      description: 'Learn about the team and mission behind One Mind, Many. Discover our passion for creating immersive social deduction experiences.',
-      keywords: 'about us, game developers, team, mission, company',
-      og_title: 'About Us - One Mind, Many',
-      og_description: 'Learn about the team and mission behind One Mind, Many.',
-      og_image: '/OneMindMany Icon PNG Orange.png',
-      twitter_title: 'About Us - One Mind, Many',
-      twitter_description: 'Learn about the team and mission behind One Mind, Many.',
-      twitter_image: '/OneMindMany Icon PNG Orange.png',
-      canonical_url: 'https://onemindmany.com/about',
-      robots: 'index, follow'
-    }
-  });
+  ]);
 
   useEffect(() => {
-    fetchContent();
-  }, []);
-
-  // Update local content when global content changes
-  useEffect(() => {
-    if (globalContent && Object.keys(globalContent).length > 0) {
-      setContent(globalContent);
-    }
-  }, [globalContent]);
-
-  // Update HTML content when page changes
-  useEffect(() => {
-    if (content[selectedPage]?.html_content) {
-      setHtmlContent(content[selectedPage].html_content);
-    } else {
-      setHtmlContent('');
-    }
-  }, [selectedPage, content]);
-
-  const fetchContent = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/api/admin/content');
+    if (!contentLoading && content) {
+      setPageContent(content);
+      setGlobalContent(content.global || {});
       
-      if (response.ok) {
-        const data = await response.json();
-        setContent(data);
-        
-        // Convert content to pages structure
-        const pagesData: ContentPage[] = [
-          {
-            id: 'homepage',
-            name: 'Homepage',
-            path: '/',
-            sections: Object.entries(data.homepage || {}).map(([key, value]) => ({
-              id: key,
-              name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              type: typeof value === 'object' ? 'json' : 'text',
-              content: value,
-              page: 'homepage',
-              section: key,
-              updated_at: new Date().toISOString()
-            }))
-          },
-          {
-            id: 'howtoplay',
-            name: 'How to Play',
-            path: '/how-to-play',
-            sections: Object.entries(data.howtoplay || {}).map(([key, value]) => ({
-              id: key,
-              name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              type: typeof value === 'object' ? 'json' : key === 'html_content' ? 'html' : 'text',
-              content: value,
-              page: 'howtoplay',
-              section: key,
-              updated_at: new Date().toISOString()
-            }))
-          },
-          {
-            id: 'about',
-            name: 'About',
-            path: '/about',
-            sections: Object.entries(data.about || {}).map(([key, value]) => ({
-              id: key,
-              name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              type: typeof value === 'object' ? 'json' : key === 'html_content' ? 'html' : 'text',
-              content: value,
-              page: 'about',
-              section: key,
-              updated_at: new Date().toISOString()
-            }))
-          },
-          {
-            id: 'global',
-            name: 'Global Settings',
-            path: '/global',
-            sections: Object.entries(data.global || {}).map(([key, value]) => ({
-              id: key,
-              name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              type: typeof value === 'object' ? 'json' : 'text',
-              content: value,
-              page: 'global',
-              section: key,
-              updated_at: new Date().toISOString()
-            }))
-          }
-        ];
-        
-        setPages(pagesData);
+      // Set HTML content for the selected page
+      const currentPage = content[selectedPage];
+      if (currentPage && currentPage.html_content) {
+        setHtmlContent(currentPage.html_content);
+      } else {
+        // Generate default HTML content based on page type
+        setHtmlContent(generateDefaultHtml(selectedPage, currentPage));
       }
-    } catch (error) {
-      console.error('Error fetching content:', error);
-      setError('Failed to load content');
-    } finally {
-      setLoading(false);
+    }
+  }, [content, contentLoading, selectedPage]);
+
+  const generateDefaultHtml = (pageId: string, pageData: any) => {
+    switch (pageId) {
+      case 'homepage':
+        return `<div class="homepage-content">
+  <section class="hero-section">
+    <h1 class="hero-title">${pageData?.hero_title || 'One Mind, Many'}</h1>
+    <p class="hero-description">${pageData?.hero_description || 'The ultimate social deduction experience'}</p>
+    <div class="hero-actions">
+      <button class="cta-primary">${pageData?.hero_cta_primary || 'Start Playing'}</button>
+      <button class="cta-secondary">${pageData?.hero_cta_secondary || 'How to Play'}</button>
+    </div>
+  </section>
+  
+  <section class="features-section">
+    <h2>Why Players Love It</h2>
+    <div class="features-grid">
+      ${pageData?.features?.map((feature: any) => `
+        <div class="feature-card">
+          <h3>${feature.title}</h3>
+          <p>${feature.description}</p>
+        </div>
+      `).join('') || ''}
+    </div>
+  </section>
+  
+  <section class="stats-section">
+    <div class="stats-grid">
+      ${pageData?.stats?.map((stat: any) => `
+        <div class="stat-card">
+          <div class="stat-value">${stat.value}</div>
+          <div class="stat-label">${stat.label}</div>
+        </div>
+      `).join('') || ''}
+    </div>
+  </section>
+</div>`;
+
+      case 'howtoplay':
+        return `<div class="how-to-play-content">
+  <section class="intro-section">
+    <h1>${pageData?.page_title || 'How to Play'}</h1>
+    <p class="intro-text">${pageData?.page_description || 'Master the art of deception and strategy in One Mind, Many.'}</p>
+  </section>
+  
+  <section class="rules-section">
+    <h2>Game Rules</h2>
+    <div class="rules-content">
+      <p>Learn the fundamental rules of One Mind, Many and become a master strategist.</p>
+      
+      <h3>Basic Gameplay</h3>
+      <ul>
+        <li>Each player controls a shared character</li>
+        <li>Players program actions secretly each turn</li>
+        <li>Actions are resolved in turn order</li>
+        <li>Trust no one - anyone could be the saboteur</li>
+      </ul>
+      
+      <h3>Player Roles</h3>
+      <div class="roles-grid">
+        <div class="role-card">
+          <h4>Collaborator</h4>
+          <p>Work with the team to achieve objectives</p>
+        </div>
+        <div class="role-card">
+          <h4>Rogue</h4>
+          <p>Look out for yourself above all else</p>
+        </div>
+        <div class="role-card">
+          <h4>Saboteur</h4>
+          <p>Secretly undermine the group's efforts</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <section class="quick-start">
+    <h2>Quick Start Guide</h2>
+    <ol>
+      <li>Join or create a game lobby</li>
+      <li>Learn your secret role and objectives</li>
+      <li>Program actions and choose intentions</li>
+      <li>Work toward your goals while staying hidden</li>
+    </ol>
+  </section>
+</div>`;
+
+      case 'about':
+        return `<div class="about-content">
+  <section class="intro-section">
+    <h1>About One Mind, Many</h1>
+    <p class="intro-text">A revolutionary social deduction game that combines strategy, psychology, and AI-driven storytelling.</p>
+  </section>
+  
+  <section class="story-section">
+    <h2>Our Story</h2>
+    <p>One Mind, Many was born from a passion for creating meaningful social gaming experiences. We believe that the best games bring people together, challenge their minds, and create lasting memories.</p>
+    
+    <p>Our team of game designers, developers, and AI specialists have crafted an experience that adapts to every group of players, ensuring no two games are ever the same.</p>
+  </section>
+  
+  <section class="features-section">
+    <h2>What Makes Us Different</h2>
+    <div class="features-list">
+      <div class="feature">
+        <h3>AI-Driven Narratives</h3>
+        <p>Our advanced AI creates dynamic stories that respond to player actions in real-time.</p>
+      </div>
+      <div class="feature">
+        <h3>Psychological Gameplay</h3>
+        <p>Every game is a battle of wits where reading people is just as important as strategy.</p>
+      </div>
+      <div class="feature">
+        <h3>Endless Replayability</h3>
+        <p>With procedurally generated scenarios and adaptive AI, every session feels fresh.</p>
+      </div>
+    </div>
+  </section>
+  
+  <section class="team-section">
+    <h2>Our Team</h2>
+    <p>We're a passionate group of creators dedicated to pushing the boundaries of social gaming.</p>
+  </section>
+</div>`;
+
+      default:
+        return `<div class="page-content">
+  <h1>Page Content</h1>
+  <p>This is the default content for this page. Edit this HTML to customize the page content.</p>
+</div>`;
     }
   };
 
@@ -450,30 +221,32 @@ const ContentManagementPage = () => {
       setError('');
       setSuccess('');
 
-      // Update HTML content in the content object
-      const updatedContent = {
-        ...content,
-        [selectedPage]: {
-          ...content[selectedPage],
-          html_content: htmlContent
-        }
-      };
+      let contentToSave = { ...pageContent };
 
-      const response = await api.put('/api/admin/content', updatedContent);
-      
+      if (activeTab === 'html') {
+        // Update the HTML content for the selected page
+        contentToSave = {
+          ...contentToSave,
+          [selectedPage]: {
+            ...contentToSave[selectedPage],
+            html_content: htmlContent
+          }
+        };
+      } else if (activeTab === 'global') {
+        contentToSave = {
+          ...contentToSave,
+          global: globalContent
+        };
+      }
+
+      const response = await api.put('/api/admin/content', contentToSave);
+
       if (!response.ok) {
         throw new Error('Failed to save content');
       }
 
-      setContent(updatedContent);
       setSuccess('Content saved successfully!');
-      setEditingSection(null);
-      
-      // Refresh content in the global context
       await refreshContent();
-      
-      // Refresh local content
-      await fetchContent();
     } catch (error) {
       console.error('Error saving content:', error);
       setError('Failed to save content');
@@ -484,241 +257,142 @@ const ContentManagementPage = () => {
 
   const handlePublishContent = async () => {
     try {
-      setSaving(true);
+      setLoading(true);
       setError('');
       setSuccess('');
 
-      // Update HTML content in the content object
-      const updatedContent = {
-        ...content,
-        [selectedPage]: {
-          ...content[selectedPage],
-          html_content: htmlContent
-        }
-      };
+      const response = await api.post('/api/admin/content/publish');
 
-      // First save the content
-      const saveResponse = await api.put('/api/admin/content', updatedContent);
-      if (!saveResponse.ok) {
-        throw new Error('Failed to save content before publishing');
-      }
-
-      // Then publish it
-      const publishResponse = await api.post('/api/admin/content/publish');
-      if (!publishResponse.ok) {
+      if (!response.ok) {
         throw new Error('Failed to publish content');
       }
 
-      setContent(updatedContent);
-
-      // Refresh the global content context to update the live site
-      await refreshContent();
-
-      setSuccess('Content published successfully! Changes are now live on the website.');
+      setSuccess('Content published successfully!');
     } catch (error) {
       console.error('Error publishing content:', error);
       setError('Failed to publish content');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleUpdateSection = (page: string, section: string, value: any) => {
-    setContent(prev => ({
+  const handlePageContentChange = (field: string, value: any) => {
+    setPageContent((prev: any) => ({
       ...prev,
-      [page]: {
-        ...prev[page],
-        [section]: value
-      }
-    }));
-  };
-
-  const handleUpdateSEO = (page: string, field: string, value: string) => {
-    setSeoSettings(prev => ({
-      ...prev,
-      [page]: {
-        ...prev[page],
+      [selectedPage]: {
+        ...prev[selectedPage],
         [field]: value
       }
     }));
   };
 
-  const handleAddFeature = () => {
-    const newFeature = {
-      title: 'New Feature',
-      description: 'Feature description',
-      icon: 'Star'
-    };
-    
-    setContent(prev => ({
-      ...prev,
-      homepage: {
-        ...prev.homepage,
-        features: [...(prev.homepage.features || []), newFeature]
+  const handleArrayFieldChange = (field: string, index: number, subField: string, value: any) => {
+    setPageContent((prev: any) => {
+      const currentPage = prev[selectedPage] || {};
+      const currentArray = currentPage[field] || [];
+      const newArray = [...currentArray];
+      
+      if (!newArray[index]) {
+        newArray[index] = {};
       }
-    }));
-  };
+      
+      newArray[index] = {
+        ...newArray[index],
+        [subField]: value
+      };
 
-  const handleRemoveFeature = (index: number) => {
-    setContent(prev => ({
-      ...prev,
-      homepage: {
-        ...prev.homepage,
-        features: prev.homepage.features.filter((_: any, i: number) => i !== index)
-      }
-    }));
-  };
-
-  const handleUpdateFeature = (index: number, field: string, value: string) => {
-    setContent(prev => ({
-      ...prev,
-      homepage: {
-        ...prev.homepage,
-        features: prev.homepage.features.map((feature: any, i: number) => 
-          i === index ? { ...feature, [field]: value } : feature
-        )
-      }
-    }));
-  };
-
-  const handleAddStat = () => {
-    const newStat = {
-      label: 'New Stat',
-      value: '0',
-      icon: 'Star'
-    };
-    
-    setContent(prev => ({
-      ...prev,
-      homepage: {
-        ...prev.homepage,
-        stats: [...(prev.homepage.stats || []), newStat]
-      }
-    }));
-  };
-
-  const handleRemoveStat = (index: number) => {
-    setContent(prev => ({
-      ...prev,
-      homepage: {
-        ...prev.homepage,
-        stats: prev.homepage.stats.filter((_: any, i: number) => i !== index)
-      }
-    }));
-  };
-
-  const handleUpdateStat = (index: number, field: string, value: string) => {
-    setContent(prev => ({
-      ...prev,
-      homepage: {
-        ...prev.homepage,
-        stats: prev.homepage.stats.map((stat: any, i: number) => 
-          i === index ? { ...stat, [field]: value } : stat
-        )
-      }
-    }));
-  };
-
-  const handleAddNavLink = (section: 'header_links' | 'footer_links') => {
-    const newLink = {
-      name: 'New Link',
-      path: '/',
-      visible: true
-    };
-    
-    setContent(prev => ({
-      ...prev,
-      global: {
-        ...prev.global,
-        navigation: {
-          ...prev.global.navigation,
-          [section]: [...(prev.global.navigation[section] || []), newLink]
+      return {
+        ...prev,
+        [selectedPage]: {
+          ...currentPage,
+          [field]: newArray
         }
-      }
-    }));
+      };
+    });
   };
 
-  const handleRemoveNavLink = (section: 'header_links' | 'footer_links', index: number) => {
-    setContent(prev => ({
-      ...prev,
-      global: {
-        ...prev.global,
-        navigation: {
-          ...prev.global.navigation,
-          [section]: prev.global.navigation[section].filter((_: any, i: number) => i !== index)
+  const addArrayItem = (field: string) => {
+    setPageContent((prev: any) => {
+      const currentPage = prev[selectedPage] || {};
+      const currentArray = currentPage[field] || [];
+      
+      let newItem = {};
+      if (field === 'features') {
+        newItem = { title: '', description: '', icon: 'Brain' };
+      } else if (field === 'stats') {
+        newItem = { label: '', value: '', icon: 'Users' };
+      }
+
+      return {
+        ...prev,
+        [selectedPage]: {
+          ...currentPage,
+          [field]: [...currentArray, newItem]
         }
-      }
-    }));
+      };
+    });
   };
 
-  const handleUpdateNavLink = (section: 'header_links' | 'footer_links', index: number, field: string, value: any) => {
-    setContent(prev => ({
-      ...prev,
-      global: {
-        ...prev.global,
-        navigation: {
-          ...prev.global.navigation,
-          [section]: prev.global.navigation[section].map((link: any, i: number) => 
-            i === index ? { ...link, [field]: value } : link
-          )
+  const removeArrayItem = (field: string, index: number) => {
+    setPageContent((prev: any) => {
+      const currentPage = prev[selectedPage] || {};
+      const currentArray = currentPage[field] || [];
+      const newArray = currentArray.filter((_: any, i: number) => i !== index);
+
+      return {
+        ...prev,
+        [selectedPage]: {
+          ...currentPage,
+          [field]: newArray
         }
-      }
-    }));
+      };
+    });
   };
 
-  const currentPage = pages.find(p => p.id === selectedPage);
-  const currentSEO = seoSettings[selectedPage] || seoSettings.homepage;
-
-  if (loading) {
+  if (contentLoading) {
     return <LoadingSpinner fullScreen text="Loading content..." />;
   }
 
+  const currentPageData = pageContent[selectedPage] || {};
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white">Content Management</h1>
-          <p className="text-slate-400 mt-2">Manage website content, SEO, and navigation</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-white custom-font">Content Management</h1>
+          <p className="text-slate-400 mt-2 body-font">Manage website content, pages, and global settings</p>
         </div>
         
-        <div className="flex flex-wrap gap-2 md:gap-4">
+        <div className="flex gap-2 md:gap-4">
           <Button
             variant="outline"
-            onClick={() => setPreviewMode(!previewMode)}
-            leftIcon={<Eye size={18} />}
-            size="sm"
-          >
-            {previewMode ? 'Edit Mode' : 'Preview Mode'}
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={refreshContent}
             leftIcon={<RefreshCw size={18} />}
-            size="sm"
+            onClick={refreshContent}
+            disabled={loading}
           >
             Refresh
           </Button>
-          
+          <Button
+            variant="outline"
+            leftIcon={<Download size={18} />}
+            disabled={loading}
+          >
+            Export
+          </Button>
+          <Button
+            variant="outline"
+            leftIcon={<Upload size={18} />}
+            disabled={loading}
+          >
+            Import
+          </Button>
           <Button
             onClick={handleSaveContent}
-            disabled={saving}
             isLoading={saving}
             leftIcon={<Save size={18} />}
-            size="sm"
+            className="game-button"
           >
             Save Changes
-          </Button>
-          
-          <Button
-            onClick={handlePublishContent}
-            disabled={saving}
-            isLoading={saving}
-            leftIcon={<Globe size={18} />}
-            className="bg-green-600 hover:bg-green-700"
-            size="sm"
-          >
-            Publish Live
           </Button>
         </div>
       </div>
@@ -726,768 +400,485 @@ const ContentManagementPage = () => {
       {/* Status Messages */}
       {error && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-          <p className="text-red-500">{error}</p>
+          <p className="text-red-500 body-font">{error}</p>
         </div>
       )}
 
       {success && (
         <div className="mb-6 p-4 bg-green-500/10 border border-green-500 rounded-lg">
-          <p className="text-green-500">{success}</p>
+          <p className="text-green-500 body-font">{success}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
-        {/* Page Navigation */}
+      {/* Tab Navigation */}
+      <div className="mb-8">
+        <div className="border-b border-slate-700">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('pages')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm custom-font transition-colors ${
+                activeTab === 'pages'
+                  ? 'border-orange-500 text-orange-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              <FileText className="w-4 h-4 inline mr-2" />
+              Page Content
+            </button>
+            <button
+              onClick={() => setActiveTab('global')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm custom-font transition-colors ${
+                activeTab === 'global'
+                  ? 'border-orange-500 text-orange-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              <Globe className="w-4 h-4 inline mr-2" />
+              Global Settings
+            </button>
+            <button
+              onClick={() => setActiveTab('html')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm custom-font transition-colors ${
+                activeTab === 'html'
+                  ? 'border-orange-500 text-orange-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              <Code className="w-4 h-4 inline mr-2" />
+              HTML Editor
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Sidebar */}
         <div className="lg:col-span-1">
-          <Card className="p-4 md:p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Pages</h3>
-            <nav className="space-y-2">
+          <Card className="p-6 game-card">
+            <h3 className="text-lg font-bold text-white mb-4 custom-font">Pages</h3>
+            <div className="space-y-2">
               {pages.map((page) => (
                 <button
                   key={page.id}
                   onClick={() => setSelectedPage(page.id)}
-                  className={`w-full flex items-center p-3 rounded-lg transition-colors text-left ${
+                  className={`w-full text-left p-3 rounded-lg transition-colors ${
                     selectedPage === page.id
-                      ? 'bg-orange-500/20 text-orange-400'
-                      : 'text-slate-300 hover:bg-slate-800'
+                      ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                      : 'text-slate-300 hover:bg-slate-800 border border-transparent'
                   }`}
                 >
-                  <FileText size={18} className="mr-3 flex-shrink-0" />
-                  <span className="font-medium">{page.name}</span>
+                  <div className="font-medium custom-font">{page.name}</div>
+                  <div className="text-xs text-slate-400 mt-1 body-font">{page.description}</div>
                 </button>
               ))}
-            </nav>
+            </div>
+
+            {activeTab === 'html' && (
+              <div className="mt-6 pt-6 border-t border-slate-700">
+                <h4 className="text-sm font-bold text-white mb-3 custom-font">Preview</h4>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={() => setPreviewMode('desktop')}
+                    className={`p-2 rounded ${previewMode === 'desktop' ? 'bg-orange-500/20 text-orange-400' : 'text-slate-400 hover:text-slate-300'}`}
+                  >
+                    <Monitor size={16} />
+                  </button>
+                  <button
+                    onClick={() => setPreviewMode('tablet')}
+                    className={`p-2 rounded ${previewMode === 'tablet' ? 'bg-orange-500/20 text-orange-400' : 'text-slate-400 hover:text-slate-300'}`}
+                  >
+                    <Tablet size={16} />
+                  </button>
+                  <button
+                    onClick={() => setPreviewMode('mobile')}
+                    className={`p-2 rounded ${previewMode === 'mobile' ? 'bg-orange-500/20 text-orange-400' : 'text-slate-400 hover:text-slate-300'}`}
+                  >
+                    <Smartphone size={16} />
+                  </button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPreview(!showPreview)}
+                  leftIcon={showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
+                  className="w-full"
+                >
+                  {showPreview ? 'Hide Preview' : 'Show Preview'}
+                </Button>
+              </div>
+            )}
           </Card>
         </div>
 
-        {/* Content Editor */}
+        {/* Main Content */}
         <div className="lg:col-span-3">
-          {/* Tab Navigation */}
-          <div className="mb-6">
-            <div className="border-b border-slate-700">
-              <nav className="flex flex-wrap space-x-4 md:space-x-8">
-                <button
-                  onClick={() => setActiveTab('content')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'content'
-                      ? 'border-orange-500 text-orange-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  <FileText size={16} className="inline mr-2" />
-                  Content
-                </button>
-                <button
-                  onClick={() => setActiveTab('html')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'html'
-                      ? 'border-orange-500 text-orange-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  <Code size={16} className="inline mr-2" />
-                  HTML Editor
-                </button>
-                <button
-                  onClick={() => setActiveTab('seo')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'seo'
-                      ? 'border-orange-500 text-orange-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  <Search size={16} className="inline mr-2" />
-                  SEO
-                </button>
-                {selectedPage === 'global' && (
-                  <button
-                    onClick={() => setActiveTab('navigation')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === 'navigation'
-                        ? 'border-orange-500 text-orange-400'
-                        : 'border-transparent text-slate-400 hover:text-slate-300'
-                    }`}
-                  >
-                    <Link size={16} className="inline mr-2" />
-                    Navigation
-                  </button>
-                )}
-              </nav>
-            </div>
-          </div>
+          {activeTab === 'pages' && (
+            <Card className="p-6 game-card">
+              <h2 className="text-xl font-bold text-white mb-6 custom-font">
+                Edit {pages.find(p => p.id === selectedPage)?.name} Content
+              </h2>
 
-          {/* HTML Editor Tab */}
-          {activeTab === 'html' && (
-            <div className="space-y-6">
-              <Card className="p-4 md:p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-white">HTML Content Editor</h2>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setHtmlPreviewMode(!htmlPreviewMode)}
-                      leftIcon={htmlPreviewMode ? <Code size={16} /> : <Monitor size={16} />}
-                      size="sm"
-                    >
-                      {htmlPreviewMode ? 'Edit Mode' : 'Preview'}
-                    </Button>
-                  </div>
-                </div>
-                
-                {!htmlPreviewMode ? (
-                  <div>
-                    <textarea
-                      value={htmlContent}
-                      onChange={(e) => setHtmlContent(e.target.value)}
-                      className="w-full h-[60vh] bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 font-mono text-sm custom-scrollbar"
-                      spellCheck="false"
-                    />
-                  </div>
-                ) : (
-                  <div className="border border-slate-700 rounded-md p-4 bg-white h-[60vh] overflow-auto custom-scrollbar">
-                    <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
-                  </div>
-                )}
-                
-                <div className="mt-4 flex justify-end">
-                  <Button
-                    onClick={handleSaveContent}
-                    disabled={saving}
-                    isLoading={saving}
-                    leftIcon={<Save size={18} />}
-                  >
-                    Save HTML Content
-                  </Button>
-                </div>
-              </Card>
-              
-              <Card className="p-4 md:p-6">
-                <h2 className="text-xl font-bold text-white mb-4">HTML Tips</h2>
-                <div className="space-y-3 text-slate-300">
-                  <p>• Use semantic HTML tags like <code className="bg-slate-700 px-1 rounded">&lt;h1&gt;, &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;</code> for better structure</p>
-                  <p>• Include inline CSS with <code className="bg-slate-700 px-1 rounded">&lt;style&gt;</code> tags for custom styling</p>
-                  <p>• Use class names that won't conflict with the site's existing styles</p>
-                  <p>• Test your HTML in preview mode before saving</p>
-                  <p>• Remember to save your changes before switching pages</p>
-                </div>
-              </Card>
-            </div>
-          )}
-
-          {/* Content Tab */}
-          {activeTab === 'content' && (
-            <div className="space-y-6">
-              {selectedPage === 'homepage' && (
-                <div className="space-y-6">
-                  {/* Hero Section */}
-                  <Card className="p-4 md:p-6">
-                    <h2 className="text-xl font-bold text-white mb-6">Hero Section</h2>
+              <div className="space-y-6">
+                {selectedPage === 'homepage' && (
+                  <>
+                    {/* Hero Section */}
                     <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-white custom-font">Hero Section</h3>
                       <Input
                         label="Hero Title"
-                        value={content.homepage?.hero_title || ''}
-                        onChange={(e) => handleUpdateSection('homepage', 'hero_title', e.target.value)}
+                        value={currentPageData.hero_title || ''}
+                        onChange={(e) => handlePageContentChange('hero_title', e.target.value)}
+                        placeholder="One Mind, Many"
                       />
-                      
-                      <Input
-                        label="Hero Subtitle"
-                        value={content.homepage?.hero_subtitle || ''}
-                        onChange={(e) => handleUpdateSection('homepage', 'hero_subtitle', e.target.value)}
-                      />
-                      
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Hero Description</label>
+                        <label className="block text-sm font-medium text-slate-300 mb-2 custom-font">Hero Description</label>
                         <textarea
-                          value={content.homepage?.hero_description || ''}
-                          onChange={(e) => handleUpdateSection('homepage', 'hero_description', e.target.value)}
-                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                          value={currentPageData.hero_description || ''}
+                          onChange={(e) => handlePageContentChange('hero_description', e.target.value)}
+                          placeholder="The ultimate social deduction experience..."
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24 body-font focus:border-orange-500 focus:ring-orange-500/20"
                         />
                       </div>
-                      
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
                           label="Primary CTA Button"
-                          value={content.homepage?.hero_cta_primary || ''}
-                          onChange={(e) => handleUpdateSection('homepage', 'hero_cta_primary', e.target.value)}
+                          value={currentPageData.hero_cta_primary || ''}
+                          onChange={(e) => handlePageContentChange('hero_cta_primary', e.target.value)}
+                          placeholder="Start Playing"
                         />
-                        
                         <Input
                           label="Secondary CTA Button"
-                          value={content.homepage?.hero_cta_secondary || ''}
-                          onChange={(e) => handleUpdateSection('homepage', 'hero_cta_secondary', e.target.value)}
+                          value={currentPageData.hero_cta_secondary || ''}
+                          onChange={(e) => handlePageContentChange('hero_cta_secondary', e.target.value)}
+                          placeholder="How to Play"
                         />
                       </div>
                     </div>
-                  </Card>
 
-                  {/* Stats Section */}
-                  <Card className="p-4 md:p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-bold text-white">Game Statistics</h2>
-                      <Button
-                        onClick={handleAddStat}
-                        leftIcon={<Plus size={16} />}
-                        size="sm"
-                      >
-                        Add Stat
-                      </Button>
-                    </div>
-                    
+                    {/* Features Section */}
                     <div className="space-y-4">
-                      {content.homepage?.stats?.map((stat: any, index: number) => (
-                        <div key={index} className="bg-slate-800/50 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-white">Stat {index + 1}</h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-white custom-font">Features</h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addArrayItem('features')}
+                          leftIcon={<Plus size={16} />}
+                        >
+                          Add Feature
+                        </Button>
+                      </div>
+                      {(currentPageData.features || []).map((feature: any, index: number) => (
+                        <div key={index} className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-sm font-medium text-slate-300 custom-font">Feature {index + 1}</span>
                             <Button
-                              onClick={() => handleRemoveStat(index)}
-                              leftIcon={<Trash2 size={16} />}
-                              size="sm"
                               variant="outline"
+                              size="sm"
+                              onClick={() => removeArrayItem('features', index)}
+                              leftIcon={<Trash2 size={14} />}
                               className="text-red-400 hover:text-red-300"
                             >
                               Remove
                             </Button>
                           </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Input
-                              label="Label"
-                              value={stat.label}
-                              onChange={(e) => handleUpdateStat(index, 'label', e.target.value)}
-                            />
-                            
-                            <Input
-                              label="Value"
-                              value={stat.value}
-                              onChange={(e) => handleUpdateStat(index, 'value', e.target.value)}
-                            />
-                            
-                            <Input
-                              label="Icon"
-                              value={stat.icon}
-                              onChange={(e) => handleUpdateStat(index, 'icon', e.target.value)}
-                              placeholder="Users, Play, Trophy, etc."
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-
-                  {/* Features Section */}
-                  <Card className="p-4 md:p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-bold text-white">Features</h2>
-                      <Button
-                        onClick={handleAddFeature}
-                        leftIcon={<Plus size={16} />}
-                        size="sm"
-                      >
-                        Add Feature
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {content.homepage?.features?.map((feature: any, index: number) => (
-                        <div key={index} className="bg-slate-800/50 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-white">Feature {index + 1}</h3>
-                            <Button
-                              onClick={() => handleRemoveFeature(index)}
-                              leftIcon={<Trash2 size={16} />}
-                              size="sm"
-                              variant="outline"
-                              className="text-red-400 hover:text-red-300"
-                            >
-                              Remove
-                            </Button>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <Input
                               label="Title"
-                              value={feature.title}
-                              onChange={(e) => handleUpdateFeature(index, 'title', e.target.value)}
+                              value={feature.title || ''}
+                              onChange={(e) => handleArrayFieldChange('features', index, 'title', e.target.value)}
+                              placeholder="Feature title"
                             />
-                            
                             <Input
                               label="Icon"
-                              value={feature.icon}
-                              onChange={(e) => handleUpdateFeature(index, 'icon', e.target.value)}
-                              placeholder="Brain, Users, Zap, etc."
+                              value={feature.icon || ''}
+                              onChange={(e) => handleArrayFieldChange('features', index, 'icon', e.target.value)}
+                              placeholder="Brain"
                             />
-                            
-                            <div>
-                              <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                            <div className="md:col-span-1">
+                              <label className="block text-sm font-medium text-slate-300 mb-2 custom-font">Description</label>
                               <textarea
-                                value={feature.description}
-                                onChange={(e) => handleUpdateFeature(index, 'description', e.target.value)}
-                                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20"
+                                value={feature.description || ''}
+                                onChange={(e) => handleArrayFieldChange('features', index, 'description', e.target.value)}
+                                placeholder="Feature description"
+                                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20 text-sm body-font focus:border-orange-500 focus:ring-orange-500/20"
                               />
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </Card>
 
-                  {/* Final CTA Section */}
-                  <Card className="p-4 md:p-6">
-                    <h2 className="text-xl font-bold text-white mb-6">Final Call-to-Action</h2>
+                    {/* Stats Section */}
                     <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-white custom-font">Statistics</h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addArrayItem('stats')}
+                          leftIcon={<Plus size={16} />}
+                        >
+                          Add Stat
+                        </Button>
+                      </div>
+                      {(currentPageData.stats || []).map((stat: any, index: number) => (
+                        <div key={index} className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-sm font-medium text-slate-300 custom-font">Stat {index + 1}</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeArrayItem('stats', index)}
+                              leftIcon={<Trash2 size={14} />}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <Input
+                              label="Label"
+                              value={stat.label || ''}
+                              onChange={(e) => handleArrayFieldChange('stats', index, 'label', e.target.value)}
+                              placeholder="Active Players"
+                            />
+                            <Input
+                              label="Value"
+                              value={stat.value || ''}
+                              onChange={(e) => handleArrayFieldChange('stats', index, 'value', e.target.value)}
+                              placeholder="12,847"
+                            />
+                            <Input
+                              label="Icon"
+                              value={stat.icon || ''}
+                              onChange={(e) => handleArrayFieldChange('stats', index, 'icon', e.target.value)}
+                              placeholder="Users"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Final CTA Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-white custom-font">Final Call-to-Action</h3>
                       <Input
                         label="CTA Title"
-                        value={content.homepage?.final_cta_title || ''}
-                        onChange={(e) => handleUpdateSection('homepage', 'final_cta_title', e.target.value)}
+                        value={currentPageData.final_cta_title || ''}
+                        onChange={(e) => handlePageContentChange('final_cta_title', e.target.value)}
+                        placeholder="Your Next Adventure Awaits"
                       />
-                      
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">CTA Description</label>
+                        <label className="block text-sm font-medium text-slate-300 mb-2 custom-font">CTA Description</label>
                         <textarea
-                          value={content.homepage?.final_cta_description || ''}
-                          onChange={(e) => handleUpdateSection('homepage', 'final_cta_description', e.target.value)}
-                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                          value={currentPageData.final_cta_description || ''}
+                          onChange={(e) => handlePageContentChange('final_cta_description', e.target.value)}
+                          placeholder="Free to play. Easy to learn. Impossible to master."
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20 body-font focus:border-orange-500 focus:ring-orange-500/20"
                         />
                       </div>
-                      
                       <Input
                         label="CTA Button Text"
-                        value={content.homepage?.final_cta_button || ''}
-                        onChange={(e) => handleUpdateSection('homepage', 'final_cta_button', e.target.value)}
+                        value={currentPageData.final_cta_button || ''}
+                        onChange={(e) => handlePageContentChange('final_cta_button', e.target.value)}
+                        placeholder="Start Your Journey"
                       />
                     </div>
-                  </Card>
-                </div>
-              )}
+                  </>
+                )}
 
-              {selectedPage === 'howtoplay' && (
-                <div className="space-y-6">
-                  <Card className="p-4 md:p-6">
-                    <h2 className="text-xl font-bold text-white mb-6">How to Play Page</h2>
-                    <div className="space-y-4">
-                      <Input
-                        label="Page Title"
-                        value={content.howtoplay?.page_title || ''}
-                        onChange={(e) => handleUpdateSection('howtoplay', 'page_title', e.target.value)}
+                {selectedPage === 'howtoplay' && (
+                  <>
+                    <Input
+                      label="Page Title"
+                      value={currentPageData.page_title || ''}
+                      onChange={(e) => handlePageContentChange('page_title', e.target.value)}
+                      placeholder="How to Play"
+                    />
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2 custom-font">Page Description</label>
+                      <textarea
+                        value={currentPageData.page_description || ''}
+                        onChange={(e) => handlePageContentChange('page_description', e.target.value)}
+                        placeholder="Master the art of deception and strategy..."
+                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24 body-font focus:border-orange-500 focus:ring-orange-500/20"
                       />
-                      
-                      <Input
-                        label="Page Subtitle"
-                        value={content.howtoplay?.page_subtitle || ''}
-                        onChange={(e) => handleUpdateSection('howtoplay', 'page_subtitle', e.target.value)}
-                      />
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Page Description</label>
-                        <textarea
-                          value={content.howtoplay?.page_description || ''}
-                          onChange={(e) => handleUpdateSection('howtoplay', 'page_description', e.target.value)}
-                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
-                        />
-                      </div>
-                      
-                      <div className="mt-4">
-                        <p className="text-slate-400 mb-2">For detailed content editing, use the HTML Editor tab.</p>
-                        <Button
-                          onClick={() => setActiveTab('html')}
-                          leftIcon={<Code size={16} />}
-                          variant="outline"
-                          size="sm"
-                        >
-                          Edit HTML Content
-                        </Button>
-                      </div>
                     </div>
-                  </Card>
-                </div>
-              )}
+                  </>
+                )}
 
-              {selectedPage === 'about' && (
-                <div className="space-y-6">
-                  <Card className="p-4 md:p-6">
-                    <h2 className="text-xl font-bold text-white mb-6">About Page</h2>
-                    <div className="space-y-4">
-                      <Input
-                        label="Page Title"
-                        value={content.about?.page_title || ''}
-                        onChange={(e) => handleUpdateSection('about', 'page_title', e.target.value)}
-                      />
-                      
-                      <Input
-                        label="Page Subtitle"
-                        value={content.about?.page_subtitle || ''}
-                        onChange={(e) => handleUpdateSection('about', 'page_subtitle', e.target.value)}
-                      />
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Page Description</label>
-                        <textarea
-                          value={content.about?.page_description || ''}
-                          onChange={(e) => handleUpdateSection('about', 'page_description', e.target.value)}
-                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Mission Statement</label>
-                        <textarea
-                          value={content.about?.mission_statement || ''}
-                          onChange={(e) => handleUpdateSection('about', 'mission_statement', e.target.value)}
-                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-32"
-                        />
-                      </div>
-                      
-                      <div className="mt-4">
-                        <p className="text-slate-400 mb-2">For detailed content editing, use the HTML Editor tab.</p>
-                        <Button
-                          onClick={() => setActiveTab('html')}
-                          leftIcon={<Code size={16} />}
-                          variant="outline"
-                          size="sm"
-                        >
-                          Edit HTML Content
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              )}
-
-              {selectedPage === 'global' && (
-                <div className="space-y-6">
-                  {/* Site Settings */}
-                  <Card className="p-4 md:p-6">
-                    <h2 className="text-xl font-bold text-white mb-6">Site Settings</h2>
-                    <div className="space-y-4">
-                      <Input
-                        label="Site Name"
-                        value={content.global?.site_name || ''}
-                        onChange={(e) => handleUpdateSection('global', 'site_name', e.target.value)}
-                      />
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Site Description</label>
-                        <textarea
-                          value={content.global?.site_description || ''}
-                          onChange={(e) => handleUpdateSection('global', 'site_description', e.target.value)}
-                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
-                        />
-                      </div>
-                      
-                      <Input
-                        label="Contact Email"
-                        type="email"
-                        value={content.global?.contact_email || ''}
-                        onChange={(e) => handleUpdateSection('global', 'contact_email', e.target.value)}
+                {selectedPage === 'about' && (
+                  <>
+                    <Input
+                      label="Page Title"
+                      value={currentPageData.page_title || ''}
+                      onChange={(e) => handlePageContentChange('page_title', e.target.value)}
+                      placeholder="About One Mind, Many"
+                    />
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2 custom-font">Page Description</label>
+                      <textarea
+                        value={currentPageData.page_description || ''}
+                        onChange={(e) => handlePageContentChange('page_description', e.target.value)}
+                        placeholder="Learn about our game and team..."
+                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24 body-font focus:border-orange-500 focus:ring-orange-500/20"
                       />
                     </div>
-                  </Card>
-
-                  {/* Social Links */}
-                  <Card className="p-4 md:p-6">
-                    <h2 className="text-xl font-bold text-white mb-6">Social Links</h2>
-                    <div className="space-y-4">
-                      <Input
-                        label="GitHub URL"
-                        value={content.global?.social_links?.github || ''}
-                        onChange={(e) => handleUpdateSection('global', 'social_links', {
-                          ...content.global?.social_links,
-                          github: e.target.value
-                        })}
-                      />
-                      
-                      <Input
-                        label="Twitter URL"
-                        value={content.global?.social_links?.twitter || ''}
-                        onChange={(e) => handleUpdateSection('global', 'social_links', {
-                          ...content.global?.social_links,
-                          twitter: e.target.value
-                        })}
-                      />
-                      
-                      <Input
-                        label="Discord URL"
-                        value={content.global?.social_links?.discord || ''}
-                        onChange={(e) => handleUpdateSection('global', 'social_links', {
-                          ...content.global?.social_links,
-                          discord: e.target.value
-                        })}
-                      />
-                    </div>
-                  </Card>
-                </div>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            </Card>
           )}
 
-          {/* SEO Tab */}
-          {activeTab === 'seo' && (
-            <div className="space-y-6">
-              <Card className="p-4 md:p-6">
-                <h2 className="text-xl font-bold text-white mb-6">SEO Settings for {currentPage?.name}</h2>
+          {activeTab === 'global' && (
+            <Card className="p-6 game-card">
+              <h2 className="text-xl font-bold text-white mb-6 custom-font">Global Settings</h2>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Site Name"
+                    value={globalContent.site_name || ''}
+                    onChange={(e) => setGlobalContent(prev => ({ ...prev, site_name: e.target.value }))}
+                    placeholder="One Mind, Many"
+                  />
+                  <Input
+                    label="Contact Email"
+                    value={globalContent.contact_email || ''}
+                    onChange={(e) => setGlobalContent(prev => ({ ...prev, contact_email: e.target.value }))}
+                    placeholder="contact@onemindmany.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2 custom-font">Site Description</label>
+                  <textarea
+                    value={globalContent.site_description || ''}
+                    onChange={(e) => setGlobalContent(prev => ({ ...prev, site_description: e.target.value }))}
+                    placeholder="The ultimate social deduction game"
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24 body-font focus:border-orange-500 focus:ring-orange-500/20"
+                  />
+                </div>
+
                 <div className="space-y-4">
-                  <Input
-                    label="Page Title"
-                    value={currentSEO.title}
-                    onChange={(e) => handleUpdateSEO(selectedPage, 'title', e.target.value)}
-                    placeholder="Page title for search engines"
-                  />
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Meta Description</label>
-                    <textarea
-                      value={currentSEO.description}
-                      onChange={(e) => handleUpdateSEO(selectedPage, 'description', e.target.value)}
-                      placeholder="Brief description for search results (150-160 characters)"
-                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
+                  <h3 className="text-lg font-semibold text-white custom-font">Social Links</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Input
+                      label="GitHub URL"
+                      value={globalContent.social_links?.github || ''}
+                      onChange={(e) => setGlobalContent(prev => ({
+                        ...prev,
+                        social_links: { ...prev.social_links, github: e.target.value }
+                      }))}
+                      placeholder="https://github.com/..."
                     />
-                    <p className="text-xs text-slate-500 mt-1">{currentSEO.description.length}/160 characters</p>
+                    <Input
+                      label="Twitter URL"
+                      value={globalContent.social_links?.twitter || ''}
+                      onChange={(e) => setGlobalContent(prev => ({
+                        ...prev,
+                        social_links: { ...prev.social_links, twitter: e.target.value }
+                      }))}
+                      placeholder="https://twitter.com/..."
+                    />
+                    <Input
+                      label="Discord URL"
+                      value={globalContent.social_links?.discord || ''}
+                      onChange={(e) => setGlobalContent(prev => ({
+                        ...prev,
+                        social_links: { ...prev.social_links, discord: e.target.value }
+                      }))}
+                      placeholder="https://discord.gg/..."
+                    />
                   </div>
-                  
-                  <Input
-                    label="Keywords"
-                    value={currentSEO.keywords}
-                    onChange={(e) => handleUpdateSEO(selectedPage, 'keywords', e.target.value)}
-                    placeholder="keyword1, keyword2, keyword3"
-                  />
-                  
-                  <Input
-                    label="Canonical URL"
-                    value={currentSEO.canonical_url}
-                    onChange={(e) => handleUpdateSEO(selectedPage, 'canonical_url', e.target.value)}
-                    placeholder="https://onemindmany.com/page"
-                  />
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Robots</label>
-                    <select
-                      value={currentSEO.robots}
-                      onChange={(e) => handleUpdateSEO(selectedPage, 'robots', e.target.value)}
-                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {activeTab === 'html' && (
+            <div className="space-y-6">
+              <Card className="p-6 game-card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-white custom-font">
+                    HTML Editor - {pages.find(p => p.id === selectedPage)?.name}
+                  </h2>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHtmlContent(generateDefaultHtml(selectedPage, currentPageData))}
+                      leftIcon={<RefreshCw size={16} />}
                     >
-                      <option value="index, follow">Index, Follow</option>
-                      <option value="noindex, follow">No Index, Follow</option>
-                      <option value="index, nofollow">Index, No Follow</option>
-                      <option value="noindex, nofollow">No Index, No Follow</option>
-                    </select>
+                      Reset to Default
+                    </Button>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2 custom-font">
+                    HTML Content
+                  </label>
+                  <textarea
+                    value={htmlContent}
+                    onChange={(e) => setHtmlContent(e.target.value)}
+                    placeholder="Enter HTML content..."
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-96 font-mono text-sm body-font focus:border-orange-500 focus:ring-orange-500/20 custom-scrollbar"
+                  />
+                  <p className="text-xs text-slate-400 mt-2 body-font">
+                    Use standard HTML tags and CSS classes. The content will be styled with the site's theme.
+                  </p>
                 </div>
               </Card>
 
-              {/* Open Graph Settings */}
-              <Card className="p-4 md:p-6">
-                <h2 className="text-xl font-bold text-white mb-6">Open Graph (Facebook)</h2>
-                <div className="space-y-4">
-                  <Input
-                    label="OG Title"
-                    value={currentSEO.og_title}
-                    onChange={(e) => handleUpdateSEO(selectedPage, 'og_title', e.target.value)}
-                    placeholder="Title for social media sharing"
-                  />
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">OG Description</label>
-                    <textarea
-                      value={currentSEO.og_description}
-                      onChange={(e) => handleUpdateSEO(selectedPage, 'og_description', e.target.value)}
-                      placeholder="Description for social media sharing"
-                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20"
-                    />
-                  </div>
-                  
-                  <Input
-                    label="OG Image URL"
-                    value={currentSEO.og_image}
-                    onChange={(e) => handleUpdateSEO(selectedPage, 'og_image', e.target.value)}
-                    placeholder="/path/to/image.jpg"
-                  />
-                </div>
-              </Card>
-
-              {/* Twitter Settings */}
-              <Card className="p-4 md:p-6">
-                <h2 className="text-xl font-bold text-white mb-6">Twitter Card</h2>
-                <div className="space-y-4">
-                  <Input
-                    label="Twitter Title"
-                    value={currentSEO.twitter_title}
-                    onChange={(e) => handleUpdateSEO(selectedPage, 'twitter_title', e.target.value)}
-                    placeholder="Title for Twitter sharing"
-                  />
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Twitter Description</label>
-                    <textarea
-                      value={currentSEO.twitter_description}
-                      onChange={(e) => handleUpdateSEO(selectedPage, 'twitter_description', e.target.value)}
-                      placeholder="Description for Twitter sharing"
-                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-20"
-                    />
-                  </div>
-                  
-                  <Input
-                    label="Twitter Image URL"
-                    value={currentSEO.twitter_image}
-                    onChange={(e) => handleUpdateSEO(selectedPage, 'twitter_image', e.target.value)}
-                    placeholder="/path/to/image.jpg"
-                  />
-                </div>
-              </Card>
-            </div>
-          )}
-
-          {/* Navigation Tab */}
-          {activeTab === 'navigation' && selectedPage === 'global' && (
-            <div className="space-y-6">
-              {/* Header Navigation */}
-              <Card className="p-4 md:p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-white">Header Navigation</h2>
-                  <Button
-                    onClick={() => handleAddNavLink('header_links')}
-                    leftIcon={<Plus size={16} />}
-                    size="sm"
-                  >
-                    Add Link
-                  </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  {content.global?.navigation?.header_links?.map((link: any, index: number) => (
-                    <div key={index} className="bg-slate-800/50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-white">Link {index + 1}</h3>
-                        <Button
-                          onClick={() => handleRemoveNavLink('header_links', index)}
-                          leftIcon={<Trash2 size={16} />}
-                          size="sm"
-                          variant="outline"
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Input
-                          label="Name"
-                          value={link.name}
-                          onChange={(e) => handleUpdateNavLink('header_links', index, 'name', e.target.value)}
-                        />
-                        
-                        <Input
-                          label="Path"
-                          value={link.path}
-                          onChange={(e) => handleUpdateNavLink('header_links', index, 'path', e.target.value)}
-                        />
-                        
-                        <div className="flex items-center pt-6">
-                          <label className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={link.visible}
-                              onChange={(e) => handleUpdateNavLink('header_links', index, 'visible', e.target.checked)}
-                              className="mr-2"
-                            />
-                            <span className="text-sm text-slate-300">Visible</span>
-                          </label>
-                        </div>
-                      </div>
+              {showPreview && (
+                <Card className="p-6 game-card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-white custom-font">Preview</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-400 body-font">
+                        {previewMode.charAt(0).toUpperCase() + previewMode.slice(1)} View
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Footer Navigation */}
-              <Card className="p-4 md:p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-white">Footer Navigation</h2>
-                  <Button
-                    onClick={() => handleAddNavLink('footer_links')}
-                    leftIcon={<Plus size={16} />}
-                    size="sm"
-                  >
-                    Add Link
-                  </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  {content.global?.navigation?.footer_links?.map((link: any, index: number) => (
-                    <div key={index} className="bg-slate-800/50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-white">Link {index + 1}</h3>
-                        <Button
-                          onClick={() => handleRemoveNavLink('footer_links', index)}
-                          leftIcon={<Trash2 size={16} />}
-                          size="sm"
-                          variant="outline"
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Input
-                          label="Name"
-                          value={link.name}
-                          onChange={(e) => handleUpdateNavLink('footer_links', index, 'name', e.target.value)}
-                        />
-                        
-                        <Input
-                          label="Path"
-                          value={link.path}
-                          onChange={(e) => handleUpdateNavLink('footer_links', index, 'path', e.target.value)}
-                        />
-                        
-                        <div className="flex items-center pt-6">
-                          <label className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={link.visible}
-                              onChange={(e) => handleUpdateNavLink('footer_links', index, 'visible', e.target.checked)}
-                              className="mr-2"
-                            />
-                            <span className="text-sm text-slate-300">Visible</span>
-                          </label>
-                        </div>
-                      </div>
+                  </div>
+                  
+                  <div className={`border border-slate-700 rounded-lg overflow-hidden ${
+                    previewMode === 'mobile' ? 'max-w-sm mx-auto' :
+                    previewMode === 'tablet' ? 'max-w-2xl mx-auto' :
+                    'w-full'
+                  }`}>
+                    <div className="bg-white text-black p-6 min-h-[400px]">
+                      <div 
+                        dangerouslySetInnerHTML={{ __html: htmlContent }}
+                        className="prose prose-slate max-w-none"
+                      />
                     </div>
-                  ))}
-                </div>
-              </Card>
+                  </div>
+                </Card>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Preview Mode */}
-      {previewMode && (
-        <Card className="p-4 md:p-6 mt-8">
-          <h2 className="text-xl font-bold text-white mb-6">Live Preview</h2>
-          <div className="bg-slate-800/50 rounded-lg p-4 md:p-6">
-            <div className="text-center">
-              <h1 className="text-2xl md:text-4xl font-bold text-white mb-4">
-                {content.homepage?.hero_title}
-              </h1>
-              <p className="text-lg md:text-xl text-slate-300 mb-2">
-                {content.homepage?.hero_subtitle}
-              </p>
-              <p className="text-slate-400 mb-6">
-                {content.homepage?.hero_description}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button className="bg-orange-500 text-white px-6 py-3 rounded-lg font-medium">
-                  {content.homepage?.hero_cta_primary}
-                </button>
-                <button className="bg-slate-700 text-white px-6 py-3 rounded-lg font-medium">
-                  {content.homepage?.hero_cta_secondary}
-                </button>
-              </div>
-            </div>
+      {/* Publish Section */}
+      <Card className="p-6 mt-8 game-card">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-white custom-font">Publish Changes</h3>
+            <p className="text-slate-400 body-font">Deploy your content changes to the live website</p>
           </div>
-        </Card>
-      )}
+          <Button
+            onClick={handlePublishContent}
+            isLoading={loading}
+            leftIcon={<Globe size={18} />}
+            className="game-button"
+          >
+            Publish to Live Site
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 };
