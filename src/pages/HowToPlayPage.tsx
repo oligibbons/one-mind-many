@@ -7,10 +7,13 @@ import {
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import { useContent } from '../contexts/ContentContext';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const HowToPlayPage = () => {
   const [expandedSection, setExpandedSection] = useState<string | null>('overview');
   const [ruleContent, setRuleContent] = useState<any>(null);
+  const { content, loading } = useContent();
 
   useEffect(() => {
     // In a real implementation, this would fetch from the CMS
@@ -167,16 +170,11 @@ Some Intention Tags are only valid when certain actions or targets are selected 
     { id: 'globalRules', title: 'Global Rules', icon: <Shield className="w-5 h-5" /> }
   ];
 
-  if (!ruleContent) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading rules...</p>
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <LoadingSpinner fullScreen text="Loading rules..." />;
   }
+
+  const howToPlayContent = content.howtoplay || {};
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -188,23 +186,29 @@ Some Intention Tags are only valid when certain actions or targets are selected 
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              How to Play
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 custom-font">
+              {howToPlayContent.page_title || "How to Play"}
             </h1>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-              Master the art of deception and strategy in One Mind, Many. 
-              Learn the rules, understand the roles, and dominate the game.
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto body-font">
+              {howToPlayContent.page_description || "Master the art of deception and strategy in One Mind, Many. Learn the rules, understand the roles, and dominate the game."}
             </p>
           </motion.div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-12">
+        {/* HTML Content Section */}
+        {howToPlayContent.html_content && (
+          <div className="mb-12">
+            <div dangerouslySetInnerHTML={{ __html: howToPlayContent.html_content }} />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Navigation Sidebar */}
           <div className="lg:col-span-1">
             <Card className="p-6 sticky top-8">
-              <h3 className="text-lg font-bold text-white mb-4">Table of Contents</h3>
+              <h3 className="text-lg font-bold text-white mb-4 custom-font">Table of Contents</h3>
               <nav className="space-y-2">
                 {sections.map((section) => (
                   <button
@@ -218,7 +222,7 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                   >
                     <div className="flex items-center">
                       {section.icon}
-                      <span className="ml-3 text-sm font-medium">{section.title}</span>
+                      <span className="ml-3 text-sm font-medium custom-font">{section.title}</span>
                     </div>
                     {expandedSection === section.id ? (
                       <ChevronDown className="w-4 h-4" />
@@ -241,13 +245,13 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                 transition={{ duration: 0.5 }}
               >
                 <Card className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center custom-font">
                     <Book className="w-6 h-6 mr-3 text-orange-500" />
                     {ruleContent.overview.title}
                   </h2>
                   <div className="prose prose-slate prose-invert max-w-none">
                     {ruleContent.overview.content.split('\n\n').map((paragraph: string, index: number) => (
-                      <p key={index} className="text-slate-300 leading-relaxed mb-4">
+                      <p key={index} className="text-slate-300 leading-relaxed mb-4 body-font">
                         {paragraph}
                       </p>
                     ))}
@@ -264,17 +268,17 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                 transition={{ duration: 0.5 }}
               >
                 <Card className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center custom-font">
                     <Play className="w-6 h-6 mr-3 text-orange-500" />
                     {ruleContent.gameFlow.title}
                   </h2>
                   <div className="space-y-6">
                     {ruleContent.gameFlow.phases.map((phase: any, index: number) => (
                       <div key={index} className="border-l-4 border-orange-500 pl-6">
-                        <h3 className="text-xl font-semibold text-white mb-2">
+                        <h3 className="text-xl font-semibold text-white mb-2 custom-font">
                           {index + 1}. {phase.name}
                         </h3>
-                        <p className="text-slate-300 leading-relaxed">
+                        <p className="text-slate-300 leading-relaxed body-font">
                           {phase.description}
                         </p>
                       </div>
@@ -292,38 +296,38 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                 transition={{ duration: 0.5 }}
               >
                 <Card className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center custom-font">
                     <Users className="w-6 h-6 mr-3 text-orange-500" />
                     {ruleContent.roles.title}
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {ruleContent.roles.roles.map((role: any, index: number) => (
-                      <div key={index} className="bg-slate-800/50 rounded-lg p-6">
+                      <div key={index} className="bg-slate-800/50 rounded-lg p-6 game-card">
                         <div className="flex items-center mb-4">
                           <div className={`${role.color} mr-3`}>
                             {role.icon}
                           </div>
-                          <h3 className={`text-xl font-bold ${role.color}`}>
+                          <h3 className={`text-xl font-bold ${role.color} custom-font`}>
                             {role.name}
                           </h3>
                         </div>
-                        <p className="text-slate-300 mb-4">
+                        <p className="text-slate-300 mb-4 body-font">
                           {role.description}
                         </p>
                         <div className="space-y-3">
                           <div>
-                            <h4 className="text-sm font-semibold text-slate-400 mb-2">Intention Tags:</h4>
+                            <h4 className="text-sm font-semibold text-slate-400 mb-2 custom-font">Intention Tags:</h4>
                             <div className="flex flex-wrap gap-1">
                               {role.intentionTags.map((tag: string) => (
-                                <span key={tag} className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded">
+                                <span key={tag} className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded custom-font">
                                   {tag}
                                 </span>
                               ))}
                             </div>
                           </div>
                           <div>
-                            <h4 className="text-sm font-semibold text-slate-400 mb-2">Special Rules:</h4>
-                            <ul className="text-xs text-slate-300 space-y-1">
+                            <h4 className="text-sm font-semibold text-slate-400 mb-2 custom-font">Special Rules:</h4>
+                            <ul className="text-xs text-slate-300 space-y-1 body-font">
                               {role.specialRules.map((rule: string, ruleIndex: number) => (
                                 <li key={ruleIndex}>• {rule}</li>
                               ))}
@@ -345,38 +349,38 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                 transition={{ duration: 0.5 }}
               >
                 <Card className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center custom-font">
                     <Zap className="w-6 h-6 mr-3 text-orange-500" />
                     {ruleContent.actions.title}
                   </h2>
                   <div className="space-y-6">
                     {ruleContent.actions.actions.map((action: any, index: number) => (
-                      <div key={index} className="bg-slate-800/50 rounded-lg p-6">
+                      <div key={index} className="bg-slate-800/50 rounded-lg p-6 game-card">
                         <div className="flex items-center mb-3">
                           <div className="text-orange-500 mr-3">
                             {action.icon}
                           </div>
-                          <h3 className="text-xl font-bold text-white">
+                          <h3 className="text-xl font-bold text-white custom-font">
                             {action.name}
                           </h3>
                         </div>
-                        <p className="text-slate-300 mb-4">
+                        <p className="text-slate-300 mb-4 body-font">
                           {action.description}
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <h4 className="text-sm font-semibold text-slate-400 mb-2">Valid Targets:</h4>
+                            <h4 className="text-sm font-semibold text-slate-400 mb-2 custom-font">Valid Targets:</h4>
                             <div className="flex flex-wrap gap-1">
                               {action.validTargets.map((target: string) => (
-                                <span key={target} className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">
+                                <span key={target} className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded custom-font">
                                   {target}
                                 </span>
                               ))}
                             </div>
                           </div>
                           <div>
-                            <h4 className="text-sm font-semibold text-slate-400 mb-2">Restrictions:</h4>
-                            <p className="text-xs text-slate-300">{action.restrictions}</p>
+                            <h4 className="text-sm font-semibold text-slate-400 mb-2 custom-font">Restrictions:</h4>
+                            <p className="text-xs text-slate-300 body-font">{action.restrictions}</p>
                           </div>
                         </div>
                       </div>
@@ -394,13 +398,13 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                 transition={{ duration: 0.5 }}
               >
                 <Card className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center custom-font">
                     <RotateCcw className="w-6 h-6 mr-3 text-orange-500" />
                     {ruleContent.movement.title}
                   </h2>
                   <div className="prose prose-slate prose-invert max-w-none">
                     {ruleContent.movement.content.split('\n\n').map((paragraph: string, index: number) => (
-                      <p key={index} className="text-slate-300 leading-relaxed mb-4">
+                      <p key={index} className="text-slate-300 leading-relaxed mb-4 body-font">
                         {paragraph}
                       </p>
                     ))}
@@ -417,13 +421,13 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                 transition={{ duration: 0.5 }}
               >
                 <Card className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center custom-font">
                     <Target className="w-6 h-6 mr-3 text-orange-500" />
                     {ruleContent.intentionTags.title}
                   </h2>
                   <div className="prose prose-slate prose-invert max-w-none mb-8">
                     {ruleContent.intentionTags.content.split('\n\n').map((paragraph: string, index: number) => (
-                      <p key={index} className="text-slate-300 leading-relaxed mb-4">
+                      <p key={index} className="text-slate-300 leading-relaxed mb-4 body-font">
                         {paragraph}
                       </p>
                     ))}
@@ -432,26 +436,26 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                   <div className="space-y-8">
                     {Object.entries(ruleContent.intentionTags.tags).map(([role, tags]: [string, any]) => (
                       <div key={role}>
-                        <h3 className="text-xl font-bold text-white mb-4 capitalize">
+                        <h3 className="text-xl font-bold text-white mb-4 capitalize custom-font">
                           {role} Intention Tags
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {tags.map((tag: any, index: number) => (
-                            <div key={index} className="bg-slate-800/50 rounded-lg p-4">
-                              <h4 className="text-lg font-semibold text-white mb-2">
+                            <div key={index} className="bg-slate-800/50 rounded-lg p-4 game-card">
+                              <h4 className="text-lg font-semibold text-white mb-2 custom-font">
                                 {tag.name}
                               </h4>
-                              <p className="text-slate-300 text-sm mb-3">
+                              <p className="text-slate-300 text-sm mb-3 body-font">
                                 {tag.description}
                               </p>
                               <div className="space-y-2">
                                 <div>
-                                  <span className="text-xs font-semibold text-slate-400">Actions: </span>
-                                  <span className="text-xs text-slate-300">{tag.actions.join(', ')}</span>
+                                  <span className="text-xs font-semibold text-slate-400 custom-font">Actions: </span>
+                                  <span className="text-xs text-slate-300 body-font">{tag.actions.join(', ')}</span>
                                 </div>
                                 <div>
-                                  <span className="text-xs font-semibold text-slate-400">Targets: </span>
-                                  <span className="text-xs text-slate-300">{tag.targets.join(', ')}</span>
+                                  <span className="text-xs font-semibold text-slate-400 custom-font">Targets: </span>
+                                  <span className="text-xs text-slate-300 body-font">{tag.targets.join(', ')}</span>
                                 </div>
                               </div>
                             </div>
@@ -472,7 +476,7 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                 transition={{ duration: 0.5 }}
               >
                 <Card className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center custom-font">
                     <Shield className="w-6 h-6 mr-3 text-orange-500" />
                     {ruleContent.globalRules.title}
                   </h2>
@@ -480,7 +484,7 @@ Some Intention Tags are only valid when certain actions or targets are selected 
                     {ruleContent.globalRules.rules.map((rule: string, index: number) => (
                       <div key={index} className="flex items-start">
                         <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                        <p className="text-slate-300">{rule}</p>
+                        <p className="text-slate-300 body-font">{rule}</p>
                       </div>
                     ))}
                   </div>
@@ -491,36 +495,36 @@ Some Intention Tags are only valid when certain actions or targets are selected 
         </div>
 
         {/* Quick Start Guide */}
-        <Card className="p-8 mt-12">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+        <Card className="p-8 mt-12 game-card">
+          <h2 className="text-2xl font-bold text-white mb-6 flex items-center custom-font">
             <Brain className="w-6 h-6 mr-3 text-orange-500" />
             Quick Start Guide
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
               <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-orange-500">1</span>
+                <span className="text-2xl font-bold text-orange-500 custom-font">1</span>
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Join a Game</h3>
-              <p className="text-slate-400 text-sm">
+              <h3 className="text-lg font-bold text-white mb-2 custom-font">Join a Game</h3>
+              <p className="text-slate-400 text-sm body-font">
                 Create or join a lobby, select a scenario, and wait for other players
               </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-orange-500">2</span>
+                <span className="text-2xl font-bold text-orange-500 custom-font">2</span>
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Learn Your Role</h3>
-              <p className="text-slate-400 text-sm">
+              <h3 className="text-lg font-bold text-white mb-2 custom-font">Learn Your Role</h3>
+              <p className="text-slate-400 text-sm body-font">
                 Understand your secret role, goals, and available intention tags
               </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-orange-500">3</span>
+                <span className="text-2xl font-bold text-orange-500 custom-font">3</span>
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Play Strategically</h3>
-              <p className="text-slate-400 text-sm">
+              <h3 className="text-lg font-bold text-white mb-2 custom-font">Play Strategically</h3>
+              <p className="text-slate-400 text-sm body-font">
                 Program actions, choose intentions, and work toward your goals
               </p>
             </div>
@@ -530,6 +534,7 @@ Some Intention Tags are only valid when certain actions or targets are selected 
               onClick={() => window.location.href = '/game/play'}
               leftIcon={<Play size={18} />}
               size="lg"
+              className="game-button"
             >
               Start Playing Now
             </Button>

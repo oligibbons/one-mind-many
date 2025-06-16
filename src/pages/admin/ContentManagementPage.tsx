@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, Download, Eye, Edit, Plus, Trash2, Globe, FileText, RefreshCw, Search, Tag, Image, Link } from 'lucide-react';
+import { Save, Upload, Download, Eye, Edit, Plus, Trash2, Globe, FileText, RefreshCw, Search, Tag, Image, Link, Code, Monitor } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
@@ -49,7 +49,9 @@ const ContentManagementPage = () => {
   const [success, setSuccess] = useState<string>('');
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'content' | 'seo' | 'navigation'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'seo' | 'navigation' | 'html'>('content');
+  const [htmlContent, setHtmlContent] = useState('');
+  const [htmlPreviewMode, setHtmlPreviewMode] = useState(false);
 
   // Content state for editing
   const [content, setContent] = useState<Record<string, any>>({
@@ -89,6 +91,124 @@ const ContentManagementPage = () => {
       page_title: 'How to Play',
       page_subtitle: 'Master the art of deception and strategy',
       page_description: 'Learn the rules, understand the roles, and dominate the game.',
+      html_content: `
+        <div class="how-to-play-content">
+          <h2>Game Overview</h2>
+          <p>In One Mind, Many, deception meets strategy in a gripping social deduction game. Players take turns programming actions for a shared character, navigating through dynamic, AI-driven scenarios where survival depends on cunning teamwork.</p>
+          
+          <h3>Key Features</h3>
+          <ul>
+            <li><strong>AI-Driven Scenarios:</strong> Dynamic stories that adapt to your choices</li>
+            <li><strong>Social Deduction:</strong> Trust no one, suspect everyone</li>
+            <li><strong>Real-time Action:</strong> Every decision matters instantly</li>
+          </ul>
+          
+          <h2>Player Roles</h2>
+          <div class="roles-grid">
+            <div class="role-card">
+              <h4>Collaborator</h4>
+              <p>Work toward the shared character's well-intentioned goals. Use intention tags like Assist, Negotiate, Investigate, Collect, and Repair.</p>
+            </div>
+            <div class="role-card">
+              <h4>Rogue</h4>
+              <p>A neutral role where players are only out for themselves. Use intention tags like Infiltrate, Scout, Bypass, Manipulate, and Distract.</p>
+            </div>
+            <div class="role-card">
+              <h4>Saboteur</h4>
+              <p>Actively work against the Collaborators. Use intention tags like Disrupt, Obstruct, Mislead, Tamper, and Sabotage.</p>
+            </div>
+          </div>
+          
+          <h2>Game Flow</h2>
+          <ol>
+            <li><strong>Programming Phase:</strong> Players secretly program their actions</li>
+            <li><strong>Resolution Phase:</strong> Actions are resolved in turn order</li>
+            <li><strong>Narrative Update:</strong> AI provides context and updates game state</li>
+            <li><strong>Next Turn:</strong> Process repeats until end conditions are met</li>
+          </ol>
+          
+          <h2>Universal Actions</h2>
+          <div class="actions-grid">
+            <div class="action-card">
+              <h4>Move</h4>
+              <p>Moves the shared character towards a target location</p>
+            </div>
+            <div class="action-card">
+              <h4>Interact</h4>
+              <p>Interact with objects, locations, hazards, or NPCs</p>
+            </div>
+            <div class="action-card">
+              <h4>Search</h4>
+              <p>Search locations or containers for useful items</p>
+            </div>
+          </div>
+          
+          <style>
+            .how-to-play-content {
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 2rem;
+              font-family: 'Quicksand', system-ui, sans-serif;
+              line-height: 1.6;
+              color: #e2e8f0;
+            }
+            
+            .how-to-play-content h2 {
+              color: #f97316;
+              font-size: 2rem;
+              margin: 2rem 0 1rem 0;
+              font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
+            }
+            
+            .how-to-play-content h3 {
+              color: #f59e0b;
+              font-size: 1.5rem;
+              margin: 1.5rem 0 1rem 0;
+              font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
+            }
+            
+            .how-to-play-content h4 {
+              color: #fbbf24;
+              font-size: 1.25rem;
+              margin: 1rem 0 0.5rem 0;
+              font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
+            }
+            
+            .roles-grid, .actions-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+              gap: 1.5rem;
+              margin: 1.5rem 0;
+            }
+            
+            .role-card, .action-card {
+              background: rgba(30, 41, 59, 0.6);
+              border: 1px solid rgba(107, 85, 137, 0.3);
+              border-radius: 0.75rem;
+              padding: 1.5rem;
+              backdrop-filter: blur(8px);
+            }
+            
+            .role-card h4, .action-card h4 {
+              margin-top: 0;
+              color: #f97316;
+            }
+            
+            .how-to-play-content ul, .how-to-play-content ol {
+              margin: 1rem 0;
+              padding-left: 2rem;
+            }
+            
+            .how-to-play-content li {
+              margin: 0.5rem 0;
+            }
+            
+            .how-to-play-content strong {
+              color: #f97316;
+            }
+          </style>
+        </div>
+      `,
       sections: [
         {
           id: 'overview',
@@ -101,6 +221,56 @@ const ContentManagementPage = () => {
       page_title: 'About One Mind, Many',
       page_subtitle: 'The story behind the game',
       page_description: 'Learn about our mission to create the ultimate social deduction experience.',
+      html_content: `
+        <div class="about-content">
+          <h2>Our Mission</h2>
+          <p>To create immersive, AI-driven gaming experiences that bring people together through strategic thinking and social interaction.</p>
+          
+          <h2>The Story Behind One Mind, Many</h2>
+          <p>One Mind, Many was born from a passion for social deduction games and cutting-edge AI technology. We wanted to create an experience that combines the best of human psychology with dynamic, adaptive storytelling.</p>
+          
+          <h2>Our Team</h2>
+          <p>We're a dedicated team of game developers, AI researchers, and design enthusiasts who believe in the power of games to connect people and create memorable experiences.</p>
+          
+          <h2>What Makes Us Different</h2>
+          <ul>
+            <li><strong>AI-Driven Narratives:</strong> Every game is unique with our advanced AI storytelling</li>
+            <li><strong>Deep Strategy:</strong> Multiple layers of deception and cooperation</li>
+            <li><strong>Community Focus:</strong> Built for players, by players</li>
+          </ul>
+          
+          <style>
+            .about-content {
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 2rem;
+              font-family: 'Quicksand', system-ui, sans-serif;
+              line-height: 1.6;
+              color: #e2e8f0;
+            }
+            
+            .about-content h2 {
+              color: #f97316;
+              font-size: 2rem;
+              margin: 2rem 0 1rem 0;
+              font-family: 'CustomHeading', 'Quicksand', system-ui, sans-serif;
+            }
+            
+            .about-content ul {
+              margin: 1rem 0;
+              padding-left: 2rem;
+            }
+            
+            .about-content li {
+              margin: 0.5rem 0;
+            }
+            
+            .about-content strong {
+              color: #f97316;
+            }
+          </style>
+        </div>
+      `,
       team_section: {
         title: 'Our Team',
         description: 'Meet the passionate developers and designers behind One Mind, Many.',
@@ -186,6 +356,15 @@ const ContentManagementPage = () => {
     }
   }, [globalContent]);
 
+  // Update HTML content when page changes
+  useEffect(() => {
+    if (content[selectedPage]?.html_content) {
+      setHtmlContent(content[selectedPage].html_content);
+    } else {
+      setHtmlContent('');
+    }
+  }, [selectedPage, content]);
+
   const fetchContent = async () => {
     try {
       setLoading(true);
@@ -218,7 +397,7 @@ const ContentManagementPage = () => {
             sections: Object.entries(data.howtoplay || {}).map(([key, value]) => ({
               id: key,
               name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              type: typeof value === 'object' ? 'json' : 'text',
+              type: typeof value === 'object' ? 'json' : key === 'html_content' ? 'html' : 'text',
               content: value,
               page: 'howtoplay',
               section: key,
@@ -232,7 +411,7 @@ const ContentManagementPage = () => {
             sections: Object.entries(data.about || {}).map(([key, value]) => ({
               id: key,
               name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              type: typeof value === 'object' ? 'json' : 'text',
+              type: typeof value === 'object' ? 'json' : key === 'html_content' ? 'html' : 'text',
               content: value,
               page: 'about',
               section: key,
@@ -271,12 +450,22 @@ const ContentManagementPage = () => {
       setError('');
       setSuccess('');
 
-      const response = await api.put('/api/admin/content', content);
+      // Update HTML content in the content object
+      const updatedContent = {
+        ...content,
+        [selectedPage]: {
+          ...content[selectedPage],
+          html_content: htmlContent
+        }
+      };
+
+      const response = await api.put('/api/admin/content', updatedContent);
       
       if (!response.ok) {
         throw new Error('Failed to save content');
       }
 
+      setContent(updatedContent);
       setSuccess('Content saved successfully!');
       setEditingSection(null);
       
@@ -299,8 +488,17 @@ const ContentManagementPage = () => {
       setError('');
       setSuccess('');
 
+      // Update HTML content in the content object
+      const updatedContent = {
+        ...content,
+        [selectedPage]: {
+          ...content[selectedPage],
+          html_content: htmlContent
+        }
+      };
+
       // First save the content
-      const saveResponse = await api.put('/api/admin/content', content);
+      const saveResponse = await api.put('/api/admin/content', updatedContent);
       if (!saveResponse.ok) {
         throw new Error('Failed to save content before publishing');
       }
@@ -310,6 +508,8 @@ const ContentManagementPage = () => {
       if (!publishResponse.ok) {
         throw new Error('Failed to publish content');
       }
+
+      setContent(updatedContent);
 
       // Refresh the global content context to update the live site
       await refreshContent();
@@ -565,7 +765,7 @@ const ContentManagementPage = () => {
           {/* Tab Navigation */}
           <div className="mb-6">
             <div className="border-b border-slate-700">
-              <nav className="flex space-x-8">
+              <nav className="flex flex-wrap space-x-4 md:space-x-8">
                 <button
                   onClick={() => setActiveTab('content')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -576,6 +776,17 @@ const ContentManagementPage = () => {
                 >
                   <FileText size={16} className="inline mr-2" />
                   Content
+                </button>
+                <button
+                  onClick={() => setActiveTab('html')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'html'
+                      ? 'border-orange-500 text-orange-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-300'
+                  }`}
+                >
+                  <Code size={16} className="inline mr-2" />
+                  HTML Editor
                 </button>
                 <button
                   onClick={() => setActiveTab('seo')}
@@ -604,6 +815,64 @@ const ContentManagementPage = () => {
               </nav>
             </div>
           </div>
+
+          {/* HTML Editor Tab */}
+          {activeTab === 'html' && (
+            <div className="space-y-6">
+              <Card className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white">HTML Content Editor</h2>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setHtmlPreviewMode(!htmlPreviewMode)}
+                      leftIcon={htmlPreviewMode ? <Code size={16} /> : <Monitor size={16} />}
+                      size="sm"
+                    >
+                      {htmlPreviewMode ? 'Edit Mode' : 'Preview'}
+                    </Button>
+                  </div>
+                </div>
+                
+                {!htmlPreviewMode ? (
+                  <div>
+                    <textarea
+                      value={htmlContent}
+                      onChange={(e) => setHtmlContent(e.target.value)}
+                      className="w-full h-[60vh] bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 font-mono text-sm custom-scrollbar"
+                      spellCheck="false"
+                    />
+                  </div>
+                ) : (
+                  <div className="border border-slate-700 rounded-md p-4 bg-white h-[60vh] overflow-auto custom-scrollbar">
+                    <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+                  </div>
+                )}
+                
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    onClick={handleSaveContent}
+                    disabled={saving}
+                    isLoading={saving}
+                    leftIcon={<Save size={18} />}
+                  >
+                    Save HTML Content
+                  </Button>
+                </div>
+              </Card>
+              
+              <Card className="p-4 md:p-6">
+                <h2 className="text-xl font-bold text-white mb-4">HTML Tips</h2>
+                <div className="space-y-3 text-slate-300">
+                  <p>• Use semantic HTML tags like <code className="bg-slate-700 px-1 rounded">&lt;h1&gt;, &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;</code> for better structure</p>
+                  <p>• Include inline CSS with <code className="bg-slate-700 px-1 rounded">&lt;style&gt;</code> tags for custom styling</p>
+                  <p>• Use class names that won't conflict with the site's existing styles</p>
+                  <p>• Test your HTML in preview mode before saving</p>
+                  <p>• Remember to save your changes before switching pages</p>
+                </div>
+              </Card>
+            </div>
+          )}
 
           {/* Content Tab */}
           {activeTab === 'content' && (
@@ -816,6 +1085,18 @@ const ContentManagementPage = () => {
                           className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-24"
                         />
                       </div>
+                      
+                      <div className="mt-4">
+                        <p className="text-slate-400 mb-2">For detailed content editing, use the HTML Editor tab.</p>
+                        <Button
+                          onClick={() => setActiveTab('html')}
+                          leftIcon={<Code size={16} />}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Edit HTML Content
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 </div>
@@ -854,6 +1135,18 @@ const ContentManagementPage = () => {
                           onChange={(e) => handleUpdateSection('about', 'mission_statement', e.target.value)}
                           className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 h-32"
                         />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <p className="text-slate-400 mb-2">For detailed content editing, use the HTML Editor tab.</p>
+                        <Button
+                          onClick={() => setActiveTab('html')}
+                          leftIcon={<Code size={16} />}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Edit HTML Content
+                        </Button>
                       </div>
                     </div>
                   </Card>
