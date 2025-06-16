@@ -39,21 +39,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        await fetchUserProfile(session.user.id);
+        await fetchUserProfile(session.user.id, session.access_token);
       } else {
         setUser(null);
         setIsAdmin(false);
+        // Clear stored auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
     } catch (error) {
       console.error('Auth check error:', error);
       setUser(null);
       setIsAdmin(false);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, accessToken?: string) => {
     try {
       const { data: userData, error } = await supabase
         .from('users')
@@ -66,6 +71,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (userData) {
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
+        
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Store access token if provided
+        if (accessToken) {
+          localStorage.setItem('token', accessToken);
+        }
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -84,12 +97,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, error: error.message };
       }
 
-      if (!data.user) {
+      if (!data.user || !data.session) {
         return { success: false, error: 'No user data returned' };
       }
 
-      // Fetch user profile
-      await fetchUserProfile(data.user.id);
+      // Store the access token in localStorage
+      localStorage.setItem('token', data.session.access_token);
+
+      // Fetch user profile and store user data
+      await fetchUserProfile(data.user.id, data.session.access_token);
+      
+      // Update last login timestamp
+      await supabase
+        .from('users')
+        .update({ last_login: new Date() })
+        .eq('id', data.user.id);
       
       return { success: true };
     } catch (error: any) {
@@ -101,6 +123,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.signOut();
     setUser(null);
     setIsAdmin(false);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
   };
 
   return (

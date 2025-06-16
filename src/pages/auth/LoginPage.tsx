@@ -1,18 +1,18 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Mail, Lock } from 'lucide-react';
 
 const LoginPage = () => {
-  const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,23 +23,16 @@ const LoginPage = () => {
     }
 
     setError('');
+    setIsLoading(true);
 
     const result = await login(formData.email, formData.password);
     
-    if (result.success) {
-      // Simple redirect logic based on user role
-      // We'll check the user role after login completes
-      setTimeout(() => {
-        const userData = JSON.parse(localStorage.getItem('user') || '{}');
-        if (userData.role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate('/game', { replace: true });
-        }
-      }, 100);
-    } else {
+    if (!result.success) {
       setError(result.error || 'Login failed');
     }
+    // Note: Redirect is handled by App.tsx useEffect based on user role
+    
+    setIsLoading(false);
   };
 
   return (
@@ -79,6 +72,7 @@ const LoginPage = () => {
           placeholder="Enter your email"
           leftIcon={<Mail size={18} />}
           required
+          disabled={isLoading}
         />
 
         <Input
@@ -89,11 +83,13 @@ const LoginPage = () => {
           placeholder="Enter your password"
           leftIcon={<Lock size={18} />}
           required
+          disabled={isLoading}
         />
 
         <Button
           type="submit"
           className="w-full"
+          isLoading={isLoading}
         >
           Sign In
         </Button>
