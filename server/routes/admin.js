@@ -885,7 +885,7 @@ router.post('/ai/test/:modelId', isAdmin, async (req, res) => {
 
     try {
       // First try with wait_for_model option
-      const response = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel || 'meta-llama/Meta-Llama-3.1-8B-Instruct'}`, {
+      const response = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel || 'ranamhamoud/storytell'}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${storedApiKey}`,
