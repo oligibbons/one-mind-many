@@ -49,7 +49,7 @@ const AISystemPage = () => {
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
   const [masterModelConfig, setMasterModelConfig] = useState({
     name: 'Master Narrative AI',
-    baseModel: 'distilbert/distilbert-base-uncased-finetuned-sst-2-english',
+    baseModel: 'HuggingFaceH4/zephyr-7b-beta',
     maxLength: 512,
     temperature: 0.8,
     topP: 0.9,
@@ -77,7 +77,7 @@ const AISystemPage = () => {
             status: 'ready',
             accuracy: 87.5,
             lastTrained: '2024-01-15T10:30:00Z',
-            huggingFaceModel: 'distilbert/distilbert-base-uncased-finetuned-sst-2-english'
+            huggingFaceModel: 'HuggingFaceH4/zephyr-7b-beta'
           },
           {
             id: '2',
@@ -246,7 +246,7 @@ const AISystemPage = () => {
     setEditingModel(model);
     setMasterModelConfig({
       name: model.name,
-      baseModel: model.huggingFaceModel || 'distilbert/distilbert-base-uncased-finetuned-sst-2-english',
+      baseModel: model.huggingFaceModel || 'HuggingFaceH4/zephyr-7b-beta',
       maxLength: model.config?.maxLength || 512,
       temperature: model.config?.temperature || 0.8,
       topP: model.config?.topP || 0.9,
@@ -682,7 +682,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="distilbert/distilbert-base-uncased-finetuned-sst-2-english"
+                placeholder="HuggingFaceH4/zephyr-7b-beta"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -753,7 +753,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="distilbert/distilbert-base-uncased-finetuned-sst-2-english"
+                placeholder="HuggingFaceH4/zephyr-7b-beta"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -810,7 +810,7 @@ const AISystemPage = () => {
           
           <div>
             <h3 className="font-semibold text-white mb-2">2. Choose a Model</h3>
-            <p>We recommend using <code className="bg-slate-800 px-1 py-0.5 rounded">distilbert/distilbert-base-uncased-finetuned-sst-2-english</code> as it's a reliable model for text classification.</p>
+            <p>We recommend using <code className="bg-slate-800 px-1 py-0.5 rounded">HuggingFaceH4/zephyr-7b-beta</code> as it's a reliable model for text generation with an MIT license.</p>
           </div>
           
           <div>
@@ -828,13 +828,13 @@ const AISystemPage = () => {
           <div className="flex items-start">
             <Info className="w-5 h-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-blue-500 font-medium">Troubleshooting Hugging Face API</p>
+              <p className="text-blue-500 font-medium">About Zephyr-7B-Beta</p>
               <ul className="text-blue-400 text-sm mt-2 space-y-2">
-                <li>• If you get a "model loading" error, wait a few minutes and try again</li>
-                <li>• Check that your API key has the correct permissions (Read)</li>
-                <li>• Try using a different model if you continue to have issues</li>
-                <li>• Ensure your prompt is appropriate for the model's capabilities</li>
-                <li>• For text classification, DistilBERT is a reliable option that doesn't require special access</li>
+                <li>• 7B parameter model fine-tuned for chat and conversational applications</li>
+                <li>• MIT licensed, making it suitable for commercial applications</li>
+                <li>• Optimized for text generation with good performance on a variety of tasks</li>
+                <li>• Supports parameters like temperature and top_p for controlling generation diversity</li>
+                <li>• If you encounter loading issues, wait a few minutes and try again</li>
               </ul>
             </div>
           </div>

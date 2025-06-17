@@ -70,7 +70,7 @@ const isTextGenerationModel = (modelName) => {
   const textGenModels = [
     'gpt', 'llama', 'mistral', 'falcon', 'bloom', 'opt', 't5', 'flan',
     'code', 'starcoder', 'codegen', 'santacoder', 'incoder',
-    'dialogpt', 'blenderbot', 'dialoGPT'
+    'dialogpt', 'blenderbot', 'dialoGPT', 'zephyr'
   ];
   
   const lowerModelName = modelName.toLowerCase();
@@ -807,9 +807,8 @@ router.post('/ai/create-master', isAdmin, async (req, res) => {
     }
 
     // Determine if we're using a classification model or a text generation model
-    const modelIsClassification = config.baseModel.includes('distilbert') || 
-                                 config.baseModel.includes('bert') || 
-                                 config.baseModel.includes('roberta');
+    const modelIsClassification = isClassificationModel(config.baseModel);
+    const modelIsTextGeneration = isTextGenerationModel(config.baseModel);
 
     // Then try a simple inference request with better error handling
     const testResponse = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel}`, {
@@ -921,19 +920,17 @@ router.post('/ai/test/:modelId', isAdmin, async (req, res) => {
 
     try {
       // Determine if we're using a classification model or a text generation model
-      const isClassificationModel = config.baseModel.includes('distilbert') || 
-                                   config.baseModel.includes('bert') || 
-                                   config.baseModel.includes('roberta');
+      const modelIsClassification = isClassificationModel(config.baseModel);
       
       // First try with wait_for_model option
-      const response = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel || 'distilbert/distilbert-base-uncased-finetuned-sst-2-english'}`, {
+      const response = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel || 'HuggingFaceH4/zephyr-7b-beta'}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${storedApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(
-          isClassificationModel 
+          modelIsClassification 
             ? { 
                 inputs: prompt 
               }
@@ -983,7 +980,7 @@ router.post('/ai/test/:modelId', isAdmin, async (req, res) => {
         const result = JSON.parse(responseText);
         
         let output = '';
-        if (isClassificationModel) {
+        if (modelIsClassification) {
           // For classification models, format the output appropriately
           if (Array.isArray(result)) {
             // Format classification results
