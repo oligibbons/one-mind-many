@@ -49,7 +49,7 @@ const AISystemPage = () => {
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
   const [masterModelConfig, setMasterModelConfig] = useState({
     name: 'Master Narrative AI',
-    baseModel: 'ranamhamoud/storytell',
+    baseModel: 'gpt2',
     maxLength: 512,
     temperature: 0.8,
     topP: 0.9,
@@ -77,7 +77,7 @@ const AISystemPage = () => {
             status: 'ready',
             accuracy: 87.5,
             lastTrained: '2024-01-15T10:30:00Z',
-            huggingFaceModel: 'ranamhamoud/storytell'
+            huggingFaceModel: 'gpt2'
           },
           {
             id: '2',
@@ -246,7 +246,7 @@ const AISystemPage = () => {
     setEditingModel(model);
     setMasterModelConfig({
       name: model.name,
-      baseModel: model.huggingFaceModel || 'ranamhamoud/storytell',
+      baseModel: model.huggingFaceModel || 'gpt2',
       maxLength: model.config?.maxLength || 512,
       temperature: model.config?.temperature || 0.8,
       topP: model.config?.topP || 0.9,
@@ -682,7 +682,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="ranamhamoud/storytell"
+                placeholder="gpt2"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -753,7 +753,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="ranamhamoud/storytell"
+                placeholder="gpt2"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -809,8 +809,8 @@ const AISystemPage = () => {
           </div>
           
           <div>
-            <h3 className="font-semibold text-white mb-2">2. Access Model</h3>
-            <p>Visit <a href="https://huggingface.co/ranamhamoud/storytell" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300">the storytell model page</a> and accept the license agreement if required.</p>
+            <h3 className="font-semibold text-white mb-2">2. Choose a Model</h3>
+            <p>We recommend using <code className="bg-slate-800 px-1 py-0.5 rounded">gpt2</code> as it's freely available and doesn't require special permissions.</p>
           </div>
           
           <div>
@@ -830,11 +830,11 @@ const AISystemPage = () => {
             <div>
               <p className="text-blue-500 font-medium">Troubleshooting Hugging Face API</p>
               <ul className="text-blue-400 text-sm mt-2 space-y-2">
-                <li>• Make sure you've accepted the license agreement for the model you're using</li>
                 <li>• If you get a "model loading" error, wait a few minutes and try again</li>
                 <li>• Check that your API key has the correct permissions (Read)</li>
                 <li>• Try using a different model if you continue to have issues</li>
                 <li>• Ensure your prompt is appropriate for the model's capabilities</li>
+                <li>• For text generation, GPT-2 is a reliable option that doesn't require special access</li>
               </ul>
             </div>
           </div>
