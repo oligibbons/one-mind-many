@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Settings, Play, Save, Upload, Download, Zap, AlertCircle, CheckCircle, Loader2, Edit, Trash2, Plus } from 'lucide-react';
+import { Brain, Settings, Play, Save, Upload, Download, Zap, AlertCircle, CheckCircle, Loader2, Edit, Trash2, Plus, Info } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
@@ -115,6 +115,93 @@ const AISystemPage = () => {
     setModels(updatedModels);
   };
 
+  const testHuggingFaceConnection = async (apiKey: string, modelName: string) => {
+    try {
+      // First, try a simple model info request
+      const infoResponse = await fetch(`https://api-inference.huggingface.co/models/${modelName}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        }
+      });
+
+      if (!infoResponse.ok) {
+        if (infoResponse.status === 401) {
+          throw new Error('Invalid Hugging Face API key. Please check your token.');
+        } else if (infoResponse.status === 403) {
+          throw new Error('Access denied. Make sure you have access to the Llama model and have accepted the license agreement.');
+        } else if (infoResponse.status === 404) {
+          throw new Error('Model not found. Please check the model name.');
+        }
+      }
+
+      // Then try a simple inference request with better error handling
+      const testResponse = await fetch(`https://api-inference.huggingface.co/models/${modelName}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: "Hello, how are you?",
+          parameters: {
+            max_new_tokens: 20,
+            temperature: 0.7,
+            do_sample: true,
+            return_full_text: false
+          },
+          options: {
+            wait_for_model: true
+          }
+        })
+      });
+
+      const responseText = await testResponse.text();
+      
+      if (!testResponse.ok) {
+        let errorMessage = `HTTP ${testResponse.status}`;
+        
+        try {
+          const errorData = JSON.parse(responseText);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // If we can't parse the error, use the status text
+          errorMessage = testResponse.statusText || errorMessage;
+        }
+
+        if (testResponse.status === 400) {
+          throw new Error(`Bad request: ${errorMessage}. The model might be loading, or the request format might be incorrect. Try again in a few moments.`);
+        } else if (testResponse.status === 503) {
+          throw new Error('Model is currently loading. Please wait a few moments and try again.');
+        } else {
+          throw new Error(`API Error (${testResponse.status}): ${errorMessage}`);
+        }
+      }
+
+      // Try to parse the response
+      try {
+        const result = JSON.parse(responseText);
+        if (result.error) {
+          throw new Error(`Model error: ${result.error}`);
+        }
+        return true;
+      } catch (parseError) {
+        // If we can't parse the response but got a 200, that's still success
+        if (testResponse.status === 200) {
+          return true;
+        }
+        throw new Error(`Unexpected response format: ${responseText.substring(0, 100)}...`);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Connection test failed: ${error}`);
+    }
+  };
+
   const handleCreateMasterAI = async () => {
     if (!huggingFaceKey.trim()) {
       setError('Please enter your Hugging Face API key');
@@ -126,33 +213,8 @@ const AISystemPage = () => {
     setSuccess('');
 
     try {
-      // Test the API key with a simple request
-      const testResponse = await fetch(`https://api-inference.huggingface.co/models/${masterModelConfig.baseModel}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${huggingFaceKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inputs: 'Test connection',
-          parameters: {
-            max_new_tokens: 10,
-            temperature: 0.7
-          }
-        })
-      });
-
-      if (!testResponse.ok) {
-        if (testResponse.status === 401) {
-          throw new Error('Invalid Hugging Face API key. Please check your token.');
-        } else if (testResponse.status === 403) {
-          throw new Error('Access denied. Make sure you have access to the Llama model.');
-        } else if (testResponse.status === 400) {
-          throw new Error('Bad request. The model might be loading or the request format is incorrect.');
-        } else {
-          throw new Error(`Hugging Face API Error: ${testResponse.status}`);
-        }
-      }
+      // Test the connection with better error handling
+      await testHuggingFaceConnection(huggingFaceKey, masterModelConfig.baseModel);
       
       const newModel: AIModel = {
         id: Date.now().toString(),
@@ -273,7 +335,7 @@ const AISystemPage = () => {
 
     try {
       if (model.apiKey && model.huggingFaceModel) {
-        // Try actual API call
+        // Try actual API call with improved error handling
         const response = await fetch(`https://api-inference.huggingface.co/models/${model.huggingFaceModel}`, {
           method: 'POST',
           headers: {
@@ -287,39 +349,64 @@ const AISystemPage = () => {
               temperature: model.config?.temperature || 0.8,
               top_p: model.config?.topP || 0.9,
               repetition_penalty: model.config?.repetitionPenalty || 1.1,
+              do_sample: true,
               return_full_text: false
+            },
+            options: {
+              wait_for_model: true
             }
           })
         });
 
+        const responseText = await response.text();
+
         if (!response.ok) {
+          let errorMessage = `HTTP ${response.status}`;
+          
+          try {
+            const errorData = JSON.parse(responseText);
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch (e) {
+            errorMessage = response.statusText || errorMessage;
+          }
+
           if (response.status === 503) {
             throw new Error('Model is loading. Please try again in a few moments.');
           } else if (response.status === 401) {
             throw new Error('Invalid API key. Please check your Hugging Face token.');
+          } else if (response.status === 400) {
+            throw new Error(`Bad request: ${errorMessage}. The model might be loading or the request format might be incorrect.`);
           } else {
-            throw new Error(`API Error: ${response.status}`);
+            throw new Error(`API Error (${response.status}): ${errorMessage}`);
           }
         }
 
-        const result = await response.json();
-        
-        let output = '';
-        if (Array.isArray(result) && result[0]?.generated_text) {
-          output = result[0].generated_text;
-        } else if (result.error) {
-          throw new Error(result.error);
-        } else {
-          throw new Error('Unexpected response format');
-        }
+        try {
+          const result = JSON.parse(responseText);
+          
+          let output = '';
+          if (Array.isArray(result) && result[0]?.generated_text) {
+            output = result[0].generated_text;
+          } else if (result.generated_text) {
+            output = result.generated_text;
+          } else if (result.error) {
+            throw new Error(result.error);
+          } else {
+            throw new Error('Unexpected response format');
+          }
 
-        setTestResult(output);
-        setSuccess('Model test completed successfully!');
+          setTestResult(output);
+          setSuccess('Model test completed successfully!');
+        } catch (parseError) {
+          throw new Error(`Failed to parse response: ${responseText.substring(0, 100)}...`);
+        }
       } else {
         // Mock response
         const mockOutput = "The facility's emergency lights cast eerie shadows down the empty corridor. You hear a distant sound of metal scraping against concrete, and your heart races as you realize you're not alone. The air is thick with tension as you must decide whether to investigate the sound or find another route to safety.";
         setTestResult(mockOutput);
-        setSuccess('Model test completed (mock response)');
+        setSuccess('Model test completed (mock response - no API key configured)');
       }
     } catch (error: any) {
       console.error('Error testing model:', error);
@@ -374,13 +461,25 @@ const AISystemPage = () => {
       {/* Status Messages */}
       {error && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-          <p className="text-red-500">{error}</p>
+          <div className="flex items-start">
+            <AlertCircle className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-red-500 font-medium">Error</p>
+              <p className="text-red-400 text-sm mt-1">{error}</p>
+            </div>
+          </div>
         </div>
       )}
 
       {success && (
         <div className="mb-6 p-4 bg-green-500/10 border border-green-500 rounded-lg">
-          <p className="text-green-500">{success}</p>
+          <div className="flex items-start">
+            <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-green-500 font-medium">Success</p>
+              <p className="text-green-400 text-sm mt-1">{success}</p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -480,6 +579,12 @@ const AISystemPage = () => {
                   <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
                     {model.type}
                   </span>
+                  
+                  {!model.apiKey && (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400">
+                      No API Key
+                    </span>
+                  )}
                 </div>
                 
                 <div className="flex items-center space-x-2">
@@ -716,6 +821,22 @@ const AISystemPage = () => {
           <div>
             <h3 className="font-semibold text-white mb-2">4. Test the Model</h3>
             <p>Use the test interface to verify the model is working correctly with your prompts.</p>
+          </div>
+        </div>
+        
+        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500 rounded-lg">
+          <div className="flex items-start">
+            <Info className="w-5 h-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-blue-500 font-medium">Troubleshooting Hugging Face API</p>
+              <ul className="text-blue-400 text-sm mt-2 space-y-2">
+                <li>• Make sure you've accepted the license agreement for the model you're using</li>
+                <li>• If you get a "model loading" error, wait a few minutes and try again</li>
+                <li>• For Llama models, you need to be logged in to Hugging Face and have access granted</li>
+                <li>• Try using a different model like "gpt2" for testing your API key</li>
+                <li>• Check that your API key has the correct permissions (Read)</li>
+              </ul>
+            </div>
           </div>
         </div>
       </Card>
