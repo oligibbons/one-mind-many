@@ -33,16 +33,27 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       setError(null);
       
-      // Try to fetch from API first
-      const response = await api.get('/api/admin/content');
-      
-      if (response.ok) {
-        const data = await response.json();
-        setContent(data);
-      } else {
-        // Fallback to default content if API fails
-        setContent(getDefaultContent());
+      // Try to fetch from API first, but don't require authentication for content
+      try {
+        const response = await fetch('/api/admin/content', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            // Don't include auth headers for content - it should be publicly accessible
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setContent(data);
+          return;
+        }
+      } catch (apiError) {
+        console.log('API content fetch failed, using fallback content');
       }
+      
+      // Always fall back to default content if API fails
+      setContent(getDefaultContent());
     } catch (error) {
       console.error('Error fetching content:', error);
       setError('Failed to load content');
