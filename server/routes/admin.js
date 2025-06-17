@@ -65,6 +65,29 @@ let contentStore = {
   }
 };
 
+// Helper function to determine if a model is a text generation model
+const isTextGenerationModel = (modelName) => {
+  const textGenModels = [
+    'gpt', 'llama', 'mistral', 'falcon', 'bloom', 'opt', 't5', 'flan',
+    'code', 'starcoder', 'codegen', 'santacoder', 'incoder',
+    'dialogpt', 'blenderbot', 'dialoGPT'
+  ];
+  
+  const lowerModelName = modelName.toLowerCase();
+  return textGenModels.some(model => lowerModelName.includes(model));
+};
+
+// Helper function to determine if a model is a classification model
+const isClassificationModel = (modelName) => {
+  const classificationModels = [
+    'bert', 'distilbert', 'roberta', 'albert', 'electra',
+    'deberta', 'xlnet', 'camembert', 'flaubert'
+  ];
+  
+  const lowerModelName = modelName.toLowerCase();
+  return classificationModels.some(model => lowerModelName.includes(model));
+};
+
 // Get admin dashboard stats
 router.get('/stats', isAdmin, async (req, res) => {
   try {
@@ -783,6 +806,10 @@ router.post('/ai/create-master', isAdmin, async (req, res) => {
       }
     }
 
+    // Determine if we're using a classification model or a text generation model
+    const isClassificationModel = isClassificationModel(config.baseModel);
+    const isTextGenModel = isTextGenerationModel(config.baseModel);
+
     // Then try a simple inference request with better error handling
     const testResponse = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel}`, {
       method: 'POST',
@@ -790,9 +817,26 @@ router.post('/ai/create-master', isAdmin, async (req, res) => {
         'Authorization': `Bearer ${huggingFaceKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        inputs: "Hello, how are you?"
-      })
+      body: JSON.stringify(
+        isClassificationModel 
+          ? { 
+              inputs: "Hello, how are you?"
+            }
+          : {
+              inputs: "Hello, how are you?",
+              parameters: {
+                max_new_tokens: config.maxLength || 512,
+                temperature: config.temperature || 0.8,
+                top_p: config.topP || 0.9,
+                repetition_penalty: config.repetitionPenalty || 1.1,
+                do_sample: true,
+                return_full_text: false
+              },
+              options: {
+                wait_for_model: true
+              }
+            }
+      )
     });
 
     const responseText = await testResponse.text();
