@@ -37,7 +37,7 @@ const AISystemPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [huggingFaceKey, setHuggingFaceKey] = useState('');
-  const [testPrompt, setTestPrompt] = useState('You are trapped in a dark research facility. What do you do?');
+  const [testPrompt, setTestPrompt] = useState('You are an AI narrator for an online hidden role, social deduction game. The story has seen a character crash land on a strange planet. Their ship has been destroyed. As has their comms equipment. The player has decided to make the character interact with the wreckage. What happens next? Keep your answer under 250 characters and present the answer as the next entry in the narrative, so they can react to your response.');
   const [testResult, setTestResult] = useState<string>('');
   const [testLoading, setTestLoading] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
