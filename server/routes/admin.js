@@ -807,8 +807,9 @@ router.post('/ai/create-master', isAdmin, async (req, res) => {
     }
 
     // Determine if we're using a classification model or a text generation model
-    const isClassificationModel = isClassificationModel(config.baseModel);
-    const isTextGenModel = isTextGenerationModel(config.baseModel);
+    const modelIsClassification = config.baseModel.includes('distilbert') || 
+                                 config.baseModel.includes('bert') || 
+                                 config.baseModel.includes('roberta');
 
     // Then try a simple inference request with better error handling
     const testResponse = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel}`, {
@@ -818,7 +819,7 @@ router.post('/ai/create-master', isAdmin, async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(
-        isClassificationModel 
+        modelIsClassification 
           ? { 
               inputs: "Hello, how are you?"
             }
