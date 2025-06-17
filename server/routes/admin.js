@@ -791,16 +791,7 @@ router.post('/ai/create-master', isAdmin, async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: "Hello, how are you?",
-        parameters: {
-          max_new_tokens: 20,
-          temperature: 0.7,
-          do_sample: true,
-          return_full_text: false
-        },
-        options: {
-          wait_for_model: true
-        }
+        inputs: "Hello, how are you?"
       })
     });
 
@@ -884,6 +875,11 @@ router.post('/ai/test/:modelId', isAdmin, async (req, res) => {
     }
 
     try {
+      // Determine if we're using a classification model or a text generation model
+      const isClassificationModel = config.baseModel.includes('distilbert') || 
+                                   config.baseModel.includes('bert') || 
+                                   config.baseModel.includes('roberta');
+      
       // First try with wait_for_model option
       const response = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel || 'distilbert/distilbert-base-uncased-finetuned-sst-2-english'}`, {
         method: 'POST',
@@ -891,20 +887,26 @@ router.post('/ai/test/:modelId', isAdmin, async (req, res) => {
           'Authorization': `Bearer ${storedApiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: config.maxLength || 512,
-            temperature: config.temperature || 0.8,
-            top_p: config.topP || 0.9,
-            repetition_penalty: config.repetitionPenalty || 1.1,
-            do_sample: true,
-            return_full_text: false
-          },
-          options: {
-            wait_for_model: true
-          }
-        })
+        body: JSON.stringify(
+          isClassificationModel 
+            ? { 
+                inputs: prompt 
+              }
+            : {
+                inputs: prompt,
+                parameters: {
+                  max_new_tokens: config.maxLength || 512,
+                  temperature: config.temperature || 0.8,
+                  top_p: config.topP || 0.9,
+                  repetition_penalty: config.repetitionPenalty || 1.1,
+                  do_sample: true,
+                  return_full_text: false
+                },
+                options: {
+                  wait_for_model: true
+                }
+              }
+        )
       });
 
       const responseText = await response.text();
@@ -936,14 +938,30 @@ router.post('/ai/test/:modelId', isAdmin, async (req, res) => {
         const result = JSON.parse(responseText);
         
         let output = '';
-        if (Array.isArray(result) && result[0]?.generated_text) {
-          output = result[0].generated_text;
-        } else if (result.generated_text) {
-          output = result.generated_text;
-        } else if (result.error) {
-          throw new Error(result.error);
+        if (isClassificationModel) {
+          // For classification models, format the output appropriately
+          if (Array.isArray(result)) {
+            // Format classification results
+            output = "Classification results:\n\n";
+            result.forEach(item => {
+              if (item.label && item.score !== undefined) {
+                output += `${item.label}: ${(item.score * 100).toFixed(2)}%\n`;
+              }
+            });
+          } else {
+            output = JSON.stringify(result, null, 2);
+          }
         } else {
-          throw new Error('Unexpected response format');
+          // For text generation models
+          if (Array.isArray(result) && result[0]?.generated_text) {
+            output = result[0].generated_text;
+          } else if (result.generated_text) {
+            output = result.generated_text;
+          } else if (result.error) {
+            throw new Error(result.error);
+          } else {
+            throw new Error('Unexpected response format');
+          }
         }
 
         return res.status(200).json({
