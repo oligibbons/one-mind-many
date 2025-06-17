@@ -49,7 +49,7 @@ const AISystemPage = () => {
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
   const [masterModelConfig, setMasterModelConfig] = useState({
     name: 'Master Narrative AI',
-    baseModel: 'gpt2',
+    baseModel: 'distilbert/distilbert-base-uncased-finetuned-sst-2-english',
     maxLength: 512,
     temperature: 0.8,
     topP: 0.9,
@@ -77,7 +77,7 @@ const AISystemPage = () => {
             status: 'ready',
             accuracy: 87.5,
             lastTrained: '2024-01-15T10:30:00Z',
-            huggingFaceModel: 'gpt2'
+            huggingFaceModel: 'distilbert/distilbert-base-uncased-finetuned-sst-2-english'
           },
           {
             id: '2',
@@ -246,7 +246,7 @@ const AISystemPage = () => {
     setEditingModel(model);
     setMasterModelConfig({
       name: model.name,
-      baseModel: model.huggingFaceModel || 'gpt2',
+      baseModel: model.huggingFaceModel || 'distilbert/distilbert-base-uncased-finetuned-sst-2-english',
       maxLength: model.config?.maxLength || 512,
       temperature: model.config?.temperature || 0.8,
       topP: model.config?.topP || 0.9,
@@ -404,7 +404,7 @@ const AISystemPage = () => {
         }
       } else {
         // Mock response
-        const mockOutput = "The facility's emergency lights cast eerie shadows down the empty corridor. You hear a distant sound of metal scraping against concrete, and your heart races as you realize you're not alone. The air is thick with tension as you must decide whether to investigate the sound or find another route to safety.";
+        const mockOutput = "Mock response - The facility's emergency lights cast eerie shadows down the empty corridor. You hear a distant sound of metal scraping against concrete...";
         setTestResult(mockOutput);
         setSuccess('Model test completed (mock response - no API key configured)');
       }
@@ -682,7 +682,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="gpt2"
+                placeholder="distilbert/distilbert-base-uncased-finetuned-sst-2-english"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -753,7 +753,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="gpt2"
+                placeholder="distilbert/distilbert-base-uncased-finetuned-sst-2-english"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -810,7 +810,7 @@ const AISystemPage = () => {
           
           <div>
             <h3 className="font-semibold text-white mb-2">2. Choose a Model</h3>
-            <p>We recommend using <code className="bg-slate-800 px-1 py-0.5 rounded">gpt2</code> as it's freely available and doesn't require special permissions.</p>
+            <p>We recommend using <code className="bg-slate-800 px-1 py-0.5 rounded">distilbert/distilbert-base-uncased-finetuned-sst-2-english</code> as it's a reliable model for text classification.</p>
           </div>
           
           <div>
@@ -834,7 +834,7 @@ const AISystemPage = () => {
                 <li>• Check that your API key has the correct permissions (Read)</li>
                 <li>• Try using a different model if you continue to have issues</li>
                 <li>• Ensure your prompt is appropriate for the model's capabilities</li>
-                <li>• For text generation, GPT-2 is a reliable option that doesn't require special access</li>
+                <li>• For text classification, DistilBERT is a reliable option that doesn't require special access</li>
               </ul>
             </div>
           </div>
