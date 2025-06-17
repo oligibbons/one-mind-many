@@ -49,7 +49,7 @@ const AISystemPage = () => {
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
   const [masterModelConfig, setMasterModelConfig] = useState({
     name: 'Master Narrative AI',
-    baseModel: 'meta-llama/Llama-3.1-8B-Instruct',
+    baseModel: 'meta-llama/Meta-Llama-3.1-8B-Instruct',
     maxLength: 512,
     temperature: 0.8,
     topP: 0.9,
@@ -77,7 +77,7 @@ const AISystemPage = () => {
             status: 'ready',
             accuracy: 87.5,
             lastTrained: '2024-01-15T10:30:00Z',
-            huggingFaceModel: 'meta-llama/Llama-3.1-8B-Instruct'
+            huggingFaceModel: 'meta-llama/Meta-Llama-3.1-8B-Instruct'
           },
           {
             id: '2',
@@ -246,7 +246,7 @@ const AISystemPage = () => {
     setEditingModel(model);
     setMasterModelConfig({
       name: model.name,
-      baseModel: model.huggingFaceModel || 'meta-llama/Llama-3.1-8B-Instruct',
+      baseModel: model.huggingFaceModel || 'meta-llama/Meta-Llama-3.1-8B-Instruct',
       maxLength: model.config?.maxLength || 512,
       temperature: model.config?.temperature || 0.8,
       topP: model.config?.topP || 0.9,
@@ -682,7 +682,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="meta-llama/Llama-3.1-8B-Instruct"
+                placeholder="meta-llama/Meta-Llama-3.1-8B-Instruct"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -753,7 +753,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="meta-llama/Llama-3.1-8B-Instruct"
+                placeholder="meta-llama/Meta-Llama-3.1-8B-Instruct"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -810,7 +810,7 @@ const AISystemPage = () => {
           
           <div>
             <h3 className="font-semibold text-white mb-2">2. Access Llama Model</h3>
-            <p>Visit <a href="https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300">the Llama model page</a> and accept the license agreement if required.</p>
+            <p>Visit <a href="https://huggingface.co/meta-llama/Meta-Llama-3.1-8B-Instruct" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300">the Llama model page</a> and accept the license agreement if required.</p>
           </div>
           
           <div>
