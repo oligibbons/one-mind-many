@@ -49,7 +49,7 @@ const AISystemPage = () => {
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
   const [masterModelConfig, setMasterModelConfig] = useState({
     name: 'Master Narrative AI',
-    baseModel: 'meta-llama/Meta-Llama-3.1-8B-Instruct',
+    baseModel: 'ranamhamoud/storytell',
     maxLength: 512,
     temperature: 0.8,
     topP: 0.9,
@@ -77,7 +77,7 @@ const AISystemPage = () => {
             status: 'ready',
             accuracy: 87.5,
             lastTrained: '2024-01-15T10:30:00Z',
-            huggingFaceModel: 'meta-llama/Meta-Llama-3.1-8B-Instruct'
+            huggingFaceModel: 'ranamhamoud/storytell'
           },
           {
             id: '2',
@@ -129,7 +129,7 @@ const AISystemPage = () => {
         if (infoResponse.status === 401) {
           throw new Error('Invalid Hugging Face API key. Please check your token.');
         } else if (infoResponse.status === 403) {
-          throw new Error('Access denied. Make sure you have access to the Llama model and have accepted the license agreement.');
+          throw new Error('Access denied. Make sure you have access to the model and have accepted the license agreement.');
         } else if (infoResponse.status === 404) {
           throw new Error('Model not found. Please check the model name.');
         }
@@ -246,7 +246,7 @@ const AISystemPage = () => {
     setEditingModel(model);
     setMasterModelConfig({
       name: model.name,
-      baseModel: model.huggingFaceModel || 'meta-llama/Meta-Llama-3.1-8B-Instruct',
+      baseModel: model.huggingFaceModel || 'ranamhamoud/storytell',
       maxLength: model.config?.maxLength || 512,
       temperature: model.config?.temperature || 0.8,
       topP: model.config?.topP || 0.9,
@@ -682,7 +682,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="meta-llama/Meta-Llama-3.1-8B-Instruct"
+                placeholder="ranamhamoud/storytell"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -753,7 +753,7 @@ const AISystemPage = () => {
                 label="Base Model"
                 value={masterModelConfig.baseModel}
                 onChange={(e) => setMasterModelConfig(prev => ({ ...prev, baseModel: e.target.value }))}
-                placeholder="meta-llama/Meta-Llama-3.1-8B-Instruct"
+                placeholder="ranamhamoud/storytell"
               />
               
               <div className="grid grid-cols-2 gap-4">
@@ -809,8 +809,8 @@ const AISystemPage = () => {
           </div>
           
           <div>
-            <h3 className="font-semibold text-white mb-2">2. Access Llama Model</h3>
-            <p>Visit <a href="https://huggingface.co/meta-llama/Meta-Llama-3.1-8B-Instruct" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300">the Llama model page</a> and accept the license agreement if required.</p>
+            <h3 className="font-semibold text-white mb-2">2. Access Model</h3>
+            <p>Visit <a href="https://huggingface.co/ranamhamoud/storytell" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300">the storytell model page</a> and accept the license agreement if required.</p>
           </div>
           
           <div>
@@ -832,9 +832,9 @@ const AISystemPage = () => {
               <ul className="text-blue-400 text-sm mt-2 space-y-2">
                 <li>• Make sure you've accepted the license agreement for the model you're using</li>
                 <li>• If you get a "model loading" error, wait a few minutes and try again</li>
-                <li>• For Llama models, you need to be logged in to Hugging Face and have access granted</li>
-                <li>• Try using a different model like "gpt2" for testing your API key</li>
                 <li>• Check that your API key has the correct permissions (Read)</li>
+                <li>• Try using a different model if you continue to have issues</li>
+                <li>• Ensure your prompt is appropriate for the model's capabilities</li>
               </ul>
             </div>
           </div>
