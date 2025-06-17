@@ -763,7 +763,27 @@ router.post('/ai/create-master', isAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Hugging Face API key is required' });
     }
 
-    // Test the API key by making a simple request to Hugging Face
+    // First, try a simple model info request
+    const infoResponse = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${huggingFaceKey}`,
+      }
+    });
+
+    if (!infoResponse.ok) {
+      if (infoResponse.status === 401) {
+        return res.status(400).json({ message: 'Invalid Hugging Face API key. Please check your token.' });
+      } else if (infoResponse.status === 403) {
+        return res.status(400).json({ message: 'Access denied. Make sure you have access to the model and have accepted the license agreement.' });
+      } else if (infoResponse.status === 404) {
+        return res.status(400).json({ message: 'Model not found. Please check the model name.' });
+      } else {
+        return res.status(400).json({ message: `Hugging Face API Error: ${infoResponse.status}` });
+      }
+    }
+
+    // Then try a simple inference request with better error handling
     const testResponse = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel}`, {
       method: 'POST',
       headers: {
@@ -771,23 +791,40 @@ router.post('/ai/create-master', isAdmin, async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: 'Test connection',
+        inputs: "Hello, how are you?",
         parameters: {
-          max_new_tokens: 10,
-          temperature: 0.7
+          max_new_tokens: 20,
+          temperature: 0.7,
+          do_sample: true,
+          return_full_text: false
+        },
+        options: {
+          wait_for_model: true
         }
       })
     });
 
+    const responseText = await testResponse.text();
+    
     if (!testResponse.ok) {
-      if (testResponse.status === 401) {
-        return res.status(400).json({ message: 'Invalid Hugging Face API key. Please check your token.' });
-      } else if (testResponse.status === 403) {
-        return res.status(400).json({ message: 'Access denied. Make sure you have access to the Llama model.' });
-      } else if (testResponse.status === 400) {
-        return res.status(400).json({ message: 'Bad request. The model might be loading or the request format is incorrect.' });
+      let errorMessage = `HTTP ${testResponse.status}`;
+      
+      try {
+        const errorData = JSON.parse(responseText);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch (e) {
+        // If we can't parse the error, use the status text
+        errorMessage = testResponse.statusText || errorMessage;
+      }
+
+      if (testResponse.status === 400) {
+        return res.status(400).json({ message: `Bad request: ${errorMessage}. The model might be loading, or the request format might be incorrect. Try again in a few moments.` });
+      } else if (testResponse.status === 503) {
+        return res.status(400).json({ message: 'Model is currently loading. Please wait a few moments and try again.' });
       } else {
-        return res.status(400).json({ message: `Hugging Face API Error: ${testResponse.status}` });
+        return res.status(400).json({ message: `API Error (${testResponse.status}): ${errorMessage}` });
       }
     }
     
@@ -847,6 +884,7 @@ router.post('/ai/test/:modelId', isAdmin, async (req, res) => {
     }
 
     try {
+      // First try with wait_for_model option
       const response = await fetch(`https://api-inference.huggingface.co/models/${config.baseModel || 'meta-llama/Llama-3.1-8B-Instruct'}`, {
         method: 'POST',
         headers: {
@@ -860,37 +898,63 @@ router.post('/ai/test/:modelId', isAdmin, async (req, res) => {
             temperature: config.temperature || 0.8,
             top_p: config.topP || 0.9,
             repetition_penalty: config.repetitionPenalty || 1.1,
+            do_sample: true,
             return_full_text: false
+          },
+          options: {
+            wait_for_model: true
           }
         })
       });
 
+      const responseText = await response.text();
+
       if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        
+        try {
+          const errorData = JSON.parse(responseText);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage;
+        }
+
         if (response.status === 503) {
           throw new Error('Model is loading. Please try again in a few moments.');
         } else if (response.status === 401) {
           throw new Error('Invalid API key. Please check your Hugging Face token.');
+        } else if (response.status === 400) {
+          throw new Error(`Bad request: ${errorMessage}. The model might be loading or the request format might be incorrect.`);
         } else {
-          throw new Error(`API Error: ${response.status}`);
+          throw new Error(`API Error (${response.status}): ${errorMessage}`);
         }
       }
 
-      const result = await response.json();
-      
-      let output = '';
-      if (Array.isArray(result) && result[0]?.generated_text) {
-        output = result[0].generated_text;
-      } else if (result.error) {
-        throw new Error(result.error);
-      } else {
-        throw new Error('Unexpected response format');
-      }
+      try {
+        const result = JSON.parse(responseText);
+        
+        let output = '';
+        if (Array.isArray(result) && result[0]?.generated_text) {
+          output = result[0].generated_text;
+        } else if (result.generated_text) {
+          output = result.generated_text;
+        } else if (result.error) {
+          throw new Error(result.error);
+        } else {
+          throw new Error('Unexpected response format');
+        }
 
-      return res.status(200).json({
-        message: 'Model test completed',
-        output
-      });
+        return res.status(200).json({
+          message: 'Model test completed',
+          output
+        });
+      } catch (parseError) {
+        throw new Error(`Failed to parse response: ${responseText.substring(0, 100)}...`);
+      }
     } catch (apiError) {
+      console.error('API error:', apiError);
       const mockOutput = "The facility's emergency lights cast eerie shadows down the empty corridor. You hear a distant sound of metal scraping against concrete...";
       return res.status(200).json({
         message: 'Model test completed (mock response due to API error)',
@@ -933,6 +997,7 @@ router.get('/scenarios', isAdmin, async (req, res) => {
 // Content Management endpoints
 router.get('/content', async (req, res) => {
   try {
+    // This endpoint is public - no auth required
     return res.status(200).json(contentStore.pages);
   } catch (error) {
     console.error('Error fetching content:', error);
