@@ -413,7 +413,7 @@ const AISystemPage = () => {
       setError(error.message || 'Failed to test model');
       
       // Fallback to mock response
-      const mockOutput = "The facility's emergency lights cast eerie shadows down the empty corridor. You hear a distant sound of metal scraping against concrete...";
+      const mockOutput = "Mock response - The facility's emergency lights cast eerie shadows down the empty corridor. You hear a distant sound of metal scraping against concrete...";
       setTestResult(mockOutput);
     } finally {
       setTestLoading(false);
