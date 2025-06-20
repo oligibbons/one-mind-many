@@ -43,7 +43,8 @@ const RulesManagementPage = () => {
   });
 
   const categories = [
-    'programming', 'resolution', 'action', 'intention', 'movement', 'validation'
+    'overview', 'programming', 'resolution', 'action', 'intention', 'movement', 
+    'validation', 'technical', 'roles', 'victory'
   ];
 
   const ruleTypes = [
@@ -67,6 +68,52 @@ const RulesManagementPage = () => {
       // Initialize with the rules from the rulebook
       const defaultRules: Rule[] = [
         {
+          id: 'game-type',
+          type: 'global',
+          name: 'Game Type',
+          description: 'Cooperative, social hidden role game with programming mechanics for 3-6 players',
+          category: 'overview',
+          parameters: { 
+            minPlayers: 3, 
+            maxPlayers: 6, 
+            gameType: 'cooperative-social-hidden-role',
+            platform: 'mobile-web'
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'player-roles',
+          type: 'global',
+          name: 'Player Roles',
+          description: 'Players are assigned roles: Collaborators (positive), Saboteurs (negative), or Rogues (neutral)',
+          category: 'overview',
+          parameters: {
+            roleCategories: ['collaborator', 'saboteur', 'rogue'],
+            rolesAreSecret: true,
+            rolesAreStatic: true
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'shared-character',
+          type: 'global',
+          name: 'Shared Character',
+          description: 'All players control a single shared character through programmed actions',
+          category: 'overview',
+          parameters: {
+            unifiedActions: true,
+            individualIntent: true,
+            layeredStrategy: true
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
           id: 'one-action-per-turn',
           type: 'global',
           name: 'One Action Per Turn',
@@ -81,9 +128,26 @@ const RulesManagementPage = () => {
           id: 'cycling-turn-order',
           type: 'global',
           name: 'Cycling Turn Order',
-          description: 'Turn order cycles after each round, moving the first player to the back',
+          description: 'Turn order cycles after each round - first player moves to last position, all others move up one position',
           category: 'resolution',
-          parameters: {},
+          parameters: { 
+            turnOrderHidden: true,
+            cyclingPattern: 'first-to-last'
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'mandatory-action-programming',
+          type: 'global',
+          name: 'Mandatory Action Programming',
+          description: 'Players cannot skip turns - AI assigns random valid action if no action is programmed',
+          category: 'programming',
+          parameters: { 
+            skipTurnAllowed: false,
+            aiAssignsRandomAction: true
+          },
           active: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -249,6 +313,114 @@ const RulesManagementPage = () => {
           description: 'Unresolved actions result in a skipped turn with appropriate feedback',
           category: 'validation',
           parameters: { skipOnTimeout: true },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'disconnection-grace-period',
+          type: 'global',
+          name: 'Disconnection Grace Period',
+          description: 'If a player disconnects, a 60-second grace period allows for reconnection before AI takes over',
+          category: 'technical',
+          parameters: { 
+            gracePeriodSeconds: 60,
+            aiTakesOverAfterGracePeriod: true
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'game-pause-unanimous',
+          type: 'global',
+          name: 'Unanimous Game Pause',
+          description: 'Pausing the game requires unanimous agreement among all players',
+          category: 'technical',
+          parameters: { 
+            pauseRequiresUnanimous: true
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'static-roles',
+          type: 'global',
+          name: 'Static Role Assignment',
+          description: 'Roles are static and do not change once assigned at the beginning of the game',
+          category: 'roles',
+          parameters: { 
+            rolesCanChange: false
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'saboteur-win-if-revealed',
+          type: 'role',
+          name: 'Saboteur Win If Revealed',
+          description: 'Saboteurs can still win even if their role is revealed, as long as they achieve their objectives',
+          category: 'victory',
+          parameters: { 
+            winPossibleWhenRevealed: true
+          },
+          roles: ['saboteur'],
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'multiple-winners-possible',
+          type: 'global',
+          name: 'Multiple Winners Possible',
+          description: 'Multiple teams can win in the same game if their objectives happen to align',
+          category: 'victory',
+          parameters: { 
+            multipleWinnersPossible: true
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'no-winners-possible',
+          type: 'global',
+          name: 'No Winners Possible',
+          description: 'If no team achieves their goal, the scenario ends in a loss for all teams',
+          category: 'victory',
+          parameters: { 
+            noWinnersPossible: true
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'accessibility-options',
+          type: 'global',
+          name: 'Accessibility Options',
+          description: 'Game includes adjustable text sizes, colorblind-friendly modes, and audio cues',
+          category: 'technical',
+          parameters: { 
+            adjustableTextSizes: true,
+            colorblindFriendly: true,
+            audioCues: true
+          },
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'external-communication',
+          type: 'global',
+          name: 'External Communication',
+          description: 'Players are not prohibited from using external voice chat tools to communicate',
+          category: 'technical',
+          parameters: { 
+            allowExternalCommunication: true
+          },
           active: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -480,17 +652,17 @@ const RulesManagementPage = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <h3 className="text-lg font-semibold text-white">{rule.name}</h3>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         rule.active 
                           ? 'bg-green-500/20 text-green-400' 
                           : 'bg-red-500/20 text-red-400'
                       }`}>
                         {rule.active ? 'Active' : 'Inactive'}
                       </span>
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
                         {rule.type}
                       </span>
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-purple-500/20 text-purple-400">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400">
                         {rule.category}
                       </span>
                     </div>

@@ -5,6 +5,53 @@ class RulesEngine {
   }
 
   loadDefaultRules() {
+    // Game Overview Rules (Descriptive)
+    this.addRule({
+      id: 'game-type',
+      type: 'global',
+      name: 'Game Type',
+      description: 'Cooperative, social hidden role game with programming mechanics for 3-6 players',
+      category: 'overview',
+      parameters: { 
+        minPlayers: 3, 
+        maxPlayers: 6, 
+        gameType: 'cooperative-social-hidden-role',
+        platform: 'mobile-web'
+      },
+      active: true,
+      validate: () => true
+    });
+
+    this.addRule({
+      id: 'player-roles',
+      type: 'global',
+      name: 'Player Roles',
+      description: 'Players are assigned roles: Collaborators (positive), Saboteurs (negative), or Rogues (neutral)',
+      category: 'overview',
+      parameters: {
+        roleCategories: ['collaborator', 'saboteur', 'rogue'],
+        rolesAreSecret: true,
+        rolesAreStatic: true
+      },
+      active: true,
+      validate: () => true
+    });
+
+    this.addRule({
+      id: 'shared-character',
+      type: 'global',
+      name: 'Shared Character',
+      description: 'All players control a single shared character through programmed actions',
+      category: 'overview',
+      parameters: {
+        unifiedActions: true,
+        individualIntent: true,
+        layeredStrategy: true
+      },
+      active: true,
+      validate: () => true
+    });
+
     // Global Game Rules
     this.addRule({
       id: 'one-action-per-turn',
@@ -24,13 +71,119 @@ class RulesEngine {
       id: 'cycling-turn-order',
       type: 'global',
       name: 'Cycling Turn Order',
-      description: 'Turn order cycles after each round, moving the first player to the back',
+      description: 'Turn order cycles after each round - first player moves to last position, all others move up one position',
       category: 'resolution',
-      parameters: {},
+      parameters: { 
+        turnOrderHidden: true,
+        cyclingPattern: 'first-to-last'
+      },
       active: true,
-      validate: () => true // This is handled by game logic, not validation
+      validate: () => true
     });
 
+    this.addRule({
+      id: 'mandatory-action-programming',
+      type: 'global',
+      name: 'Mandatory Action Programming',
+      description: 'Players cannot skip turns - AI assigns random valid action if no action is programmed',
+      category: 'programming',
+      parameters: { 
+        skipTurnAllowed: false,
+        aiAssignsRandomAction: true
+      },
+      active: true,
+      validate: () => true
+    });
+
+    this.addRule({
+      id: 'invalid-action-reselection',
+      type: 'global',
+      name: 'Invalid Action Re-selection',
+      description: 'Players may adapt their actions in the resolution phase if the initial target is invalid',
+      category: 'validation',
+      parameters: { allowReselection: true },
+      active: true,
+      validate: () => true
+    });
+
+    this.addRule({
+      id: 'unresolved-action-skip',
+      type: 'global',
+      name: 'Unresolved Action Skip',
+      description: 'Unresolved actions result in a skipped turn with appropriate feedback',
+      category: 'validation',
+      parameters: { skipOnTimeout: true },
+      active: true,
+      validate: () => true
+    });
+
+    this.addRule({
+      id: 'disconnection-grace-period',
+      type: 'global',
+      name: 'Disconnection Grace Period',
+      description: 'If a player disconnects, a 60-second grace period allows for reconnection before AI takes over',
+      category: 'technical',
+      parameters: { 
+        gracePeriodSeconds: 60,
+        aiTakesOverAfterGracePeriod: true
+      },
+      active: true,
+      validate: () => true
+    });
+
+    this.addRule({
+      id: 'game-pause-unanimous',
+      type: 'global',
+      name: 'Unanimous Game Pause',
+      description: 'Pausing the game requires unanimous agreement among all players',
+      category: 'technical',
+      parameters: { 
+        pauseRequiresUnanimous: true
+      },
+      active: true,
+      validate: () => true
+    });
+
+    this.addRule({
+      id: 'static-roles',
+      type: 'global',
+      name: 'Static Role Assignment',
+      description: 'Roles are static and do not change once assigned at the beginning of the game',
+      category: 'roles',
+      parameters: { 
+        rolesCanChange: false
+      },
+      active: true,
+      validate: () => true
+    });
+
+    this.addRule({
+      id: 'multiple-winners-possible',
+      type: 'global',
+      name: 'Multiple Winners Possible',
+      description: 'Multiple teams can win in the same game if their objectives happen to align',
+      category: 'victory',
+      parameters: { 
+        multipleWinnersPossible: true
+      },
+      active: true,
+      validate: () => true
+    });
+
+    this.addRule({
+      id: 'no-winners-possible',
+      type: 'global',
+      name: 'No Winners Possible',
+      description: 'If no team achieves their goal, the scenario ends in a loss for all teams',
+      category: 'victory',
+      parameters: { 
+        noWinnersPossible: true
+      },
+      active: true,
+      validate: () => true
+    });
+
+    // Role-Specific Rules - Saboteur
     this.addRule({
       id: 'saboteur-cooldown',
       type: 'role',
@@ -52,6 +205,20 @@ class RulesEngine {
         if (!lastSabotage) return true;
         return (gameState.currentTurn - lastSabotage.turn) >= 2;
       }
+    });
+
+    this.addRule({
+      id: 'saboteur-win-if-revealed',
+      type: 'role',
+      name: 'Saboteur Win If Revealed',
+      description: 'Saboteurs can still win even if their role is revealed, as long as they achieve their objectives',
+      category: 'victory',
+      parameters: { 
+        winPossibleWhenRevealed: true
+      },
+      roles: ['saboteur'],
+      active: true,
+      validate: () => true
     });
 
     // Universal Actions
@@ -269,6 +436,36 @@ class RulesEngine {
         // Check if locations are connected
         return currentLocation.connections?.includes(targetLocation.id) || false;
       }
+    });
+
+    // Accessibility Rules
+    this.addRule({
+      id: 'accessibility-options',
+      type: 'global',
+      name: 'Accessibility Options',
+      description: 'Game includes adjustable text sizes, colorblind-friendly modes, and audio cues',
+      category: 'technical',
+      parameters: { 
+        adjustableTextSizes: true,
+        colorblindFriendly: true,
+        audioCues: true
+      },
+      active: true,
+      validate: () => true
+    });
+
+    // External Communication Rule
+    this.addRule({
+      id: 'external-communication',
+      type: 'global',
+      name: 'External Communication',
+      description: 'Players are not prohibited from using external voice chat tools to communicate',
+      category: 'technical',
+      parameters: { 
+        allowExternalCommunication: true
+      },
+      active: true,
+      validate: () => true
     });
   }
 
