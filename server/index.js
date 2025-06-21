@@ -18,6 +18,9 @@ import { validateActionMiddleware, validateGameStateMiddleware } from './middlew
 
 // Load environment variables
 dotenv.config();
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'Loaded' : 'Not Loaded');
+console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Loaded' : 'Not Loaded');
+
 
 // Initialize Express app
 const app = express();
