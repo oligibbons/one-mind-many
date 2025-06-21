@@ -36,11 +36,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAuthState = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔍 Checking Supabase connection and auth state...');
+      
+      // Test basic Supabase connection
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ Supabase connection error:', sessionError);
+        throw sessionError;
+      }
+      
+      console.log('✅ Supabase connection successful');
       
       if (session?.user) {
+        console.log('👤 User session found:', {
+          userId: session.user.id,
+          email: session.user.email,
+          lastSignIn: session.user.last_sign_in_at
+        });
+        
         await fetchUserProfile(session.user.id, session.access_token);
       } else {
+        console.log('🚫 No active user session found');
         setUser(null);
         setIsAdmin(false);
         // Clear stored auth data
@@ -48,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('user');
       }
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error('💥 Auth check error:', error);
       setUser(null);
       setIsAdmin(false);
       localStorage.removeItem('token');
@@ -60,15 +77,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (userId: string, accessToken?: string) => {
     try {
+      console.log('📋 Fetching user profile for:', userId);
+      
       const { data: userData, error } = await supabase
         .from('users')
         .select('id, username, email, role')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching user profile:', error);
+        throw error;
+      }
 
       if (userData) {
+        console.log('✅ User profile loaded:', {
+          username: userData.username,
+          email: userData.email,
+          role: userData.role
+        });
+        
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
         
@@ -81,25 +109,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('💥 Error fetching user profile:', error);
       throw error;
     }
   };
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      console.log('🔐 Attempting login for:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
+        console.error('❌ Login error:', error.message);
         return { success: false, error: error.message };
       }
 
       if (!data.user || !data.session) {
+        console.error('❌ No user data returned from login');
         return { success: false, error: 'No user data returned' };
       }
+
+      console.log('✅ Login successful for user:', data.user.id);
 
       // Store the access token in localStorage
       localStorage.setItem('token', data.session.access_token);
@@ -108,23 +142,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await fetchUserProfile(data.user.id, data.session.access_token);
       
       // Update last login timestamp
-      await supabase
+      const { error: updateError } = await supabase
         .from('users')
         .update({ last_login: new Date() })
         .eq('id', data.user.id);
       
+      if (updateError) {
+        console.warn('⚠️ Failed to update last login timestamp:', updateError);
+      }
+      
       return { success: true };
     } catch (error: any) {
+      console.error('💥 Login exception:', error);
       return { success: false, error: error.message };
     }
   };
 
   const logout = () => {
+    console.log('🚪 Logging out user');
     supabase.auth.signOut();
     setUser(null);
     setIsAdmin(false);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    console.log('✅ Logout complete');
   };
 
   return (
