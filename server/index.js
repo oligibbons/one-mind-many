@@ -21,7 +21,7 @@ dotenv.config();
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000; // Explicitly set port to 3000
 
 // CORS configuration function to handle trailing slash variations
 const corsOrigin = (origin, callback) => {
