@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -13,6 +13,7 @@ import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { api } from '../../lib/api';
+import { inkService } from '../../services/InkService';
 
 interface GameState {
   turn: number;
@@ -49,6 +50,12 @@ interface GameAction {
   data?: any;
 }
 
+interface InkChoice {
+  text: string;
+  index: number;
+  tags: string[];
+}
+
 const GamePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -79,12 +86,23 @@ const GamePage = () => {
     compactMode: false
   });
 
+  // Ink story state
+  const [inkStoryText, setInkStoryText] = useState<string>('');
+  const [inkChoices, setInkChoices] = useState<InkChoice[]>([]);
+  const [inkTags, setInkTags] = useState<string[]>([]);
+  const [inkLoading, setInkLoading] = useState(false);
+  const [inkInitialized, setInkInitialized] = useState(false);
+  const [inkError, setInkError] = useState<string | null>(null);
+
   // Mock environment images
   const environmentImages = [
     'https://images.pexels.com/photos/2694344/pexels-photo-2694344.jpeg', // Prison corridor
     'https://images.pexels.com/photos/2693212/pexels-photo-2693212.jpeg', // Dark hallway
     'https://images.pexels.com/photos/1108701/pexels-photo-1108701.jpeg', // Industrial facility
   ];
+
+  // Refs
+  const narrativeLogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchGameState = async () => {
@@ -106,6 +124,11 @@ const GamePage = () => {
           }
         });
         setTurnOrderPrediction(initialPrediction);
+        
+        // Initialize Ink story
+        if (!inkInitialized && id) {
+          initializeInkStory(id);
+        }
         
         setLoading(false);
       } catch (error) {
@@ -141,7 +164,123 @@ const GamePage = () => {
         socket.off('pause:requested');
       };
     }
-  }, [id, socket, user?.id]);
+  }, [id, socket, user?.id, inkInitialized]);
+
+  // Auto-scroll narrative log when new content is added
+  useEffect(() => {
+    if (narrativeLogRef.current && gameSettings.autoScroll) {
+      narrativeLogRef.current.scrollTop = narrativeLogRef.current.scrollHeight;
+    }
+  }, [narrativeLog, gameSettings.autoScroll]);
+
+  // Initialize Ink story
+  const initializeInkStory = async (gameId: string) => {
+    try {
+      setInkLoading(true);
+      
+      // Fetch the Ink story JSON
+      const response = await api.get(`/api/game/${gameId}/ink-story`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch Ink story');
+      }
+      
+      const data = await response.json();
+      
+      if (!data.inkStoryJSON) {
+        throw new Error('No Ink story found for this game');
+      }
+      
+      // Initialize the Ink story
+      await inkService.initStory(data.inkStoryJSON, gameId);
+      
+      // Load saved state if available
+      const stateResponse = await api.get(`/api/game/${gameId}/ink-state`);
+      
+      if (stateResponse.ok) {
+        const stateData = await stateResponse.json();
+        
+        if (stateData.stateJSON) {
+          inkService.loadState(stateData.stateJSON);
+        }
+      }
+      
+      // Continue the story and get initial content
+      continueInkStory();
+      
+      setInkInitialized(true);
+    } catch (error) {
+      console.error('Error initializing Ink story:', error);
+      setInkError(error instanceof Error ? error.message : 'Failed to initialize Ink story');
+    } finally {
+      setInkLoading(false);
+    }
+  };
+
+  // Continue the Ink story
+  const continueInkStory = () => {
+    try {
+      // Continue the story until we can't anymore
+      let text = '';
+      while (inkService.continue()) {
+        text += inkService.continue();
+      }
+      
+      // Get current choices
+      const choices = inkService.getChoices();
+      
+      // Get current tags
+      const tags = inkService.getCurrentTags();
+      
+      // Update state
+      setInkStoryText(text);
+      setInkChoices(choices);
+      setInkTags(tags);
+      
+      // Add to narrative log if there's text
+      if (text.trim()) {
+        const newLogEntry = {
+          id: `ink-${Date.now()}`,
+          type: 'narrative',
+          content: text,
+          timestamp: new Date().toISOString(),
+          turn_number: gameState?.turn || 1
+        };
+        
+        setNarrativeLog(prev => [...prev, newLogEntry]);
+      }
+      
+      // Save state
+      saveInkState();
+    } catch (error) {
+      console.error('Error continuing Ink story:', error);
+      setInkError(error instanceof Error ? error.message : 'Failed to continue Ink story');
+    }
+  };
+
+  // Make a choice in the Ink story
+  const makeInkChoice = (choiceIndex: number) => {
+    try {
+      inkService.choose(choiceIndex);
+      continueInkStory();
+    } catch (error) {
+      console.error('Error making Ink choice:', error);
+      setInkError(error instanceof Error ? error.message : 'Failed to make Ink choice');
+    }
+  };
+
+  // Save Ink state
+  const saveInkState = async () => {
+    try {
+      if (!id) return;
+      
+      const stateJSON = inkService.saveState();
+      
+      await api.post(`/api/game/${id}/ink-state`, { stateJSON });
+    } catch (error) {
+      console.error('Error saving Ink state:', error);
+    }
+  };
 
   const handleSubmitAction = async () => {
     if (!selectedAction.type) return;
@@ -391,7 +530,10 @@ const GamePage = () => {
                 </Button>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+              <div 
+                ref={narrativeLogRef}
+                className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
+              >
                 {narrativeLog.map((entry, index) => (
                   <motion.div
                     key={entry.id || index}
@@ -419,6 +561,22 @@ const GamePage = () => {
                   <div className="text-center text-slate-400 py-8">
                     <Eye size={48} className="mx-auto mb-4 opacity-50" />
                     <p className="body-font">Waiting for the story to begin...</p>
+                  </div>
+                )}
+
+                {/* Ink Choices */}
+                {inkChoices.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="text-md font-semibold text-white mb-2 custom-font">What will you do?</h4>
+                    {inkChoices.map((choice) => (
+                      <button
+                        key={choice.index}
+                        onClick={() => makeInkChoice(choice.index)}
+                        className="w-full text-left p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition-colors game-card"
+                      >
+                        {choice.text}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -682,6 +840,22 @@ const GamePage = () => {
                     <div className="text-center text-slate-400 py-8">
                       <Eye size={32} className="mx-auto mb-4 opacity-50" />
                       <p className="text-sm body-font">Waiting for the story to begin...</p>
+                    </div>
+                  )}
+
+                  {/* Ink Choices - Mobile */}
+                  {inkChoices.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <h4 className="text-md font-semibold text-white mb-2 custom-font">What will you do?</h4>
+                      {inkChoices.map((choice) => (
+                        <button
+                          key={choice.index}
+                          onClick={() => makeInkChoice(choice.index)}
+                          className="w-full text-left p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition-colors game-card"
+                        >
+                          {choice.text}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -953,6 +1127,46 @@ const GamePage = () => {
               <div className="p-6 border-t border-slate-700 flex justify-end gap-4">
                 <Button variant="outline" onClick={() => setShowSettings(false)} className="game-button">
                   Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Ink Error Modal */}
+      <AnimatePresence>
+        {inkError && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-slate-900 rounded-lg border border-red-700 w-full max-w-md game-card"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="p-6 border-b border-slate-700">
+                <h2 className="text-xl font-bold text-white custom-font flex items-center">
+                  <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
+                  Ink Story Error
+                </h2>
+              </div>
+              
+              <div className="p-6">
+                <p className="text-slate-300 body-font">{inkError}</p>
+              </div>
+              
+              <div className="p-6 border-t border-slate-700 flex justify-end gap-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setInkError(null)} 
+                  className="game-button"
+                >
+                  Dismiss
                 </Button>
               </div>
             </motion.div>

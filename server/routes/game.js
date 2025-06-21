@@ -1,6 +1,7 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import inkExternalFunctions from '../services/inkExternalFunctions.js';
 
 dotenv.config();
 
@@ -216,10 +217,21 @@ router.get('/:id', async (req, res) => {
       .from('game_actions')
       .select('*')
       .eq('game_id', id)
-      .eq('turn', game.current_turn);
+      .eq('turn_number', game.current_turn);
     
     if (actionsError) {
       return res.status(500).json({ message: actionsError.message });
+    }
+    
+    // Get narrative logs
+    const { data: narrativeLogs, error: logsError } = await supabase
+      .from('game_logs')
+      .select('*')
+      .eq('game_id', id)
+      .order('created_at', { ascending: true });
+    
+    if (logsError) {
+      return res.status(500).json({ message: logsError.message });
     }
     
     // Filter information based on player role
@@ -239,7 +251,8 @@ router.get('/:id', async (req, res) => {
       players: filteredPlayers,
       actions,
       your_role: player.role,
-      is_host: isHost
+      is_host: isHost,
+      narrative_log: narrativeLogs || []
     });
   } catch (error) {
     console.error('Error fetching game:', error);
@@ -294,8 +307,8 @@ router.post('/:id/action', async (req, res) => {
       .from('game_actions')
       .select('*', { count: 'exact' })
       .eq('game_id', id)
-      .eq('user_id', userId)
-      .eq('turn', game.current_turn);
+      .eq('player_id', userId)
+      .eq('turn_number', game.current_turn);
     
     if (actionError) {
       return res.status(500).json({ message: actionError.message });
@@ -310,11 +323,12 @@ router.post('/:id/action', async (req, res) => {
       .from('game_actions')
       .insert([{
         game_id: id,
-        user_id: userId,
-        turn: game.current_turn,
+        player_id: userId,
+        turn_number: game.current_turn,
         action_type,
         action_data,
-        submitted_at: new Date()
+        status: 'queued',
+        created_at: new Date()
       }])
       .select()
       .single();
@@ -338,7 +352,7 @@ router.post('/:id/action', async (req, res) => {
       .from('game_actions')
       .select('*', { count: 'exact' })
       .eq('game_id', id)
-      .eq('turn', game.current_turn);
+      .eq('turn_number', game.current_turn);
     
     if (actionCountError) {
       return res.status(500).json({ message: actionCountError.message });
@@ -362,6 +376,209 @@ router.post('/:id/action', async (req, res) => {
   } catch (error) {
     console.error('Error submitting action:', error);
     return res.status(500).json({ message: 'An error occurred while submitting the action' });
+  }
+});
+
+// Handle Ink external function calls
+router.post('/:id/ink-external-call', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { functionName, args } = req.body;
+    const userId = req.user.id;
+    
+    // Check if game exists
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (gameError) {
+      return res.status(404).json({ message: 'Game not found' });
+    }
+    
+    // Check if user is a player in the game
+    const { data: player, error: playerError } = await supabase
+      .from('game_players')
+      .select('*')
+      .eq('game_id', id)
+      .eq('user_id', userId)
+      .single();
+    
+    if (playerError) {
+      return res.status(403).json({ message: 'You are not a player in this game' });
+    }
+    
+    // Check if the function exists
+    if (!inkExternalFunctions[functionName]) {
+      return res.status(400).json({ message: `Unknown function: ${functionName}` });
+    }
+    
+    // Call the function with the game ID and provided arguments
+    const result = await inkExternalFunctions[functionName](id, ...args);
+    
+    return res.status(200).json({ result });
+  } catch (error) {
+    console.error(`Error calling Ink external function:`, error);
+    return res.status(500).json({ message: 'An error occurred while calling the external function' });
+  }
+});
+
+// Get Ink story JSON for a game
+router.get('/:id/ink-story', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    // Check if game exists
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select(`
+        *,
+        scenario:scenario_id(*)
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (gameError) {
+      return res.status(404).json({ message: 'Game not found' });
+    }
+    
+    // Check if user is a player in the game
+    const { data: player, error: playerError } = await supabase
+      .from('game_players')
+      .select('*')
+      .eq('game_id', id)
+      .eq('user_id', userId)
+      .single();
+    
+    if (playerError) {
+      return res.status(403).json({ message: 'You are not a player in this game' });
+    }
+    
+    // Get the Ink story JSON from the scenario
+    const inkStoryJSON = game.scenario.content.ink_story_json;
+    
+    if (!inkStoryJSON) {
+      return res.status(404).json({ message: 'Ink story not found for this scenario' });
+    }
+    
+    return res.status(200).json({ inkStoryJSON });
+  } catch (error) {
+    console.error('Error fetching Ink story:', error);
+    return res.status(500).json({ message: 'An error occurred while fetching the Ink story' });
+  }
+});
+
+// Save Ink story state
+router.post('/:id/ink-state', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stateJSON } = req.body;
+    const userId = req.user.id;
+    
+    if (!stateJSON) {
+      return res.status(400).json({ message: 'State JSON is required' });
+    }
+    
+    // Check if game exists
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (gameError) {
+      return res.status(404).json({ message: 'Game not found' });
+    }
+    
+    // Check if user is a player in the game
+    const { data: player, error: playerError } = await supabase
+      .from('game_players')
+      .select('*')
+      .eq('game_id', id)
+      .eq('user_id', userId)
+      .single();
+    
+    if (playerError) {
+      return res.status(403).json({ message: 'You are not a player in this game' });
+    }
+    
+    // Save the Ink story state
+    const { data, error } = await supabase
+      .from('game_ink_states')
+      .upsert({
+        game_id: id,
+        state_json: stateJSON,
+        updated_at: new Date()
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+    
+    return res.status(200).json({
+      message: 'Ink state saved successfully',
+      state: data
+    });
+  } catch (error) {
+    console.error('Error saving Ink state:', error);
+    return res.status(500).json({ message: 'An error occurred while saving the Ink state' });
+  }
+});
+
+// Load Ink story state
+router.get('/:id/ink-state', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    // Check if game exists
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (gameError) {
+      return res.status(404).json({ message: 'Game not found' });
+    }
+    
+    // Check if user is a player in the game
+    const { data: player, error: playerError } = await supabase
+      .from('game_players')
+      .select('*')
+      .eq('game_id', id)
+      .eq('user_id', userId)
+      .single();
+    
+    if (playerError) {
+      return res.status(403).json({ message: 'You are not a player in this game' });
+    }
+    
+    // Get the Ink story state
+    const { data, error } = await supabase
+      .from('game_ink_states')
+      .select('*')
+      .eq('game_id', id)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No state found, return empty
+        return res.status(200).json({ stateJSON: null });
+      }
+      return res.status(500).json({ message: error.message });
+    }
+    
+    return res.status(200).json({
+      stateJSON: data.state_json
+    });
+  } catch (error) {
+    console.error('Error loading Ink state:', error);
+    return res.status(500).json({ message: 'An error occurred while loading the Ink state' });
   }
 });
 
