@@ -22,7 +22,6 @@
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "framer-motion": "^11.0.8",
-    "inkjs": "^2.2.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",

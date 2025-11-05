@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useGameStore } from '../../stores/useGameStore';
-import { GameState, PrivatePlayerState } from '../../types/game';
+import { GameState, PrivatePlayerState, BoardSpace } from '../../types/game';
 
 // --- Import our REAL UI Components ---
 import { GameBoard } from '../../components/game/GameBoard';
@@ -15,6 +15,7 @@ import { ComplicationTrack } from '../../components/game/ComplicationTrack';
 import { PrivateDashboard } from '../../components/game/PrivateDashboard';
 import { ChatBox } from '../../components/game/ChatBox';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { MovementOverlay } from '../../components/game/MovementOverlay'; // <-- NEW
 
 export const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -27,7 +28,9 @@ export const GamePage: React.FC = () => {
     privateState,
     setFullGameData,
     updatePublicState,
+    updatePrivateState, // <-- NEW
     updatePlayerSubmitted,
+    setAwaitingMove, // <-- NEW
     setError,
     clearGame,
   } = useGameStore();
@@ -39,6 +42,7 @@ export const GamePage: React.FC = () => {
     }
 
     // --- 1. Register Socket Event Listeners ---
+    
     const onFullState = (data: {
       publicState: GameState;
       privateState: PrivatePlayerState;
@@ -52,23 +56,36 @@ export const GamePage: React.FC = () => {
       updatePublicState(newPublicState);
     };
 
+    // NEW: For when server sends just our private state (e.g., new hand)
+    const onPrivateUpdate = (newPrivateState: PrivatePlayerState) => {
+      console.log('Received game:private_update', newPrivateState);
+      updatePrivateState(newPrivateState);
+    };
+
     const onPlayerSubmitted = (data: { userId: string }) => {
       console.log('Received game:player_submitted', data.userId);
       updatePlayerSubmitted(data.userId);
     };
-    
-    // Note: 'game:player_joined' and 'game:player_left' are now
-    // handled directly by the ChatBox component.
 
+    // NEW: Server is asking for movement input
+    const onAwaitingMove = (data: {
+      playerId: string;
+      validMoves: BoardSpace[];
+    }) => {
+      console.log('Received game:await_move');
+      setAwaitingMove(data);
+    };
+    
     const onGameError = (data: { message: string }) => {
       console.error('Received error:game', data.message);
       setError(data.message);
-      // TODO: Show toast.error(data.message)
     };
 
     socket.on('game:full_state', onFullState);
     socket.on('game:state_update', onStateUpdate);
+    socket.on('game:private_update', onPrivateUpdate); // <-- NEW
     socket.on('game:player_submitted', onPlayerSubmitted);
+    socket.on('game:await_move', onAwaitingMove); // <-- NEW
     socket.on('error:game', onGameError);
 
     // --- 2. Emit "join" event to the server ---
@@ -80,7 +97,9 @@ export const GamePage: React.FC = () => {
       console.log('Cleaning up GamePage listeners');
       socket.off('game:full_state', onFullState);
       socket.off('game:state_update', onStateUpdate);
+      socket.off('game:private_update', onPrivateUpdate); // <-- NEW
       socket.off('game:player_submitted', onPlayerSubmitted);
+      socket.off('game:await_move', onAwaitingMove); // <-- NEW
       socket.off('error:game', onGameError);
       
       clearGame();
@@ -92,12 +111,12 @@ export const GamePage: React.FC = () => {
     user,
     setFullGameData,
     updatePublicState,
+    updatePrivateState, // <-- NEW
     updatePlayerSubmitted,
+    setAwaitingMove, // <-- NEW
     setError,
     clearGame,
   ]);
-
-  // --- Render Logic ---
 
   if (!publicState || !privateState || !gameId) {
     return (
@@ -108,7 +127,6 @@ export const GamePage: React.FC = () => {
     );
   }
 
-  // --- Main Game UI ---
   return (
     <div className="flex h-screen w-full flex-col bg-gray-950 text-gray-200">
       {/* Top Bar: Tracks and Info */}
@@ -129,9 +147,10 @@ export const GamePage: React.FC = () => {
 
       {/* Main Content: Board and Chat */}
       <main className="flex flex-1 overflow-hidden">
-        {/* Game Board */}
-        <div className="flex-1 p-4">
+        {/* Game Board (Relative container) */}
+        <div className="relative flex-1 p-4"> {/* <-- MODIFIED */}
           <GameBoard />
+          <MovementOverlay /> {/* <-- NEW */}
         </div>
 
         {/* Side Panel: Chat and Private Info */}

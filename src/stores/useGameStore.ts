@@ -5,6 +5,7 @@ import {
   GameState,
   PrivatePlayerState,
   PublicPlayerState,
+  BoardSpace, // <-- NEW
 } from '../types/game';
 
 // Define the shape of the store's state
@@ -12,6 +13,11 @@ interface GameStoreState {
   publicState: GameState | null;
   privateState: PrivatePlayerState | null;
   error: string | null;
+  
+  // --- NEW state for interactive movement ---
+  isAwaitingMove: boolean;
+  actingPlayerId: string | null; // The player who needs to move
+  validMoves: BoardSpace[];
 }
 
 // Define the actions (functions) to modify the state
@@ -21,9 +27,17 @@ interface GameStoreActions {
     privateState: PrivatePlayerState;
   }) => void;
   updatePublicState: (newState: GameState) => void;
+  updatePrivateState: (newState: PrivatePlayerState) => void; // <-- NEW
   updatePlayerSubmitted: (userId: string) => void;
   setError: (message: string) => void;
   clearGame: () => void;
+  
+  // --- NEW actions for movement ---
+  setAwaitingMove: (data: {
+    playerId: string;
+    validMoves: BoardSpace[];
+  }) => void;
+  clearAwaitingMove: () => void;
 }
 
 // Create the store
@@ -33,63 +47,71 @@ export const useGameStore = create<GameStoreState & GameStoreActions>(
     publicState: null,
     privateState: null,
     error: null,
+    isAwaitingMove: false,
+    actingPlayerId: null,
+    validMoves: [],
 
     // --- Actions ---
     
-    /**
-     * Called when first joining a game or reconnecting.
-     * Sets the entire game state.
-     */
     setFullGameData: (data) =>
       set({
         publicState: data.publicState,
         privateState: data.privateState,
         error: null,
+        isAwaitingMove: false, // Ensure state is clean on load
+        validMoves: [],
+        actingPlayerId: null,
       }),
 
-    /**
-     * Called on a 'game:state_update' event from the server.
-     * Updates only the public game state (e.g., after a round resolves).
-     */
     updatePublicState: (newState) =>
       set({
         publicState: newState,
       }),
+      
+    // NEW: For when the server sends just our private state (e.g., new hand)
+    updatePrivateState: (newState) =>
+      set({
+        privateState: newState,
+      }),
 
-    /**
-     * Called when a 'game:player_submitted' event is received.
-     * Toggles a player's submitted status.
-     */
     updatePlayerSubmitted: (userId) =>
       set((state) => {
         if (!state.publicState) return state;
-
         const newPlayers = state.publicState.players.map(
           (p: PublicPlayerState) =>
             p.userId === userId ? { ...p, submittedAction: true } : p
         );
-
         return {
-          publicState: {
-            ...state.publicState,
-            players: newPlayers,
-          },
+          publicState: { ...state.publicState, players: newPlayers },
         };
       }),
 
-    /**
-     * Sets a game-related error.
-     */
     setError: (message) => set({ error: message }),
 
-    /**
-     * Clears the game state when leaving a game or on logout.
-     */
     clearGame: () =>
       set({
         publicState: null,
         privateState: null,
         error: null,
+        isAwaitingMove: false,
+        validMoves: [],
+        actingPlayerId: null,
+      }),
+      
+    // --- NEW Movement Actions ---
+    
+    setAwaitingMove: (data) =>
+      set({
+        isAwaitingMove: true,
+        actingPlayerId: data.playerId,
+        validMoves: data.validMoves,
+      }),
+      
+    clearAwaitingMove: () =>
+      set({
+        isAwaitingMove: false,
+        actingPlayerId: null,
+        validMoves: [],
       }),
   })
 );
