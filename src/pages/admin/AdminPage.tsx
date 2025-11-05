@@ -6,14 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Shield, Users, BarChart } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-export const AdminPage: React.FC = ()_ => {
-  const { profile } = useAuth();
+export const AdminPage: React.FC = () => {
+  const { user } = useAuth(); // Changed from profile to user.profile
 
   return (
     <div className="mx-auto w-full max-w-4xl p-8">
       <h1 className="mb-2 text-5xl font-bold game-title">Admin Dashboard</h1>
       <p className="mb-8 text-xl text-gray-300">
-        Welcome, <span className="text-brand-orange">{profile?.username}</span>.
+        Welcome, <span className="text-brand-orange">{user?.profile?.username}</span>.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
