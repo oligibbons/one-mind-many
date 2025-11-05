@@ -2,6 +2,7 @@ import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  as?: React.ElementType;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'game';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
@@ -10,6 +11,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
+  as: Component = 'button', // <-- This line is correct
   className = '',
   variant = 'primary',
   size = 'md',
@@ -42,13 +44,19 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
     tap: { scale: variant === 'game' ? 0.95 : 0.97 }
   };
 
+  // --- THIS IS THE FIX ---
+  // We create a dynamic component that is either 'button' or 'Link'
+  // and wrap it with 'motion'.
+  const MotionComponent = motion(Component);
+
   return (
-    <motion.button
+    // We render the dynamic MotionComponent here instead of a hard-coded 'motion.button'
+    <MotionComponent
       ref={ref}
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       disabled={isLoading || props.disabled}
       style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
-      {...props}
+      {...props} // This correctly passes 'to="/login"' to the Link component
       initial="initial"
       whileHover="hover"
       whileTap="tap"
@@ -79,10 +87,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
       {!isLoading && leftIcon && <span className="mr-2">{leftIcon}</span>}
       {children}
       {!isLoading && rightIcon && <span className="ml-2">{rightIcon}</span>}
-    </motion.button>
+    </MotionComponent>
   );
 });
 
 Button.displayName = 'Button';
-
-// Removed 'export default Button;'
