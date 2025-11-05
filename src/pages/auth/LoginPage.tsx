@@ -1,11 +1,13 @@
+// src/pages/auth/LoginPage.tsx
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../../components/ui/Button'; // <-- Corrected
-import { Input } from '../../components/ui/Input'; // <-- Corrected
+import { Button } from '../../components/ui/Button'; // Corrected
+import { Input } from '../../components/ui/Input'; // Corrected
 import { Mail, Lock } from 'lucide-react';
 
-const LoginPage = () => {
+export const LoginPage = () => { // Changed to export const
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -79,7 +81,7 @@ const LoginPage = () => {
           type="password"
           label="Password"
           value={formData.password}
-          onChange={(e) => setFormData({ ...formData, password: e.targe.value })}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           placeholder="Enter your password"
           leftIcon={<Lock size={18} />}
           required
@@ -112,4 +114,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+// Removed 'export default LoginPage;'

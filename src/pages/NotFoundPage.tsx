@@ -2,9 +2,9 @@
 
 import { Link } from 'react-router-dom';
 import { Home, AlertTriangle } from 'lucide-react';
-import { Button } from '../components/ui/Button'; // <-- Corrected import
+import { Button } from '../components/ui/Button'; // Already correct
 
-const NotFoundPage = () => {
+export const NotFoundPage = () => { // Changed to export const
   return (
     <div className="flex min-h-[calc(100vh-80px)] w-full flex-col items-center justify-center space-y-6 text-center">
       <AlertTriangle className="h-24 w-24 text-orange-400" />
@@ -24,4 +24,4 @@ const NotFoundPage = () => {
   );
 };
 
-export default NotFoundPage;
+// Removed 'export default NotFoundPage;'

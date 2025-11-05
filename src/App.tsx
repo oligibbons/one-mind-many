@@ -20,11 +20,11 @@ import { FriendsPage } from './pages/game/FriendsPage';
 import { SettingsPage } from './pages/game/SettingsPage';
 import { GamePage } from './pages/game/GamePage';
 import { LobbyPage } from './pages/game/LobbyPage';
-import { LobbyListPage } from './pages/game/LobbyListPage'; // <-- Make sure this is imported
+import { LobbyListPage } from './pages/game/LobbyListPage'; 
 import { NotFoundPage } from './pages/NotFoundPage';
 
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import AdminRoute from './components/auth/AdminRoute';
+import { ProtectedRoute } from './components/auth/ProtectedRoute'; // <-- Corrected
+import { AdminRoute } from './components/auth/AdminRoute'; // <-- Corrected
 import { AdminPage } from './pages/admin/AdminPage';
 import { UserManagementPage } from './pages/admin/UserManagementPage';
 
@@ -59,7 +59,7 @@ const App: React.FC = () => {
               }
             >
               <Route path="/menu" element={<MainMenuPage />} />
-              <Route path="/lobbies" element={<LobbyListPage />} /> {/* <-- NEW route */}
+              <Route path="/lobbies" element={<LobbyListPage />} /> 
               <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
               <Route path="/friends" element={<FriendsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
