@@ -1,11 +1,11 @@
 // src/components/layout/Navbar.tsx
 
-import React, { useState } from 'react'; // <-- NEW: Added useState
+import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Logo } from '../ui/Logo';
 import { Button } from '../ui/Button';
-import { User, LogOut, Gamepad2, Users, HelpCircle, Menu, X, Shield } from 'lucide-react'; // <-- NEW: Added Menu, X, Shield
+import { User, LogOut, Gamepad2, Users, HelpCircle, Menu, X, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import clsx from 'clsx';
 
@@ -78,7 +78,7 @@ export const Navbar: React.FC = () => {
             </div>
           </div>
 
-          {/* --- DESKTOP Auth Status --- */}
+          {/* --- DESKTOP Auth Status (FIXED) --- */}
           <div className="hidden items-center md:flex">
             {loading ? (
               <div className="h-5 w-24 animate-pulse rounded-md bg-gray-700" />
