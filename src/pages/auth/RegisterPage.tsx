@@ -21,22 +21,25 @@ export const RegisterPage: React.FC = () => {
     setError(null);
 
     try {
-      // --- Step 1: Sign up the user in auth.users ---
+      // --- Step 1: Sign up and pass username in options.data ---
+      // The database trigger 'handle_new_user' (from the previous step)
+      // will now automatically create the profile.
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            username: username, // This data is passed to the trigger
+          },
+        },
       });
 
       if (authError) throw authError;
       if (!authData.user) throw new Error('Registration successful but no user data returned.');
 
-      // --- Step 2: Create the user profile in public.profiles ---
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: authData.user.id, // Link to the new auth user
-        username: username,
-      });
-
-      if (profileError) throw profileError;
+      // --- Step 2: (REMOVED!) ---
+      // The manual client-side insert has been removed.
+      // The database trigger is handling this, which fixes the recursion error.
       
       // On success, show alert and redirect
       alert('Registration successful! Please check your email to verify your account.');
@@ -44,7 +47,16 @@ export const RegisterPage: React.FC = () => {
 
     } catch (error: any) {
       console.error('Registration error:', error.message);
-      setError(error.message);
+      
+      // Add specific error handling for duplicate username, which the
+      // database trigger will now catch because of your UNIQUE constraint.
+      if (error.message.includes('duplicate key') || error.message.includes('profiles_username_key')) {
+        setError('This username is already taken. Please choose another.');
+      } else if (error.message.includes('User already registered')) {
+         setError('An account with this email already exists.');
+      } else {
+        setError(error.message);
+      }
     } finally {
       setLoading(false);
     }
