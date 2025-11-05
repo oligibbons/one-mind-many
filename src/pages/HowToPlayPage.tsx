@@ -370,6 +370,82 @@ export const HowToPlayPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* === NEW SECTION: COMMAND CARDS === */}
+        <Card className="mt-8 border-gray-700 bg-gray-900">
+          <CardHeader>
+            <IconHeader icon={Hand} title="The Command Cards" />
+          </CardHeader>
+          <CardContent className="space-y-4 text-gray-300">
+            <p>
+              These are your core actions. You have a hand of 4 cards, which is
+              refilled every 3 rounds.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-full text-left">
+                <thead className="text-orange-400">
+                  <tr>
+                    <th className="py-2 pr-4 font-semibold">Card</th>
+                    <th className="py-2 pr-4 font-semibold">Effect</th>
+                    <th className="py-2 pl-4 font-semibold border-l border-gray-700">Card</th>
+                    <th className="py-2 pr-4 font-semibold">Effect</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700 text-gray-300">
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-white">Move 1, 2, 3</td>
+                    <td className="py-2 pr-4">Move 1, 2, or 3 spaces.</td>
+                    <td className="py-2 pl-4 font-medium text-white border-l border-gray-700">Homage</td>
+                    <td className="py-2 pr-4">Repeat the previously resolved action.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-white">Hesitate</td>
+                    <td className="py-2 pr-4">Next Move card is -1 value.</td>
+                    <td className="py-2 pl-4 font-medium text-white border-l border-gray-700">Foresight</td>
+                    <td className="py-2 pr-4">Preemptively copy the next action.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-white">Charge</td>
+                    <td className="py-2 pr-4">Next Move card is +1 value.</td>
+                    <td className="py-2 pl-4 font-medium text-white border-l border-gray-700">Deny</td>
+                    <td className="py-2 pr-4">Prevent the next action from having any effect.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-white">Rethink</td>
+                    <td className="py-2 pr-4">Cancel the previously resolved action.</td>
+                    <td className="py-2 pl-4 font-medium text-white border-l border-gray-700">Empower</td>
+                    <td className="py-2 pr-4">If next is Move, increase value by +2.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-white">Impulse</td>
+                    <td className="py-2 pr-4">Move to a random adjacent space.</td>
+                    <td className="py-2 pl-4 font-medium text-white border-l border-gray-700">Degrade</td>
+                    <td className="py-2 pr-4">If next is Move, decrease value by -1.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-white">Interact</td>
+                    <td className="py-2 pr-4">Interact with Object/NPC on current space.</td>
+                    <td className="py-2 pl-4 font-medium text-white border-l border-gray-700">Inhibit</td>
+                    <td className="py-2 pr-4">The next Interact action will have no effect.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-white">Buffer</td>
+                    <td className="py-2 pr-4">Do Nothing.</td>
+                    <td className="py-2 pl-4 font-medium text-white border-l border-gray-700">Gamble</td>
+                    <td className="py-2 pr-4">All remaining actions are now randomly assigned from each players’ hand.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-white">Hail Mary</td>
+                    <td className="py-2 pr-4">All players’ hands are now redrawn.</td>
+                    <td className="py-2 pl-4 font-medium text-white border-l border-gray-700">Reload</td>
+                    <td className="py-2 pr-4">Redraw your hand and play an action at random.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+        
         <Card className="mt-8 border-gray-700 bg-gray-900">
           <CardHeader>
             <IconHeader icon={Zap} title="Modifiers & Complications" />
