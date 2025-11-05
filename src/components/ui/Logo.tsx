@@ -7,7 +7,7 @@ interface LogoProps {
   clickable?: boolean;
 }
 
-const Logo = ({ size = 'md', variant = 'full', clickable = true }: LogoProps) => {
+export const Logo = ({ size = 'md', variant = 'full', clickable = true }: LogoProps) => {
   const sizeClasses = {
     sm: { height: '32px', fontSize: 'text-lg' },
     md: { height: '40px', fontSize: 'text-xl' },
@@ -50,4 +50,4 @@ const Logo = ({ size = 'md', variant = 'full', clickable = true }: LogoProps) =>
   return content;
 };
 
-export default Logo;
+// No longer need 'export default Logo;'
