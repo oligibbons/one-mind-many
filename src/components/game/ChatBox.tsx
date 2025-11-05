@@ -1,148 +1,159 @@
 // src/components/game/ChatBox.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
-import { useGameStore } from '../../stores/useGameStore';
-import { Input } from '../ui/Input'; // Your existing Input
-import { Button } from '../ui/Button'; // Your existing Button
-import { Send } from 'lucide-react';
+import { useGameStore } from '../../stores/useGameStore'; // <-- NEW
+import { usePlayerContextStore } from '../../stores/usePlayerContextStore'; // <-- NEW
+import { Input } from '../ui/Input';
+import { Button } from '../ui/Button';
+import { Send, AlertCircle } from 'lucide-react';
+import { format } from 'date-fns';
+import { PlayerName } from '../ui/PlayerName'; // <-- NEW
+import clsx from 'clsx';
 
 interface ChatMessage {
   id: string;
+  userId: string;
   username: string;
   message: string;
-  isSystem?: boolean;
+  timestamp: string;
 }
 
 interface ChatBoxProps {
   gameId: string;
+  allowKick?: boolean; // <-- NEW: Allow kicking from this chat?
+  onKick?: (userId: string) => void; // <-- NEW: Kick handler
 }
 
-export const ChatBox: React.FC<ChatBoxProps> = ({ gameId }) => {
+export const ChatBox: React.FC<ChatBoxProps> = ({
+  gameId,
+  allowKick = false,
+  onKick,
+}) => {
   const { socket } = useSocket();
   const { user } = useAuth();
+  const { isMuted } = usePlayerContextStore(); // <-- NEW: Mute store
+  const hostId = useGameStore((state) => state.publicState?.hostId); // <-- NEW: Get hostId
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const myUsername =
-    useGameStore((s) => s.privateState?.username) || user?.email;
+  const isHost = user?.id === hostId; // <-- NEW: Check if I am host
 
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  };
 
-  // --- Socket Listeners for Chat ---
+  useEffect(scrollToBottom, [messages]);
+
   useEffect(() => {
     if (!socket) return;
 
-    // Fired when a new chat message comes from the server
-    const onReceiveMessage = (message: ChatMessage) => {
-      setMessages((prev) => [...prev, message]);
+    // Handler for receiving a new message
+    const onMessageReceived = (message: ChatMessage) => {
+      // --- NEW: Mute check ---
+      if (isMuted(message.userId)) {
+        return;
+      }
+      setMessages((prevMessages) => [...prevMessages, message]);
     };
 
-    // Fired when a player joins/leaves (system message)
-    const onPlayerJoined = (data: { username: string }) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          username: 'SYSTEM',
-          message: `${data.username} has joined.`,
-          isSystem: true,
-        },
-      ]);
+    const onChatHistory = (history: ChatMessage[]) => {
+      // --- NEW: Filter history on load ---
+      setMessages(history.filter((msg) => !isMuted(msg.userId)));
     };
 
-    const onPlayerLeft = (data: { username?: string }) => {
-      if (!data.username) return; // Don't log anonymous disconnects
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          username: 'SYSTEM',
-          message: `${data.username} has left.`,
-          isSystem: true,
-        },
-      ]);
-    };
+    socket.on('chat:message_received', onMessageReceived);
+    socket.on('chat:history', onChatHistory);
 
-    socket.on('chat:receive', onReceiveMessage);
-    socket.on('game:player_joined', onPlayerJoined);
-    socket.on('game:player_left', onPlayerLeft);
+    // TODO: Request history on join
+    // socket.emit('chat:get_history', { gameId });
 
     return () => {
-      socket.off('chat:receive', onReceiveMessage);
-      socket.off('game:player_joined', onPlayerJoined);
-      socket.off('game:player_left', onPlayerLeft);
+      socket.off('chat:message_received', onMessageReceived);
+      socket.off('chat:history', onChatHistory);
     };
-  }, [socket]);
+  }, [socket, gameId, isMuted]); // <-- NEW: Add isMuted dependency
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!socket || !myUsername || newMessage.trim() === '') return;
+    if (!socket || !newMessage.trim()) return;
 
-    const messageData: ChatMessage = {
-      id: crypto.randomUUID(),
-      username: myUsername,
-      message: newMessage.trim(),
-    };
-
-    // Send to server
-    socket.emit('chat:send', { gameId, message: messageData });
-
-    // Add our own message to the list immediately (optimistic update)
-    setMessages((prev) => [...prev, messageData]);
-    setNewMessage('');
+    setError(null);
+    socket.emit(
+      'chat:send_message',
+      { gameId, message: newMessage },
+      (response: { status: 'ok' } | { status: 'error'; message: string }) => {
+        if (response.status === 'ok') {
+          setNewMessage('');
+        } else {
+          setError(response.message);
+        }
+      },
+    );
   };
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-gray-700 bg-gray-900/50">
-      <div className="border-b border-gray-700 p-3">
-        <h4 className="font-semibold text-gray-200">Player Chat</h4>
-      </div>
-
-      {/* Message List */}
-      <div className="flex-1 space-y-2 overflow-y-auto p-3">
-        {messages.map((msg) => (
-          <div key={msg.id} className="text-sm">
-            {msg.isSystem ? (
-              <p className="text-gray-500 italic">...{msg.message}...</p>
-            ) : (
-              <p>
-                <span
-                  className={clsx(
-                    'font-bold',
-                    msg.username === myUsername
-                      ? 'text-orange-400'
-                      : 'text-gray-400'
+    <div className="flex h-full flex-col rounded-lg border border-gray-700 bg-brand-navy/30">
+      <div className="flex-1 space-y-3 overflow-y-auto p-3 custom-scrollbar">
+        {messages.map((msg) => {
+          const isMe = msg.userId === user?.id;
+          return (
+            <div
+              key={msg.id}
+              className={clsx('flex flex-col', isMe ? 'items-end' : 'items-start')}
+            >
+              <div
+                className={clsx(
+                  'max-w-xs rounded-lg px-3 py-2 md:max-w-sm',
+                  isMe
+                    ? 'bg-brand-orange text-white'
+                    : 'bg-brand-navy/60 text-brand-cream',
+                )}
+              >
+                <div className="flex items-baseline gap-2">
+                  {!isMe && (
+                    // --- NEW: Use PlayerName component ---
+                    <PlayerName
+                      player={{ userId: msg.userId, username: msg.username }}
+                      isHost={isHost}
+                      allowKick={allowKick}
+                      onKick={onKick}
+                      className="text-sm font-bold text-orange-300"
+                    />
                   )}
-                >
-                  {msg.username}:
-                </span>{' '}
-                <span className="text-gray-200">{msg.message}</span>
-              </p>
-            )}
-          </div>
-        ))}
+                  <span className="text-xs text-gray-400">
+                    {format(new Date(msg.timestamp), 'h:mm a')}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+              </div>
+            </div>
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="flex border-t border-gray-700 p-2">
+      <form onSubmit={handleSubmit} className="flex gap-2 border-t border-gray-700 p-3">
         <Input
           type="text"
-          placeholder="Trust no one..."
-          className="flex-1 border-gray-700 bg-gray-800 text-gray-200"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Type a message..."
+          className="flex-1"
+          maxLength={256}
         />
-        <Button type="submit" variant="ghost" size="icon" className="ml-2">
-          <Send size={18} />
+        <Button type="submit" className="game-button" disabled={!newMessage.trim()}>
+          <Send className="h-4 w-4" />
         </Button>
       </form>
+      {error && (
+        <div className="flex items-center gap-2 p-2 text-sm text-red-400">
+          <AlertCircle className="h-4 w-4" />
+          {error}
+        </div>
+      )}
     </div>
   );
 };

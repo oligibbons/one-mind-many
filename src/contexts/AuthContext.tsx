@@ -2,116 +2,120 @@
 
 import React, {
   createContext,
-  // useContext, // <-- REMOVED (no longer needed in this file)
-  useEffect,
   useState,
-  ReactNode,
+  useEffect,
+  useContext,
+  useCallback, // <-- NEW
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session, User } from '@supabase/supabase-js';
-import { Profile } from '../types/game'; // Import our Profile type
+import { Profile } from '../types/game'; // Assuming Profile is in game.d.ts
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  profile: Profile | null; // <-- NEW
+  profile: Profile | null;
   loading: boolean;
+  refreshProfile: () => void; // <-- NEW
 }
 
-// --- MODIFIED: Added 'export' ---
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null); // <-- NEW
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const getSession = async () => {
-      setLoading(true);
-      const { data, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error getting session:', error);
-        setLoading(false);
-        return;
-      }
-      
-      const session = data.session;
-      setSession(session);
-      const user = session?.user ?? null;
-      setUser(user);
+  // --- NEW: useCallback for fetching profile ---
+  const fetchProfile = useCallback(async (authedUser: User) => {
+    try {
+      const { data, error }_ = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authedUser.id)
+        .single();
 
-      if (user) {
-        // --- NEW: Fetch profile on load ---
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        
-        if (profileError) {
-          console.error('Error fetching profile on load:', profileError);
-        } else {
-          setProfile(profileData as Profile);
-        }
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setProfile(null);
+      } else {
+        setProfile(data as Profile);
       }
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+      setProfile(null);
+    }
+  }, []);
+
+  // --- NEW: Public function to refresh profile ---
+  const refreshProfile = useCallback(() => {
+    if (user) {
+      fetchProfile(user);
+    }
+  }, [user, fetchProfile]);
+
+  useEffect(() => {
+    setLoading(true);
+
+    const getInitialSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      const currentSession = data.session;
+      setSession(currentSession);
+      const currentUser = currentSession?.user || null;
+      setUser(currentUser);
+
+      if (currentUser) {
+        await fetchProfile(currentUser);
+      }
+      
       setLoading(false);
     };
 
-    getSession();
+    getInitialSession();
 
-    // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setLoading(true);
-        setSession(session);
-        const user = session?.user ?? null;
-        setUser(user);
+      async (event, newSession) => {
+        console.log('Auth event:', event);
+        setSession(newSession);
+        const currentUser = newSession?.user || null;
+        setUser(currentUser);
 
-        // --- NEW: Fetch profile on auth change ---
-        if (user) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-          if (profileError) {
-            console.error('Error fetching profile on change:', profileError.message);
-            setProfile(null); // Clear profile if fetch fails
-          } else {
-            setProfile(profileData as Profile);
-          }
-        } else {
-          setProfile(null); // Clear profile on logout
+        if (event === 'SIGNED_IN' && currentUser) {
+          setLoading(true);
+          await fetchProfile(currentUser);
+          setLoading(false);
+        } else if (event === 'SIGNED_OUT') {
+          setProfile(null);
+        } else if (event === 'USER_UPDATED' && currentUser) {
+          // e.g., if email is confirmed or password changed
+          await fetchProfile(currentUser);
         }
-        setLoading(false);
-      }
+      },
     );
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const value = {
     user,
     session,
-    profile, // <-- NEW
+    profile,
     loading,
+    refreshProfile, // <-- NEW
   };
 
-  // Don't render children until we've checked for a session
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// --- MODIFIED: Removed the duplicate useAuth hook ---
-// (The correct one is in src/hooks/useAuth.ts)
+export const useAuth = ()_ => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

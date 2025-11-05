@@ -1,109 +1,120 @@
 // src/App.tsx
 
-import React from 'react';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-} from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
+import { LoadingSpinner } from './components/ui/LoadingSpinner';
 
+// --- Layouts ---
 import { MainLayout } from './layouts/MainLayout';
 import { AuthLayout } from './layouts/AuthLayout';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { AdminRoute } from './components/auth/AdminRoute';
+
+// --- Eagerly Loaded Pages ---
 import { HomePage } from './pages/HomePage';
+import { HowToPlayPage } from './pages/HowToPlayPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
-import { MainMenuPage } from './pages/game/MainMenuPage';
-import { HowToPlayPage } from './pages/HowToPlayPage';
-import { FriendsPage } from './pages/game/FriendsPage';
-import { SettingsPage } from './pages/game/SettingsPage';
-import { GamePage } from './pages/game/GamePage';
-import { LobbyPage } from './pages/game/LobbyPage';
-import { LobbyListPage } from './pages/game/LobbyListPage'; 
-import { NotFoundPage } from './pages/NotFoundPage';
 
-import { ProtectedRoute } from './components/auth/ProtectedRoute'; // <-- Corrected
-import { AdminRoute } from './components/auth/AdminRoute'; // <-- Corrected
-import { AdminPage } from './pages/admin/AdminPage';
-import { UserManagementPage } from './pages/admin/UserManagementPage';
+// --- Lazy Loaded Game Pages ---
+const MainMenuPage = lazy(() => import('./pages/game/MainMenuPage').then(m => ({ default: m.MainMenuPage })));
+const LobbyListPage = lazy(() => import('./pages/game/LobbyListPage').then(m => ({ default: m.LobbyListPage })));
+const LobbyPage = lazy(() => import('./pages/game/LobbyPage').then(m => ({ default: m.LobbyPage })));
+const GamePage = lazy(() => import('./pages/game/GamePage').then(m => ({ default: m.GamePage })));
+const FriendsPage = lazy(() => import('./pages/game/FriendsPage').then(m => ({ default: m.FriendsPage })));
+const ProfilePage = lazy(() => import('./pages/game/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages/game/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
-// --- NEW Imports for Scenario Manager ---
-import { ScenarioManagementPage } from './pages/admin/ScenarioManagementPage';
-import { ScenarioEditorPage } from './pages/admin/ScenarioEditorPage';
-// --- (End of New Imports) ---
+// --- Lazy Loaded Admin Pages ---
+const AdminPage = lazy(() => import('./pages/admin/AdminPage').then(m => ({ default: m.AdminPage })));
+const ScenarioManagementPage = lazy(() => import('./pages/admin/ScenarioManagementPage').then(m => ({ default: m.ScenarioManagementPage })));
+const ScenarioEditorPage = lazy(() => import('./pages/admin/ScenarioEditorPage').then(m => ({ default: m.ScenarioEditorPage })));
+const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
+const GameManagementPage = lazy(() => import('./pages/admin/GameManagementPage').then(m => ({ default: m.GameManagementPage }))); // <-- NEW
+const ContentManagementPage = lazy(() => import('./pages/admin/ContentManagementPage').then(m => ({ default: m.ContentManagementPage }))); // <-- NEW
+// const TestGameViewPage = lazy(() => import('./pages/admin/TestGameViewPage')); // For next batch
+// const RulesManagementPage = lazy(() => import('./pages/admin/RulesManagementPage')); // For next batch
 
+const AppSuspense: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Suspense fallback={
+    <div className="flex h-screen w-full items-center justify-center">
+      <LoadingSpinner size="lg" />
+    </div>
+  }>
+    {children}
+  </Suspense>
+);
 
-const App: React.FC = () => {
+export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <Router>
-          <Routes>
-            {/* --- Public Routes --- */}
-            <Route element={<MainLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/how-to-play" element={<HowToPlayPage />} />
-            </Route>
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-            </Route>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* --- Main App (Logged In) --- */}
+          <Route
+            path="/app"
+            element={
+              <ProtectedRoute>
+                <SocketProvider>
+                  <AppSuspense>
+                    <MainLayout />
+                  </AppSuspense>
+                </SocketProvider>
+              </ProtectedRoute>
+            }
+          >
+            <Route path="main-menu" element={<MainMenuPage />} />
+            <Route path="lobbies" element={<LobbyListPage />} />
+            <Route path="lobby/:lobbyId" element={<LobbyPage />} />
+            <Route path="game/:gameId" element={<GamePage />} />
+            <Route path="friends" element={<FriendsPage />} />
+            <Route path="profile/:userId" element={<ProfilePage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route index element={<Navigate to="main-menu" replace />} />
+          </Route>
 
-            {/* --- Protected Game Routes --- */}
-            <Route
-              element={
-                <ProtectedRoute>
-                  <MainLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/menu" element={<MainMenuPage />} />
-              <Route path="/lobbies" element={<LobbyListPage />} /> 
-              <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
-              <Route path="/friends" element={<FriendsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Route>
+          {/* --- Admin (Logged In + Admin Role) --- */}
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <SocketProvider>
+                  <AppSuspense>
+                    <MainLayout />
+                  </AppSuspense>
+                </SocketProvider>
+              </AdminRoute>
+            }
+          >
+            <Route index element={<AdminPage />} />
+            <Route path="scenarios" element={<ScenarioManagementPage />} />
+            <Route path="scenario/new" element={<ScenarioEditorPage />} />
+            <Route path="scenario/edit/:scenarioId" element={<ScenarioEditorPage />} />
+            <Route path="users" element={<UserManagementPage />} />
+            <Route path="games" element={<GameManagementPage />} /> {/* <-- NEW */}
+            <Route path="content" element={<ContentManagementPage />} /> {/* <-- NEW */}
+            {/* <Route path="test-game" element={<TestGameViewPage />} /> */}
+            {/* <Route path="rules" element={<RulesManagementPage />} /> */}
+          </Route>
 
-            {/* --- NEW Game Page Route (uses its own layout) --- */}
-            <Route
-              path="/game/:gameId"
-              element={
-                <ProtectedRoute>
-                  <GamePage />
-                </ProtectedRoute>
-              }
-            />
+          {/* --- Auth (Logged Out) --- */}
+          <Route path="/" element={<AuthLayout />}>
+            <Route index element={<HomePage />} />
+            <Route path="login" element={<LoginPage />} />
+            <Route path="register" element={<RegisterPage />} />
+          </Route>
 
-            {/* --- Admin Routes --- */}
-            <Route
-              element={
-                <AdminRoute>
-                  <MainLayout />
-                </AdminRoute>
-              }
-            >
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/admin/users" element={<UserManagementPage />} />
-              
-              {/* --- NEW Scenario Routes --- */}
-              <Route
-                path="/admin/scenarios"
-                element={<ScenarioManagementPage />}
-              />
-              <Route
-                path="/admin/scenario/:scenarioId"
-                element={<ScenarioEditorPage />}
-              />
-            </Route>
+          {/* --- Public Pages --- */}
+          <Route path="/how-to-play" element={<HowToPlayPage />} />
 
-            {/* --- Catch-all --- */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Router>
-      </SocketProvider>
-    </AuthProvider>
+          {/* --- Redirects & 404 --- */}
+          <Route path="/menu" element={<Navigate to="/app/main-menu" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 };
-
-export default App;

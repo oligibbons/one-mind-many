@@ -1,95 +1,173 @@
 // src/pages/admin/ScenarioManagementPage.tsx
 
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useSocket } from '../../contexts/SocketContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Card, CardContent } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
-import { ArrowLeft, Edit, Plus, Eye, EyeOff } from 'lucide-react';
-import { Scenario } from '../../types/game'; // Make sure this is imported
+import { AlertCircle, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
+import { format } from 'date-fns';
 
-type ScenarioListItem = Pick<Scenario, 'id' | 'name' | 'is_published' | 'created_at'>;
+interface Scenario {
+  id: string;
+  name: string;
+  description: string;
+  is_published: boolean;
+  created_at: string;
+}
 
 export const ScenarioManagementPage: React.FC = () => {
-  const { socket, isConnected } = useSocket();
-  const [scenarios, setScenarios] = useState<ScenarioListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchScenarios = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/admin/scenarios');
+      setScenarios(response.data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load scenarios.');
+    }
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    fetchScenarios();
+  }, [fetchScenarios]);
 
-    // --- Socket Listeners ---
-    const onScenarioList = (list: ScenarioListItem[]) => {
-      setScenarios(list);
-      setLoading(false);
-    };
+  const handleTogglePublish = async (scenario: Scenario) => {
+    try {
+      await api.patch(`/admin/scenario/${scenario.id}/publish`, {
+        is_published: !scenario.is_published,
+      });
+      // Refresh list to show change
+      fetchScenarios();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update status.');
+    }
+  };
 
-    const onListUpdated = () => {
-      setLoading(true);
-      socket.emit('admin:get_scenario_list');
-    };
+  const handleDelete = async (scenarioId: string, scenarioName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${scenarioName}"? This is permanent.`)) {
+      try {
+        await api.delete(`/admin/scenario/${scenarioId}`);
+        fetchScenarios();
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to delete scenario.');
+      }
+    }
+  };
 
-    socket.on('admin:scenario_list', onScenarioList);
-    socket.on('admin:scenario_list_updated', onListUpdated); // Real-time update
-
-    // --- Initial Fetch ---
-    socket.emit('admin:get_scenario_list');
-
-    return () => {
-      socket.off('admin:scenario_list', onScenarioList);
-      socket.off('admin:scenario_list_updated', onListUpdated);
-    };
-  }, [socket, isConnected]);
+  const handleCreate = async () => {
+    // This will be built in the next batch. For now, it just navigates.
+    navigate('/admin/scenario/new');
+  };
 
   return (
-    <div className="mx-auto w-full max-w-4xl p-8">
-      <Button as={Link} to="/admin" variant="outline" className="mb-6">
-        <ArrowLeft size={16} className="mr-2" />
-        Back to Admin
-      </Button>
-
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-4xl font-bold text-white">Scenario Management</h1>
-        <Button as={Link} to="/admin/scenario/new">
-          <Plus size={16} className="mr-2" />
-          Create New Scenario
+    <div className="mx-auto w-full max-w-6xl p-8">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-5xl font-bold game-title">Scenario Management</h1>
+        <Button className="game-button" onClick={handleCreate}>
+          <Plus className="h-5 w-5 mr-2" />
+          New Scenario
         </Button>
       </div>
-      
-      <Card className="border-gray-700 bg-gray-800 text-gray-200">
-        <CardHeader>
-          <CardTitle className="text-orange-400">All Scenarios</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading && <LoadingSpinner />}
-          {!loading && (
-            <div className="space-y-3">
-              {scenarios.length === 0 && <p>No scenarios found.</p>}
-              {scenarios.map((scenario) => (
-                <div 
-                  key={scenario.id} 
-                  className="flex items-center justify-between rounded-lg bg-gray-700/50 p-3"
-                >
-                  <div className="flex items-center">
-                    {scenario.is_published ? (
-                      <Eye size={18} className="mr-3 text-green-400" title="Published" />
-                    ) : (
-                      <EyeOff size={18} className="mr-3 text-gray-500" title="Draft" />
-                    )}
-                    <div>
-                      <p className="font-bold text-gray-100">{scenario.name}</p>
-                      <p className="text-xs text-gray-400">ID: {scenario.id}</p>
-                    </div>
-                  </div>
-                  <Button as={Link} to={`/admin/scenario/${scenario.id}`} variant="secondary" size="sm">
-                    <Edit size={14} className="mr-2" />
-                    Edit
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
+
+      {error && (
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-red-700 bg-red-900/30 p-3 text-red-300">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <p>{error}</p>
+        </div>
+      )}
+
+      <Card className="game-card">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead className="bg-brand-navy/30">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Created</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={4} className="p-6 text-center text-gray-400">
+                      <LoadingSpinner />
+                    </td>
+                  </tr>
+                ) : scenarios.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-6 text-center text-gray-400">
+                      No scenarios found.
+                    </td>
+                  </tr>
+                ) : (
+                  scenarios.map((scenario) => (
+                    <tr key={scenario.id} className="hover:bg-brand-navy/20">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-brand-cream">{scenario.name}</div>
+                        <div className="text-sm text-gray-400 max-w-md truncate">
+                          {scenario.description || 'No description'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {scenario.is_published ? (
+                          <span className="inline-flex items-center rounded-full bg-green-900/50 px-3 py-1 text-sm font-medium text-green-300">
+                            <Eye className="h-4 w-4 mr-1.5" />
+                            Published
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-gray-700 px-3 py-1 text-sm font-medium text-gray-300">
+                            <EyeOff className="h-4 w-4 mr-1.5" />
+                            Draft
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-400">
+                        {format(new Date(scenario.created_at), 'dd MMM yyyy')}
+                      </td>
+                      <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleTogglePublish(scenario)}
+                          title={scenario.is_published ? 'Unpublish' : 'Publish'}
+                        >
+                          {scenario.is_published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          as={Link}
+                          to={`/admin/scenario/edit/${scenario.id}`}
+                          variant="ghost"
+                          size="sm"
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(scenario.id, scenario.name)}
+                          title="Delete"
+                          className="text-red-400 hover:bg-red-900/50 hover:text-red-300"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>

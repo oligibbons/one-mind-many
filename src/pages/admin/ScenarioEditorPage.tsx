@@ -1,10 +1,9 @@
 // src/pages/admin/ScenarioEditorPage.tsx
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useSocket } from '../../contexts/SocketContext';
+import { useParams, useNavigate, Link }_ from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Card, CardContent } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { Save, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Scenario } from '../../types/game';
@@ -12,8 +11,9 @@ import JSONEditor from 'react-json-editor-ajrm';
 // @ts-ignore
 import locale from 'react-json-editor-ajrm/locale/en';
 import { v4 as uuid } from 'uuid';
+import { api } from '../../lib/api'; // <-- NEW: Import API helper
 
-// --- NEW DATA-DRIVEN TEMPLATE ---
+// (BLANK_SCENARIO template is unchanged)
 const BLANK_SCENARIO = {
   id: uuid(),
   name: 'New Scenario',
@@ -146,55 +146,54 @@ const BLANK_SCENARIO = {
 export const ScenarioEditorPage: React.FC = () => {
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const navigate = useNavigate();
-  const { socket, isConnected } = useSocket();
+  // Sockets are no longer needed here
+  // const { socket, isConnected } = useSocket(); 
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false); 
+  const [isDirty, setIsDirty] = useState(false); // Tracks if JSON editor is valid
 
   useEffect(() => {
-    if (!socket || !isConnected) return;
-
-    const onScenarioDetails = (data: Scenario) => {
-      setScenario(data);
-      setLoading(false);
-    };
-    
-    const onScenarioSaved = () => {
-      navigate('/admin/scenarios');
-    };
-    
-    const onAdminError = (data: { message: string }) => {
-      setError(data.message);
-      setLoading(false);
-    };
-
-    socket.on('admin:scenario_details', onScenarioDetails);
-    socket.on('admin:scenario_saved', onScenarioSaved);
-    socket.on('error:admin', onAdminError);
-
+    // This effect now uses the REST API
     if (scenarioId === 'new') {
-      setScenario(BLANK_SCENARIO as any); // Cast as any to bypass strict type check for editor
+      setScenario(BLANK_SCENARIO as any);
       setLoading(false);
     } else {
-      socket.emit('admin:get_scenario_details', { scenarioId });
+      const fetchScenario = async () => {
+        setLoading(true);
+        try {
+          const response = await api.get(`/admin/scenario/${scenarioId}`);
+          setScenario(response.data);
+        } catch (err: any) {
+          setError(err.response?.data?.message || 'Failed to load scenario.');
+        }
+        setLoading(false);
+      };
+      fetchScenario();
     }
+  }, [scenarioId]);
 
-    return () => {
-      socket.off('admin:scenario_details', onScenarioDetails);
-      socket.off('admin:scenario_saved', onScenarioSaved);
-      socket.off('error:admin', onAdminError);
-    };
-  }, [socket, isConnected, scenarioId, navigate]);
-
-  const handleSave = () => {
-    if (!socket || !scenario || isDirty) {
+  const handleSave = async () => {
+    if (!scenario || isDirty) {
       setError('JSON is invalid, cannot save.');
       return;
     }
     setLoading(true);
     setError(null);
-    socket.emit('admin:save_scenario', { scenario });
+    
+    try {
+      if (scenarioId === 'new') {
+        // Create new scenario
+        await api.post('/admin/scenario', scenario);
+      } else {
+        // Update existing scenario
+        await api.put(`/admin/scenario/${scenarioId}`, scenario);
+      }
+      navigate('/admin/scenarios');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to save scenario.');
+      setLoading(false);
+    }
   };
 
   const handleJsonChange = (e: any) => {
@@ -219,12 +218,12 @@ export const ScenarioEditorPage: React.FC = () => {
   return (
     <div className="mx-auto w-full max-w-7xl p-8">
       <div className="mb-6 flex items-center justify-between">
-        <Button as={Link} to="/admin/scenarios" variant="outline">
+        <Button as={Link} to="/admin/scenarios" variant="outline" className="btn-outline">
           <ArrowLeft size={16} className="mr-2" />
           Back to List
         </Button>
         <h1 className="text-3xl font-bold text-white">Scenario Editor</h1>
-        <Button onClick={handleSave} disabled={isDirty || loading}>
+        <Button onClick={handleSave} disabled={isDirty || loading} className="game-button">
           <Save size={16} className="mr-2" />
           {loading ? 'Saving...' : 'Save Scenario'}
         </Button>

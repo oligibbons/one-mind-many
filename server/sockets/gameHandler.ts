@@ -2,233 +2,133 @@
 
 import { Server, Socket } from 'socket.io';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { GameEngine, TurnState } from '../services/GameEngine.js';
+import { GameEngine } from '../services/GameEngine.js';
 import {
   GameState,
   PrivatePlayerState,
+  PublicPlayerState, // <-- NEW
   SubmittedAction,
   BoardSpace,
   Scenario,
-  PublicPlayerState,
-} from '../../src/types/game';
+  GameResults, // <-- NEW
+} from '../../src/types/game.js';
 
 type AdminSupabaseClient = SupabaseClient<any, 'public', any>;
 type UserMap = Map<string, { userId: string; username: string }>;
-type RoomMap = Map<string, { roomId: string, type: 'lobby' | 'game' }>;
+type RoomMap = Map<string, { roomId: string; type: 'lobby' | 'game' }>;
 
-const gameTurnState = new Map<string, TurnState>();
-
-const findSocketIdByUserId = (userMap: UserMap, userId: string): string | undefined => {
-  for (const [id, user] of userMap.entries()) {
-    if (user.userId === userId) {
-      return id;
-    }
+// In-memory store for active game engines/states
+const activeGames = new Map<
+  string,
+  {
+    state: GameState;
+    privateStates: PrivatePlayerState[];
+    publicStates: PublicPlayerState[]; // <-- NEW
+    scenario: Scenario;
+    submittedActions: Map<string, SubmittedAction>;
   }
-  return undefined;
-};
+>();
 
 export const registerGameHandlers = (
   io: Server,
   socket: Socket,
   supabase: AdminSupabaseClient,
-  socketToUser: UserMap, 
-  socketInRoom: RoomMap  
+  socketToUser: UserMap,
+  socketInRoom: RoomMap,
 ) => {
-  // --- Internal Helper Functions ---
-
-  const processNextAction = async (gameId: string) => {
-    let turnState = gameTurnState.get(gameId);
-    if (!turnState) {
-      console.error(`No turn state found for game ${gameId} to process next action.`);
-      return;
-    }
-
-    if (turnState.actionQueue.length === 0) {
-      await endRound(gameId, turnState);
-      return;
-    }
-
-    const action = turnState.actionQueue.shift()!;
-    const { nextTurnState, pause } = GameEngine.processSingleAction(turnState, action);
-    gameTurnState.set(gameId, nextTurnState);
-
-    if (pause) {
-      console.log(`[Game ${gameId}] Pausing for move input from ${pause.playerId}`);
-      
-      // Check if the paused player is disconnected
-      const pausedPlayer = nextTurnState.playerStates.find(p => p.userId === pause.playerId);
-      if (pausedPlayer?.is_disconnected) {
-          console.log(`[Game ${gameId}] Player ${pause.playerId} is disconnected. Submitting non-move.`);
-          // Auto-submit a "non-move" (their current position)
-          const { nextTurnState: movedState } = GameEngine.processSubmittedMove(nextTurnState, nextTurnState.state.harbingerPosition);
-          gameTurnState.set(gameId, movedState);
-          setImmediate(() => processNextAction(gameId));
-      } else {
-          // Player is connected, emit event as normal
-          const playerSocketId = findSocketIdByUserId(socketToUser, pause.playerId);
-          if (playerSocketId) {
-            io.to(playerSocketId).emit('game:await_move', pause);
-          }
-          socket.to(gameId).emit('game:awaiting_input', {
-            message: `Waiting for ${pause.actingUsername} to move...`,
-          });
-      }
-    } else {
-      setImmediate(() => processNextAction(gameId));
-    }
-  };
-
-  const checkAllActionsSubmitted = async (gameId: string) => {
-    const { data: players, error: fetchError } = await supabase
-      .from('game_players')
-      .select('user_id, submitted_action, is_disconnected') // <-- NEW
-      .eq('game_id', gameId);
-    if (fetchError) throw new Error(`Supabase player fetch error: ${fetchError.message}`);
-
-    // --- NEW: Disconnected players count as "submitted" ---
-    const allSubmitted = players.every((p) => p.submitted_action !== null || p.is_disconnected);
-    if (!allSubmitted) return;
-
-    console.log(`[Game ${gameId}] All actions submitted. Resolving round...`);
-
-    const { data: currentState, error: gameFetchError } = await supabase
-      .from('games').select('*').eq('id', gameId).single();
-    if (gameFetchError) throw new Error(`Supabase game fetch error: ${gameFetchError.message}`);
-
-    const { data: allPlayerStates, error: playersFetchError } = await supabase
-      .from('game_players').select('*').eq('game_id', gameId);
-    if (playersFetchError) throw new Error(`Supabase players fetch error: ${playersFetchError.message}`);
-    
-    // We need both public and private states for the engine
-    const allPublicPlayerStates = currentState.players as PublicPlayerState[];
-    const allPrivatePlayerStates = allPlayerStates as PrivatePlayerState[];
-
-    const { data: scenario, error: scenarioError } = await supabase
-      .from('scenarios').select('*').eq('id', currentState.scenario_id).single();
-    if (scenarioError || !scenario) {
-      throw new Error(`Failed to load scenario ${currentState.scenario_id}: ${scenarioError?.message}`);
-    }
-
-    const submittedActions = allPlayerStates
-        .filter(p => !p.is_disconnected) // Don't add disconnected players' actions
-        .map((p) => ({
-            playerId: p.user_id, card: p.submitted_action, priority: 0,
-        }));
-
-    const initialTurnState = GameEngine.startRoundResolution(
-      currentState as GameState,
-      allPrivatePlayerStates,
-      allPublicPlayerStates, // <-- NEW
-      submittedActions as SubmittedAction[],
-      scenario as Scenario
-    );
-    
-    gameTurnState.set(gameId, initialTurnState);
-    await processNextAction(gameId);
-  };
-
-  const endRound = async (gameId: string, finalTurnState: TurnState) => {
-    console.log(`[Game ${gameId}] Round ${finalTurnState.state.currentRound} finished.`);
-    
-    const { nextState, nextPrivateStates } = GameEngine.applyEndOfRoundEffects(finalTurnState);
-
-    // --- NEW: Update all game state fields ---
-    const { data: updatedGame, error: updateError } = await supabase
-      .from('games')
-      .update({
-        status: nextState.status,
-        current_round: nextState.currentRound,
-        harbinger_position: nextState.harbingerPosition,
-        stalker_position: nextState.stalkerPosition, // <-- NEW
-        board_modifiers: nextState.boardModifiers, // <-- NEW
-        priority_track: nextState.priorityTrack,
-        active_complications: nextState.activeComplications,
-        game_log: nextState.gameLog,
-        game_objects: nextState.boardObjects,
-        npcs: nextState.boardNPCs,
-        players: nextState.players, // <-- NEW: Save updated public player state (for disconnects)
-      })
-      .eq('id', gameId)
-      .select()
-      .single();
-      
-    if (updateError) throw new Error(`Supabase game update error: ${updateError.message}`);
-
-    const playerUpdates = nextPrivateStates.map((p) => {
-      // Find the corresponding public player state to see if they are disconnected
-      const publicPlayer = nextState.players.find(pp => pp.id === p.id);
-      
-      return supabase
-        .from('game_players')
-        .update({
-          vp: p.vp, 
-          hand: p.hand, 
-          personal_goal: p.personalGoal,
-          submitted_action: null,
-          is_disconnected: publicPlayer?.is_disconnected || false, // Persist disconnect status
-        })
-        .eq('id', p.id);
-    });
-    await Promise.all(playerUpdates);
-
-    io.to(gameId).emit('game:state_update', updatedGame);
-    for (const p of nextPrivateStates) {
-      const playerSocketId = findSocketIdByUserId(socketToUser, p.userId);
-      if (playerSocketId) {
-        io.to(playerSocketId).emit('game:private_update', p);
-      }
-    }
-    gameTurnState.delete(gameId);
-  };
-
-  // --- Socket Event Listeners ---
-
   const joinGame = async (payload: { gameId: string; userId: string }) => {
     try {
       const { gameId, userId } = payload;
-      console.log(`[${socket.id}] joinGame: ${userId} joining ${gameId}`);
-
-      const { data: publicState, error: gameError } = await supabase
-        .from('games').select('*').eq('id', gameId).single();
-      if (gameError || !publicState) throw new Error(`Game not found: ${gameId}`);
-        
-      if (publicState.status !== 'active' && publicState.status !== 'finished') {
-        throw new Error(`Game is not active. Status: ${publicState.status}`);
-      }
+      console.log(`[${socket.id}] User ${userId} joining game ${gameId}`);
       
-      // --- NEW: Handle Reconnecting Player ---
-      const { error: updateError } = await supabase
+      // Update socket-to-room mapping
+      socketInRoom.set(socket.id, { roomId: gameId, type: 'game' });
+      socket.join(gameId);
+
+      // --- Handle Reconnection ---
+      const { error: reconnectError } = await supabase
         .from('game_players')
         .update({ is_disconnected: false })
-        .eq('game_id', gameId)
-        .eq('user_id', userId);
-      if (updateError) throw new Error(`Player ${userId} failed to reconnect: ${updateError.message}`);
+        .match({ game_id: gameId, user_id: userId });
+      if (reconnectError) throw reconnectError;
 
-      const { data: privateState, error: playerError } = await supabase
-        .from('game_players').select('*').eq('game_id', gameId).eq('user_id', userId).single();
-      if (playerError || !privateState) throw new Error(`Player ${userId} not found in game ${gameId}`);
-      
-      // Update the public player state in the 'games' table
-      const publicPlayers = publicState.players as PublicPlayerState[];
-      const player = publicPlayers.find((p: PublicPlayerState) => p.userId === userId);
-      if(player) {
-          player.is_disconnected = false;
-          await supabase.from('games').update({ players: publicPlayers }).eq('id', gameId);
+      // Notify other players
+      const userInfo = socketToUser.get(socket.id);
+      if (userInfo) {
+        socket.to(gameId).emit('game:player_joined', { userId, username: userInfo.username });
       }
 
+      // --- Load Game or Get from Memory ---
+      let gameData = activeGames.get(gameId);
+      if (!gameData) {
+        console.log(`[${socket.id}] Loading game ${gameId} from DB...`);
+        const { data: game, error: gameError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('id', gameId)
+          .single();
+        if (gameError) throw new Error(`DB game fetch error: ${gameError.message}`);
 
-      socket.join(gameId);
+        const { data: players, error: playersError } = await supabase
+          .from('game_players')
+          .select('*')
+          .eq('game_id', gameId);
+        if (playersError) throw new Error(`DB players fetch error: ${playersError.message}`);
+
+        const { data: scenario, error: scenarioError } = await supabase
+          .from('scenarios')
+          .select('*')
+          .eq('id', game.scenario_id)
+          .single();
+        if (scenarioError) throw new Error(`DB scenario fetch error: ${scenarioError.message}`);
+
+        // Reconstruct public states from game_players
+        const publicStates: PublicPlayerState[] = players.map(p => ({
+          id: p.id,
+          userId: p.user_id,
+          username: p.username,
+          vp: p.vp,
+          submittedAction: !!p.submitted_action,
+          is_disconnected: p.is_disconnected,
+        }));
+        
+        // Update game.players to be in sync
+        game.players = publicStates;
+
+        // Reconstruct private states
+        const privateStates: PrivatePlayerState[] = players.map(p => ({
+          id: p.id,
+          userId: p.user_id,
+          username: p.username,
+          hand: p.hand,
+          role: p.role,
+          subRole: p.sub_role,
+          secretIdentity: p.secret_identity,
+          personalGoal: p.personal_goal,
+          vp: p.vp,
+        }));
+        
+        gameData = {
+          state: game as GameState,
+          privateStates: privateStates,
+          publicStates: publicStates, // <-- NEW
+          scenario: scenario as Scenario,
+          submittedActions: new Map(),
+        };
+        activeGames.set(gameId, gameData);
+      }
       
-      socketInRoom.set(socket.id, { roomId: gameId, type: 'game' });
-      socketToUser.set(socket.id, { userId, username: privateState.username });
+      // --- Send States to Player ---
+      const privateState = gameData.privateStates.find(
+        (p) => p.userId === userId
+      );
+      if (!privateState) throw new Error('Player not found in this game.');
 
       socket.emit('game:full_state', {
-        publicState: publicState as GameState,
-        privateState: privateState as PrivatePlayerState,
+        publicState: gameData.state,
+        privateState: privateState,
       });
 
-      // Emit with full user info
-      socket.to(gameId).emit('game:player_joined', { userId: privateState.userId, username: privateState.username });
     } catch (error: any) {
       console.error(`[${socket.id}] Error in joinGame: ${error.message}`);
       socket.emit('error:game', { message: `Failed to join game: ${error.message}` });
@@ -238,67 +138,237 @@ export const registerGameHandlers = (
   const submitAction = async (payload: {
     gameId: string;
     userId: string;
-    card: any;
+    card: CommandCard;
   }) => {
     try {
       const { gameId, userId, card } = payload;
+      const gameData = activeGames.get(gameId);
+      if (!gameData) throw new Error('Game not found.');
+      if (gameData.state.status !== 'active') throw new Error('Game is not active.');
+      if (gameData.submittedActions.has(userId)) throw new Error('Action already submitted.');
       
-      const { error } = await supabase
-        .from('game_players').update({ submitted_action: card }).eq('game_id', gameId).eq('user_id', userId);
-      if (error) throw new Error(`Supabase action update error: ${error.message}`);
+      const privateState = gameData.privateStates.find(p => p.userId === userId)!;
+      const cardInHand = privateState.hand.find(c => c.id === card.id);
+      if (!cardInHand) throw new Error('Card not in hand.');
+      
+      // 1. Remove card from hand
+      privateState.hand = privateState.hand.filter(c => c.id !== card.id);
 
+      // 2. Add action to queue
+      const priority = gameData.state.priorityTrack.findIndex(p => p.playerId === userId);
+      const submittedAction: SubmittedAction = { playerId: userId, card: cardInHand, priority };
+      gameData.submittedActions.set(userId, submittedAction);
+      
+      // 3. Update public player state
+      const publicPlayer = gameData.state.players.find(p => p.userId === userId)!;
+      publicPlayer.submittedAction = true;
+      
+      // 4. Update DB
+      await supabase
+        .from('game_players')
+        .update({ submitted_action: submittedAction, hand: privateState.hand })
+        .match({ game_id: gameId, user_id: userId });
+
+      // 5. Notify room
       io.to(gameId).emit('game:player_submitted', { userId });
-      await checkAllActionsSubmitted(gameId);
+      
+      // 6. Check if all (connected) players have submitted
+      const allSubmitted = gameData.state.players
+        .filter(p => !p.is_disconnected) // <-- Only check connected players
+        .every(p => p.submittedAction);
+        
+      if (allSubmitted) {
+        io.to(gameId).emit('game:round_resolving');
+        await processRound(gameId);
+      }
     } catch (error: any) {
       console.error(`[${socket.id}] Error in submitAction: ${error.message}`);
-      socket.emit('error:game', { message: 'Failed to submit action.' });
+      socket.emit('error:game', { message: `Action failed: ${error.message}` });
     }
   };
   
-  const submitMove = async (payload: {
-    gameId: string;
-    position: BoardSpace;
-  }) => {
-    try {
-      const { gameId, position } = payload;
-      let turnState = gameTurnState.get(gameId);
-      if (!turnState) throw new Error('No active turn state found for this move.');
-      
-      const userInfo = socketToUser.get(socket.id);
-      if (!userInfo || turnState.modifiers.awaitingMoveFromPlayerId !== userInfo.userId) {
-        throw new Error('It is not your turn to move.');
-      }
-
-      console.log(`[${socket.id}] submitMove: ${userInfo.username} moves to ${position.x},${position.y}`);
-      const { nextTurnState } = GameEngine.processSubmittedMove(turnState, position);
-      gameTurnState.set(gameId, nextTurnState);
-      
-      setImmediate(() => processNextAction(gameId));
-      
-    } catch (error: any) {
-      console.error(`[${socket.id}] Error in submitMove: ${error.message}`);
-      socket.emit('error:game', { message: 'Failed to submit move.' });
-    }
+  const submitMove = (payload: { gameId: string; position: BoardSpace }) => {
+     // This is a synchronous action, handled by the game loop leader (server)
+     // The client just emits this, and the leader (processRound) will pick it up
+     // For now, we'll just log it
+     console.log(`[${socket.id}] Received move for ${payload.gameId}:`, payload.position);
   };
 
-  const handleChatMessage = (payload: { gameId: string; message: any }) => {
+  // --- *** UPDATED: processRound *** ---
+  const processRound = async (gameId: string) => {
+    const gameData = activeGames.get(gameId);
+    if (!gameData) return;
+
     try {
-      const { gameId, message } = payload;
-      io.to(gameId).emit('chat:receive', message);
+      let turnState = GameEngine.startRoundResolution(
+        gameData.state,
+        gameData.privateStates,
+        gameData.publicStates, // <-- Pass public states
+        Array.from(gameData.submittedActions.values()),
+        gameData.scenario
+      );
+      
+      // Clear submitted actions for next round
+      gameData.submittedActions.clear();
+      
+      while (turnState.actionQueue.length > 0) {
+        const action = turnState.actionQueue.shift()!;
+        
+        // 1. Process the action
+        const { nextTurnState, pause } = GameEngine.processSingleAction(turnState, action);
+        turnState = nextTurnState;
+        
+        // 2. Send state update
+        io.to(gameId).emit('game:state_update', turnState.state);
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Pause for effect
+
+        // 3. Handle pause for movement
+        if (pause) {
+          io.to(gameId).emit('game:await_move', pause);
+          
+          const move = await new Promise<BoardSpace>((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Move timed out')), 20000);
+            
+            const onMove = (payload: { gameId: string; position: BoardSpace }) => {
+              if (payload.gameId === gameId) {
+                clearTimeout(timeout);
+                socket.off('game:submit_move', onMove); // Clean up listener
+                resolve(payload.position);
+              }
+            };
+            socket.on('game:submit_move', onMove);
+          });
+          
+          turnState = GameEngine.processSubmittedMove(turnState, move).nextTurnState;
+          io.to(gameId).emit('game:state_update', turnState.state);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      // --- 4. Round End ---
+      const { nextState, nextPrivateStates, gameResults } = GameEngine.applyEndOfRoundEffects(turnState);
+      
+      gameData.state = nextState;
+      gameData.privateStates = nextPrivateStates;
+      
+      // 5. Update DB
+      await Promise.all([
+        supabase
+          .from('games')
+          .update({
+            current_round: gameData.state.currentRound,
+            harbinger_position: gameData.state.harbingerPosition,
+            stalker_position: gameData.state.stalkerPosition,
+            priority_track: gameData.state.priorityTrack,
+            active_complications: gameData.state.activeComplications,
+            game_log: gameData.state.gameLog,
+            status: gameData.state.status, // <-- This might be 'finished'
+            players: gameData.state.players,
+          })
+          .eq('id', gameId),
+        ...gameData.privateStates.map(p => 
+          supabase
+            .from('game_players')
+            .update({ 
+              vp: p.vp, 
+              hand: p.hand, 
+              personal_goal: p.personalGoal,
+              submitted_action: null, // Clear for next round
+            })
+            .match({ game_id: gameId, user_id: p.userId })
+        )
+      ]);
+      
+      // 6. Send final round update
+      io.to(gameId).emit('game:state_update', gameData.state);
+      
+      // --- 7. HANDLE GAME END ---
+      if (gameResults) {
+        console.log(`[${gameId}] Game finished! Saving results...`);
+        await saveGameResults(gameId, gameData.scenario.id, gameResults);
+        
+        // Emit results to all players
+        io.to(gameId).emit('game:results', gameResults);
+        
+        // Clean up game from memory
+        activeGames.delete(gameId);
+        
+        // Update room type for all players
+        for (const player of gameData.state.players) {
+          const playerSocketId = [...socketToUser.entries()].find(
+            ([, user])f => user.userId === player.userId
+          )?.[0];
+          if (playerSocketId) {
+            // Set them back to 'lobby' type
+            socketInRoom.set(playerSocketId, { roomId: gameId, type: 'lobby' });
+          }
+        }
+      } else {
+         // Send private state updates (new hands)
+         for (const p of gameData.privateStates) {
+            const playerSocketId = [...socketToUser.entries()].find(
+              ([, user]) => user.userId === p.userId
+            )?.[0];
+            if (playerSocketId) {
+              io.to(playerSocketId).emit('game:private_update', p);
+            }
+         }
+      }
+
     } catch (error: any) {
-      console.error(`[${socket.id}] Error in handleChatMessage: ${error.message}`);
+      console.error(`[${gameId}] Error in processRound: ${error.message}`);
+      io.to(gameId).emit('error:game', { message: `Round failed: ${error.message}` });
+      // TODO: Handle game crash state
+    }
+  };
+  
+  // --- NEW: saveGameResults ---
+  const saveGameResults = async (
+    gameId: string, 
+    scenarioId: string, 
+    results: GameResults
+  ) => {
+    try {
+      const { summary, leaderboard } = results;
+      
+      // Format player data for the SQL function
+      const playersPayload = leaderboard.map(p => ({
+        user_id: p.userId,
+        username: p.username,
+        role: p.role,
+        sub_role: p.subRole,
+        total_vp: p.totalVp,
+        rank: p.rank,
+        secret_identity: p.secretIdentity,
+      }));
+      
+      // Call the Supabase RPC function
+      const { error: rpcError } = await supabase.rpc('save_game_results', {
+        p_original_game_id: gameId,
+        p_scenario_id: scenarioId,
+        p_end_condition: summary.endCondition,
+        p_winning_role: summary.winningRole,
+        p_players: playersPayload,
+      });
+
+      if (rpcError) {
+        throw new Error(`RPC save_game_results error: ${rpcError.message}`);
+      }
+      
+      console.log(`[${gameId}] Successfully saved game results to DB.`);
+
+    } catch (error: any) {
+      console.error(`[${gameId}] CRITICAL: Failed to save game results: ${error.message}`);
+      // Don't emit error to client, just log it
     }
   };
 
   socket.on('game:join', joinGame);
-  socket.on('action:submit', submitAction);
-  socket.on('action:submit_move', submitMove);
-  socket.on('chat:send', handleChatMessage);
+  socket.on('game:submit_action', submitAction);
+  socket.on('game:submit_move', submitMove);
 };
 
-/**
- * (NEW) Exported disconnect handler
- */
+// --- (handleGameDisconnect is unchanged) ---
 export const handleGameDisconnect = async (
   io: Server,
   socket: Socket,
@@ -306,59 +376,38 @@ export const handleGameDisconnect = async (
   roomId: string,
   userInfo: { userId: string; username: string }
 ) => {
-  console.log(`[${socket.id}] ${userInfo.username} disconnected from game ${roomId}`);
-  // Emit with full user info
-  io.to(roomId).emit('game:player_left', { userId: userInfo.userId, username: userInfo.username });
-  
   try {
-    // Set disconnected flag in game_players
-    const { error: playerUpdateError } = await supabase
+    console.log(`[${socket.id}] ${userInfo.username} disconnected from game ${roomId}`);
+    
+    // Set disconnected flag in DB
+    const { error } = await supabase
       .from('game_players')
       .update({ is_disconnected: true })
-      .eq('game_id', roomId)
-      .eq('user_id', userInfo.userId);
+      .match({ game_id: roomId, user_id: userInfo.userId });
 
-    if (playerUpdateError) throw new Error(`DB player update error: ${playerUpdateError.message}`);
-
-    // Set disconnected flag in games.players (public state)
-    const { data: game, error: gameFetchError } = await supabase
-      .from('games')
-      .select('players')
-      .eq('id', roomId)
-      .single();
-      
-    if (gameFetchError) throw new Error(`DB game fetch error: ${gameFetchError.message}`);
-    
-    const publicPlayers = game.players as PublicPlayerState[];
-    const player = publicPlayers.find(p => p.userId === userInfo.userId);
-    if (player) {
-        player.is_disconnected = true;
-        await supabase.from('games').update({ players: publicPlayers }).eq('id', roomId);
+    if (error) {
+      console.error(`[${socket.id}] DB Error setting disconnect flag: ${error.message}`);
     }
 
-    // Check if a turn is in progress
-    const turnState = gameTurnState.get(roomId);
-    if (turnState) {
-      // Update the in-memory turn state
-      const publicPlayer = turnState.playerStates.find(p => p.userId === userInfo.userId);
-      if(publicPlayer) publicPlayer.is_disconnected = true;
-
-      // Check if the disconnected player was awaiting a move
-      if (turnState.modifiers.awaitingMoveFromPlayerId === userInfo.userId) {
-        console.log(`[Game ${roomId}] Disconnected player was awaiting move. Auto-submitting non-move.`);
-        const { nextTurnState } = GameEngine.processSubmittedMove(turnState, turnState.state.harbingerPosition);
-        gameTurnState.set(roomId, nextTurnState);
-        setImmediate(() => processNextAction(roomId)); // Continue the queue
-      } else {
-        // Otherwise, check if this disconnect means all actions are now "submitted"
-        await checkAllActionsSubmitted(roomId);
+    // Update in-memory state if game is active
+    const gameData = activeGames.get(roomId);
+    if (gameData) {
+      const publicPlayer = gameData.state.players.find(p => p.userId === userInfo.userId);
+      if (publicPlayer) {
+        publicPlayer.is_disconnected = true;
       }
-    } else {
-        // No turn in progress, just check if all actions are submitted (for next round)
-        await checkAllActionsSubmitted(roomId);
+      const publicPlayer2 = gameData.publicStates.find(p => p.userId === userInfo.userId);
+      if (publicPlayer2) {
+          publicPlayer2.is_disconnected = true;
+      }
     }
+    
+    // Notify other players
+    io.to(roomId).emit('game:player_left', { userId: userInfo.userId, username: userInfo.username });
 
   } catch (error: any) {
-    console.error(`[${socket.id}] Error in handleGameDisconnect: ${error.message}`);
+    console.error(
+      `[${socket.id}] Critical error in handleGameDisconnect: ${error.message}`
+    );
   }
 };

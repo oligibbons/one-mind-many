@@ -1,7 +1,7 @@
 // src/pages/game/GamePage.tsx
 
-import React, { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // <-- NEW: Added useNavigate
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useGameStore } from '../../stores/useGameStore';
@@ -9,10 +9,10 @@ import {
   GameState,
   PrivatePlayerState,
   BoardSpace,
-  GameResults, // <-- NEW IMPORT
+  GameResults,
 } from '../../types/game';
 
-// --- Import our REAL UI Components ---
+// --- Import UI Components ---
 import { GameBoard } from '../../components/game/GameBoard';
 import { PlayerHand } from '../../components/game/PlayerHand';
 import { PriorityTrack } from '../../components/game/PriorityTrack';
@@ -21,25 +21,29 @@ import { PrivateDashboard } from '../../components/game/PrivateDashboard';
 import { ChatBox } from '../../components/game/ChatBox';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { MovementOverlay } from '../../components/game/MovementOverlay';
-import { GameEndModal } from '../../components/game/GameEndModal'; // <-- NEW IMPORT
+import { GameEndModal } from '../../components/game/GameEndModal';
+import { InGameMenuModal } from '../../components/game/InGameMenuModal';
+import { Button } from '../../components/ui/Button';
+import { Menu } from 'lucide-react';
 
 export const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useAuth();
   const { socket, isConnected } = useSocket();
-  const navigate = useNavigate(); // <-- NEW
+  const navigate = useNavigate();
 
-  // Get state and actions from our Zustand store
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const {
     publicState,
     privateState,
-    gameResults, // <-- NEW
+    gameResults,
     setFullGameData,
     updatePublicState,
     updatePrivateState,
     updatePlayerSubmitted,
     updatePlayerDisconnect,
-    setGameResults, // <-- NEW
+    setGameResults,
     setAwaitingMove,
     setError,
     clearGame,
@@ -51,8 +55,6 @@ export const GamePage: React.FC = () => {
       return;
     }
 
-    // --- 1. Register Socket Event Listeners ---
-
     const onFullState = (data: {
       publicState: GameState;
       privateState: PrivatePlayerState;
@@ -60,38 +62,31 @@ export const GamePage: React.FC = () => {
       console.log('Received game:full_state', data);
       setFullGameData(data);
     };
-
     const onStateUpdate = (newPublicState: GameState) => {
       console.log('Received game:state_update', newPublicState);
       updatePublicState(newPublicState);
-      // Clear move overlay on any state update
       useGameStore.getState().clearAwaitingMove();
     };
-
     const onPrivateUpdate = (newPrivateState: PrivatePlayerState) => {
       console.log('Received game:private_update', newPrivateState);
       updatePrivateState(newPrivateState);
     };
-
     const onPlayerSubmitted = (data: { userId: string }) => {
       console.log('Received game:player_submitted', data.userId);
       updatePlayerSubmitted(data.userId);
     };
-
     const onPlayerJoined = (data: { userId: string; username: string }) => {
       console.log('Received game:player_joined', data.username);
       if (data.userId) {
         updatePlayerDisconnect(data.userId, false);
       }
     };
-
     const onPlayerLeft = (data: { userId: string; username: string }) => {
       console.log('Received game:player_left', data.username);
       if (data.userId) {
         updatePlayerDisconnect(data.userId, true);
       }
     };
-
     const onAwaitingMove = (data: {
       playerId: string;
       validMoves: BoardSpace[];
@@ -99,32 +94,25 @@ export const GamePage: React.FC = () => {
       console.log('Received game:await_move');
       setAwaitingMove(data);
     };
-
     const onGameError = (data: { message: string }) => {
       console.error('Received error:game', data.message);
       setError(data.message);
     };
-
-    // --- NEW: Game End / Kick / Close Listeners ---
     const onGameResults = (results: GameResults) => {
       console.log('Game over, results received:', results);
-      setGameResults(results); // <-- This triggers the modal!
+      setGameResults(results);
     };
-
     const onLobbyKicked = () => {
       alert('You have been kicked from the lobby.');
       clearGame();
       navigate('/app/lobbies');
     };
-
     const onLobbyClosed = () => {
       alert('The lobby has been closed by the host.');
       clearGame();
       navigate('/app/lobbies');
     };
-
     const onLobbyRedirect = (data: { lobbyId: string }) => {
-      // Server is forcing a redirect, probably back to lobby
       navigate(`/app/lobby/${data.lobbyId}`);
     };
 
@@ -136,16 +124,14 @@ export const GamePage: React.FC = () => {
     socket.on('game:player_left', onPlayerLeft);
     socket.on('game:await_move', onAwaitingMove);
     socket.on('error:game', onGameError);
-    socket.on('game:results', onGameResults); // <-- NEW
-    socket.on('lobby:kicked', onLobbyKicked); // <-- NEW
-    socket.on('lobby:closed', onLobbyClosed); // <-- NEW
-    socket.on('lobby:redirect', onLobbyRedirect); // <-- NEW
+    socket.on('game:results', onGameResults);
+    socket.on('lobby:kicked', onLobbyKicked);
+    socket.on('lobby:closed', onLobbyClosed);
+    socket.on('lobby:redirect', onLobbyRedirect);
 
-    // --- 2. Emit "join" event to the server ---
     console.log(`Emitting game:join for game ${gameId}`);
     socket.emit('game:join', { gameId, userId: user.id });
 
-    // --- 3. Cleanup ---
     return () => {
       console.log('Cleaning up GamePage listeners');
       socket.off('game:full_state', onFullState);
@@ -156,31 +142,18 @@ export const GamePage: React.FC = () => {
       socket.off('game:player_left', onPlayerLeft);
       socket.off('game:await_move', onAwaitingMove);
       socket.off('error:game', onGameError);
-      socket.off('game:results', onGameResults); // <-- NEW
-      socket.off('lobby:kicked', onLobbyKicked); // <-- NEW
-      socket.off('lobby:closed', onLobbyClosed); // <-- NEW
-      socket.off('lobby:redirect', onLobbyRedirect); // <-- NEW
-
+      socket.off('game:results', onGameResults);
+      socket.off('lobby:kicked', onLobbyKicked);
+      socket.off('lobby:closed', onLobbyClosed);
+      socket.off('lobby:redirect', onLobbyRedirect);
       clearGame();
     };
   }, [
-    socket,
-    isConnected,
-    gameId,
-    user,
-    setFullGameData,
-    updatePublicState,
-    updatePrivateState,
-    updatePlayerSubmitted,
-    updatePlayerDisconnect,
-    setAwaitingMove,
-    setGameResults, // <-- NEW
-    setError,
-    clearGame,
-    navigate, // <-- NEW
+    socket, isConnected, gameId, user, setFullGameData, updatePublicState,
+    updatePrivateState, updatePlayerSubmitted, updatePlayerDisconnect,
+    setAwaitingMove, setGameResults, setError, clearGame, navigate
   ]);
 
-  // --- NEW: Redirect if state reverts to lobby (e.g., after "New Scenario")
   useEffect(() => {
     if (publicState?.status === 'lobby') {
       navigate(`/app/lobby/${gameId}`);
@@ -198,22 +171,40 @@ export const GamePage: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full flex-col bg-gray-950 text-gray-200">
-      {/* === NEW: Render the modal on top of everything if results exist === */}
+      {/* --- MODAL OVERLAYS --- */}
       {gameResults && <GameEndModal results={gameResults} />}
+      {isMenuOpen && (
+        <InGameMenuModal
+          onClose={() => setIsMenuOpen(false)}
+          onLeave={() => {
+            clearGame();
+            navigate('/app/main-menu');
+          }}
+        />
+      )}
 
       {/* Top Bar: Tracks and Info */}
       <header className="flex w-full items-center justify-between border-b border-gray-700 p-2">
-        <div className="font-bold">
-          One Mind, Many (Round {publicState.currentRound})
+        <div className="font-bold text-lg">
+          Round {publicState.currentRound}
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex-1 px-4">
           <PriorityTrack
             players={publicState.players}
             track={publicState.priorityTrack}
           />
         </div>
-        <div>
+        <div className="flex items-center gap-4">
           <ComplicationTrack />
+          <Button
+            variant="outline"
+            size="sm"
+            className="btn-outline"
+            onClick={() => setIsMenuOpen(true)}
+          >
+            <Menu size={18} className="mr-2" />
+            Menu
+          </Button>
         </div>
       </header>
 
@@ -227,11 +218,12 @@ export const GamePage: React.FC = () => {
 
         {/* Side Panel: Chat and Private Info */}
         <aside className="flex w-80 flex-col border-l border-gray-700 bg-gray-900">
-          <div className="flex-1 p-2">
-            <ChatBox gameId={gameId} />
-          </div>
-          <div className="border-t border-gray-700 p-2">
+          <div className="p-2">
             <PrivateDashboard />
+          </div>
+          <div className="flex-1 p-2 overflow-hidden">
+            {/* --- UPDATED: ChatBox with kicking disabled --- */}
+            <ChatBox gameId={gameId} allowKick={false} />
           </div>
         </aside>
       </main>

@@ -2,7 +2,6 @@
 
 import { Server, Socket } from 'socket.io';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { v4 as uuid } from 'uuid';
 import { GameEngine } from '../services/GameEngine.js';
 import { Scenario } from '../../src/types/game.js';
 
@@ -10,43 +9,113 @@ type AdminSupabaseClient = SupabaseClient<any, 'public', any>;
 type UserMap = Map<string, { userId: string; username: string }>;
 type RoomMap = Map<string, { roomId: string, type: 'lobby' | 'game' }>;
 
+// Helper for random lobby codes
+const generateLobbyCode = (length = 6): string => {
+  const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ123456789'; // Omitted O and 0
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+// Helper to broadcast lobby list updates to all clients NOT in a lobby
+const broadcastLobbyList = async (
+  io: Server,
+  supabase: AdminSupabaseClient,
+) => {
+  try {
+    const { data, error } = await supabase
+      .from('games')
+      .select(
+        `
+        id, 
+        name, 
+        host_id, 
+        game_players ( user_id, username ),
+        scenarios ( name ) 
+      `,
+      )
+      .eq('status', 'lobby')
+      .eq('is_public', true);
+
+    if (error) throw new Error(`DB lobby fetch error: ${error.message}`);
+    
+    const lobbyList = data.map(lobby => ({
+      ...lobby,
+      scenario_name: lobby.scenarios?.name || 'Unknown Scenario'
+    }));
+
+    io.emit('lobby:list', lobbyList);
+  } catch (error: any) {
+    console.error(`[broadcastLobbyList] Error: ${error.message}`);
+  }
+};
+
 export const registerLobbyHandlers = (
   io: Server,
   socket: Socket,
   supabase: AdminSupabaseClient,
-  socketToUser: UserMap, // <-- NEW
-  socketInRoom: RoomMap  // <-- NEW
+  socketToUser: UserMap,
+  socketInRoom: RoomMap,
 ) => {
-  const createLobby = async (payload: {
-    userId: string;
-    username: string;
-    scenarioId: string;
-  }) => {
+  // --- createLobby (from Batch 2) ---
+  const createLobby = async (
+    payload: {
+      name: string;
+      isPublic: boolean;
+    },
+    callback: (
+      response:
+        | { status: 'ok'; lobbyId: string }
+        | { status: 'error'; message: string },
+    ) => void,
+  ) => {
     try {
-      const { userId, username, scenarioId } = payload;
-      const gameId = uuid();
+      const { name, isPublic } = payload;
+      const userInfo = socketToUser.get(socket.id);
+      if (!userInfo) throw new Error('User not authenticated');
+      if (!name) throw new Error('Lobby name is required');
 
-      // Verify scenarioId exists and is published
+      const { userId, username } = userInfo;
+
       const { data: scenario, error: scenarioError } = await supabase
         .from('scenarios')
         .select('id')
-        .eq('id', scenarioId)
         .eq('is_published', true)
+        .limit(1)
         .single();
-      
+
       if (scenarioError || !scenario) {
-          throw new Error(`Invalid or unpublished scenarioId: ${scenarioId}`);
+        throw new Error('No published scenarios found. Cannot create lobby.');
+      }
+      
+      let lobbyCode: string | null = null;
+      if (!isPublic) {
+        let isUnique = false;
+        while (!isUnique) {
+          lobbyCode = generateLobbyCode();
+          const { data: existing, error } = await supabase
+            .from('games')
+            .select('id')
+            .eq('lobby_code', lobbyCode)
+            .eq('status', 'lobby')
+            .single();
+          if (!existing) isUnique = true;
+        }
       }
 
-      const { error: gameError } = await supabase
-        .from('games')
-        .insert({
-          id: gameId,
-          host_id: userId,
-          scenario_id: scenarioId,
-          status: 'lobby',
-          priority_track: [],
-        });
+      const gameId = crypto.randomUUID();
+      const { error: gameError } = await supabase.from('games').insert({
+        id: gameId,
+        host_id: userId,
+        scenario_id: scenario.id,
+        status: 'lobby',
+        name,
+        is_public: isPublic,
+        lobby_code: lobbyCode,
+        priority_track: [],
+      });
       if (gameError)
         throw new Error(`DB game insert error: ${gameError.message}`);
 
@@ -61,46 +130,52 @@ export const registerLobbyHandlers = (
       if (playerError)
         throw new Error(`DB player insert error: ${playerError.message}`);
 
-      console.log(`[${socket.id}] Lobby created: ${gameId}`);
+      console.log(`[${socket.id}] Lobby created: ${gameId} (Public: ${isPublic})`);
       socket.join(gameId);
-
-      // Populate central maps
       socketInRoom.set(socket.id, { roomId: gameId, type: 'lobby' });
-      socketToUser.set(socket.id, { userId, username });
-
-      socket.emit('lobby:joined', { gameId: gameId });
       
-      // Notify lobby list viewers
-      getLobbies(true); // broadcast=true
+      callback({ status: 'ok', lobbyId: gameId });
+
+      broadcastLobbyList(io, supabase);
       
     } catch (error: any) {
       console.error(`[${socket.id}] Error in createLobby: ${error.message}`);
-      socket.emit('error:lobby', { message: `Failed to create lobby: ${error.message}` });
+      callback({ status: 'error', message: `Failed to create lobby: ${error.message}` });
     }
   };
 
-  const getLobbies = async (broadcast = false) => {
+  // --- getLobbies (from Batch 2) ---
+  const getLobbies = async () => {
     try {
       const { data, error } = await supabase
         .from('games')
         .select(
-          `id, host_id, scenarios ( id, name, description ), game_players ( user_id, username )`
+          `
+          id, 
+          name, 
+          host_id, 
+          game_players ( user_id, username ),
+          scenarios ( name )
+        `,
         )
         .eq('status', 'lobby')
-        .eq('scenarios.is_published', true);
+        .eq('is_public', true);
+        
       if (error) throw new Error(`DB lobby fetch error: ${error.message}`);
       
-      if (broadcast) {
-        io.emit('lobby:list', data);
-      } else {
-        socket.emit('lobby:list', data);
-      }
+      const lobbyList = data.map(lobby => ({
+        ...lobby,
+        scenario_name: lobby.scenarios?.name || 'Unknown Scenario'
+      }));
+
+      socket.emit('lobby:list', lobbyList);
     } catch (error: any) {
       console.error(`[${socket.id}] Error in getLobbies: ${error.message}`);
       socket.emit('error:lobby', { message: 'Failed to fetch lobbies.' });
     }
   };
 
+  // --- joinLobby (from Batch 2) ---
   const joinLobby = async (payload: {
     gameId: string;
     userId: string;
@@ -109,37 +184,48 @@ export const registerLobbyHandlers = (
     try {
       const { gameId, userId, username } = payload;
       
-      // Check if lobby is full
+      const { data: game, error: gameError } = await supabase
+        .from('games')
+        .select('status, is_public')
+        .eq('id', gameId)
+        .single();
+        
+      if (gameError || !game) throw new Error('Lobby not found.');
+      if (game.status !== 'lobby') throw new Error('Game has already started.');
+      if (!game.is_public) throw new Error('This is a private lobby. Use a code to join.');
+
       const { data: players, error: countError } = await supabase
         .from('game_players')
-        .select('user_id')
+        .select('user_id', { count: 'exact' })
         .eq('game_id', gameId);
-      
+
       if (countError) throw new Error(`DB player count error: ${countError.message}`);
-      if (players.length >= 6) throw new Error('Lobby is full (max 6 players).');
-      if (players.find(p => p.user_id === userId)) throw new Error('User already in lobby.');
-
-      const { error: playerError } = await supabase
-        .from('game_players')
-        .insert({
-          game_id: gameId,
-          user_id: userId,
-          username: username,
-          is_ready: false,
-        });
-      if (playerError)
-        throw new Error(`DB player insert error: ${playerError.message}`);
-
+      const playerCount = players?.length || 0;
+      
+      const isAlreadyIn = players.some(p => p.user_id === userId);
+      if (isAlreadyIn) {
+        console.log(`[${socket.id}] User ${username} rejoining lobby ${gameId}`);
+      } else {
+        if (playerCount >= 6) throw new Error('Lobby is full (max 6 players).');
+        
+        const { error: playerError } = await supabase
+          .from('game_players')
+          .insert({
+            game_id: gameId,
+            user_id: userId,
+            username: username,
+            is_ready: false,
+          });
+        if (playerError)
+          throw new Error(`DB player insert error: ${playerError.message}`);
+      }
+      
       socket.join(gameId);
-
-      // Populate central maps
       socketInRoom.set(socket.id, { roomId: gameId, type: 'lobby' });
-      socketToUser.set(socket.id, { userId, username });
 
       socket.emit('lobby:joined', { gameId: gameId });
       
-      // Notify lobby list viewers
-      getLobbies(true); // broadcast=true
+      broadcastLobbyList(io, supabase);
       
     } catch (error: any) {
       console.error(`[${socket.id}] Error in joinLobby: ${error.message}`);
@@ -147,6 +233,110 @@ export const registerLobbyHandlers = (
     }
   };
 
+  // --- joinPrivateLobby (from Batch 2) ---
+  const joinPrivateLobby = async (payload: {
+    lobbyCode: string;
+    userId: string;
+    username: string;
+  }) => {
+    try {
+      const { lobbyCode, userId, username } = payload;
+      
+      const { data: game, error: gameError } = await supabase
+        .from('games')
+        .select('id, status')
+        .eq('lobby_code', lobbyCode.toUpperCase()) // Ensure code is uppercase
+        .eq('status', 'lobby')
+        .single();
+        
+      if (gameError || !game) throw new Error('Invalid lobby code.');
+      if (game.status !== 'lobby') throw new Error('Game has already started.');
+
+      // Found game, now call the normal join logic, but use game.id
+      // We'll bypass the public check by calling joinLobby logic directly
+      const { data: players, error: countError } = await supabase
+        .from('game_players')
+        .select('user_id', { count: 'exact' })
+        .eq('game_id', game.id);
+
+      if (countError) throw new Error(`DB player count error: ${countError.message}`);
+      const playerCount = players?.length || 0;
+
+      const isAlreadyIn = players.some(p => p.user_id === userId);
+      if (isAlreadyIn) {
+         console.log(`[${socket.id}] User ${username} rejoining lobby ${game.id}`);
+      } else {
+        if (playerCount >= 6) throw new Error('Lobby is full (max 6 players).');
+        
+        const { error: playerError } = await supabase
+          .from('game_players')
+          .insert({
+            game_id: game.id,
+            user_id: userId,
+            username: username,
+            is_ready: false,
+          });
+        if (playerError)
+          throw new Error(`DB player insert error: ${playerError.message}`);
+      }
+
+      socket.join(game.id);
+      socketInRoom.set(socket.id, { roomId: game.id, type: 'lobby' });
+      socket.emit('lobby:joined', { gameId: game.id });
+      
+      // No need to broadcast, as it's a private lobby
+      
+    } catch (error: any) {
+      console.error(`[${socket.id}] Error in joinPrivateLobby: ${error.message}`);
+      socket.emit('error:lobby', { message: error.message });
+    }
+  };
+  
+  // --- kickPlayer (from Batch 2) ---
+  const kickPlayer = async (payload: { gameId: string; kickUserId: string }) => {
+     try {
+        const { gameId, kickUserId } = payload;
+        const userInfo = socketToUser.get(socket.id);
+        if (!userInfo) throw new Error('User not authenticated');
+        
+        const { data: game, error: gameError } = await supabase
+          .from('games')
+          .select('host_id')
+          .eq('id', gameId)
+          .single();
+          
+        if (gameError || !game) throw new Error('Game not found');
+        if (game.host_id !== userInfo.userId) throw new Error('Only the host can kick players.');
+        if (game.host_id === kickUserId) throw new Error('Host cannot kick themselves.');
+        
+        const { error: deleteError } = await supabase
+          .from('game_players')
+          .delete()
+          .match({ game_id: gameId, user_id: kickUserId });
+          
+        if (deleteError) throw new Error(`DB delete error: ${deleteError.message}`);
+        
+        const kickedSocketId = [...socketToUser.entries()].find(
+          ([, user]) => user.userId === kickUserId
+        )?.[0];
+        
+        if (kickedSocketId && io.sockets.sockets.get(kickedSocketId)) {
+          const kickedSocket = io.sockets.sockets.get(kickedSocketId)!;
+          kickedSocket.emit('lobby:kicked');
+          kickedSocket.leave(gameId);
+          socketInRoom.delete(kickedSocketId);
+        }
+        
+        console.log(`[${socket.id}] Kicked user ${kickUserId} from lobby ${gameId}`);
+        broadcastLobbyList(io, supabase);
+
+     } catch (error: any) {
+      console.error(`[${socket.id}] Error in kickPlayer: ${error.message}`);
+      socket.emit('error:lobby', { message: `Failed to kick player: ${error.message}` });
+    }
+  };
+
+  // --- setReady (from Batch 1 / Original) ---
   const setReady = async (payload: {
     gameId: string;
     userId: string;
@@ -168,6 +358,7 @@ export const registerLobbyHandlers = (
     }
   };
 
+  // --- startGame (from Batch 1 / Original, with minor tweaks) ---
   const startGame = async (payload: { gameId: string }) => {
     try {
       const { gameId } = payload;
@@ -229,7 +420,7 @@ export const registerLobbyHandlers = (
           npcs: gameState.boardNPCs,
           active_complications: [],
           game_log: ['Game started.'],
-          players: gameState.players, // <-- NEW: Save initial public player state
+          players: gameState.players,
         })
         .eq('id', gameId);
       if (gameUpdateError)
@@ -251,7 +442,6 @@ export const registerLobbyHandlers = (
       });
       await Promise.all(playerUpdates);
 
-      // Update room type for all players
       for (const player of players) {
         const playerSocketId = [...socketToUser.entries()].find(
           ([, user]) => user.userId === player.user_id
@@ -267,10 +457,10 @@ export const registerLobbyHandlers = (
       console.log(`[${socket.id}] Game ${gameId} is starting!`);
       io.to(gameId).emit('game:starting');
       
-      // Notify lobby list viewers
-      getLobbies(true); // broadcast=true
+      broadcastLobbyList(io, supabase);
 
-    } catch (error: any) {
+    } catch (error: any)
+      {
       console.error(
         `[${socket.id}] Error in startGame: ${error.message}`
       );
@@ -279,17 +469,75 @@ export const registerLobbyHandlers = (
       });
     }
   };
+  
+  // --- NEW: setScenario (for Batch 3) ---
+  const setScenario = async (
+    payload: {
+      gameId: string;
+      scenarioId: string;
+    },
+    callback: (
+      response:
+        | { status: 'ok' }
+        | { status: 'error'; message: string },
+    ) => void,
+  ) => {
+    try {
+      const { gameId, scenarioId } = payload;
+      const userInfo = socketToUser.get(socket.id);
+      if (!userInfo) throw new Error('User not authenticated');
 
+      // 1. Verify user is host
+      const { data: game, error: gameError } = await supabase
+        .from('games')
+        .select('host_id')
+        .eq('id', gameId)
+        .single();
+      
+      if (gameError || !game) throw new Error('Lobby not found.');
+      if (game.host_id !== userInfo.userId) throw new Error('Only the host can change the scenario.');
+
+      // 2. Verify scenario is valid and published
+      const { data: scenario, error: scenarioError } = await supabase
+        .from('scenarios')
+        .select('id')
+        .eq('id', scenarioId)
+        .eq('is_published', true)
+        .single();
+
+      if (scenarioError || !scenario) throw new Error('Invalid or unpublished scenario.');
+
+      // 3. Update the game
+      const { error: updateError } = await supabase
+        .from('games')
+        .update({ scenario_id: scenarioId })
+        .eq('id', gameId);
+        
+      if (updateError) throw new Error(`DB update error: ${updateError.message}`);
+
+      console.log(`[${socket.id}] Host changed scenario for lobby ${gameId} to ${scenarioId}`);
+      callback({ status: 'ok' });
+      // Realtime will notify clients of the change
+
+    } catch (error: any) {
+      console.error(`[${socket.id}] Error in setScenario: ${error.message}`);
+      callback({ status: 'error', message: error.message });
+    }
+  };
+
+
+  // --- Register all handlers ---
   socket.on('lobby:create', createLobby);
-  socket.on('lobby:get_list', () => getLobbies(false)); // Get list for self
+  socket.on('lobby:get_list', getLobbies);
   socket.on('lobby:join', joinLobby);
+  socket.on('lobby:join_private', joinPrivateLobby);
+  socket.on('lobby:kick', kickPlayer);
   socket.on('lobby:set_ready', setReady);
+  socket.on('lobby:set_scenario', setScenario); // <-- NEW
   socket.on('lobby:start_game', startGame);
 };
 
-/**
- * (NEW) Exported disconnect handler
- */
+// --- handleLobbyDisconnect (from Batch 2) ---
 export const handleLobbyDisconnect = async (
   io: Server,
   socket: Socket,
@@ -302,7 +550,6 @@ export const handleLobbyDisconnect = async (
       `[${socket.id}] ${userInfo.username} disconnected from lobby ${roomId}`
     );
     
-    // Remove player from DB
     const { error: deleteError } = await supabase
       .from('game_players')
       .delete()
@@ -312,24 +559,21 @@ export const handleLobbyDisconnect = async (
       console.error(`[${socket.id}] DB Error removing player: ${deleteError.message}`);
     }
 
-    // Check remaining players
     const { data: remainingPlayers, error: fetchError } = await supabase
       .from('game_players')
       .select('user_id')
       .eq('game_id', roomId)
-      .order('joined_at', { ascending: true }); // Get them in join order
+      .order('joined_at', { ascending: true });
     
     if (fetchError) {
        console.error(`[${socket.id}] DB Error fetching remaining players: ${fetchError.message}`);
        return;
     }
 
-    // If no players left, delete the game
     if (remainingPlayers.length === 0) {
       console.log(`[${socket.id}] Lobby ${roomId} is empty. Deleting game.`);
       await supabase.from('games').delete().eq('id', roomId);
     } else {
-      // Check if the host disconnected
       const { data: game, error: gameFetchError } = await supabase
         .from('games')
         .select('host_id')
@@ -342,7 +586,6 @@ export const handleLobbyDisconnect = async (
       }
 
       if (game.host_id === userInfo.userId) {
-        // Host left, promote the next player (first in the list)
         const newHost = remainingPlayers[0];
         console.log(`[${socket.id}] Host left lobby ${roomId}. Promoting ${newHost.user_id}.`);
         await supabase
@@ -352,15 +595,7 @@ export const handleLobbyDisconnect = async (
       }
     }
     
-    // Notify lobby list viewers that lobby has changed
-    const { data, error } = await supabase
-      .from('games')
-      .select(`id, host_id, scenarios ( id, name, description ), game_players ( user_id, username )`)
-      .eq('status', 'lobby')
-      .eq('scenarios.is_published', true);
-    if (!error) {
-       io.emit('lobby:list', data);
-    }
+    broadcastLobbyList(io, supabase);
 
   } catch (error: any) {
     console.error(
