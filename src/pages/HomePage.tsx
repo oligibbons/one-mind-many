@@ -4,7 +4,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
-import { Logo } from '../components/ui/Logo';
+// import { Logo } from '../components/ui/Logo'; // No longer using the Logo component here
 import {
   Users,
   EyeOff,
@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Target,
   ArrowRight,
+  Key, // Added for the new section
 } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
@@ -22,9 +23,18 @@ export const HomePage: React.FC = () => {
     <div className="w-full bg-gray-900 text-gray-200">
       {/* Hero Section */}
       <section className="flex min-h-[calc(100vh-80px)] w-full flex-col items-center justify-center bg-gray-950 px-6 text-center">
+        {/* --- MODIFIED: Replaced Logo with animated Orange Icon --- */}
         <div className="mb-8">
-          <Logo width={400} />
+          <img
+            src="/OneMindMany Icon PNG Orange.png"
+            alt="G.I.M.P. Sigil"
+            width="250"
+            height="250"
+            className="animate-[floating_6s_ease-in-out_infinite]"
+          />
         </div>
+        {/* --- END MODIFICATION --- */}
+
         <h1 className="text-5xl font-bold text-white md:text-6xl">
           One Pawn. Many Minds.
         </h1>
@@ -38,8 +48,38 @@ export const HomePage: React.FC = () => {
         </Button>
       </section>
 
-      {/* How It Works Section */}
+      {/* --- NEW: Thematic Concept Section --- */}
       <section className="bg-gray-900 py-20 px-6">
+        <div className="mx-auto max-w-3xl text-center">
+          <Key className="mx-auto h-16 w-16 text-orange-400" />
+          <h2 className="mt-6 text-4xl font-bold text-white">
+            The Apocalypse is a Trivial Matter
+          </h2>
+          <p className="mt-6 text-xl text-gray-300">
+            As a Guardian of Ineffable Manifest Power (G.I.M.P.), you know the
+            truth: the fabric of reality is held together by mundane tasks.
+          </p>
+          <p className="mt-4 text-xl text-gray-300">
+            You and your fellow "Guardians" must collectively guide a single,
+            unwitting mortal—The Harbinger—to complete these sacred chores.
+            Guiding this pawn to file his taxes or buy milk isn't just a goal...
+            it's the *only* thing preventing total annihilation.
+          </p>
+          <Button
+            as={Link}
+            to={user ? '/menu' : '/login'}
+            size="lg"
+            className="mt-10 text-lg"
+          >
+            Avert Doomsday
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+        </div>
+      </section>
+      {/* --- END NEW SECTION --- */}
+
+      {/* How It Works Section */}
+      <section className="bg-gray-950 py-20 px-6"> {/* Changed color for contrast */}
         <div className="mx-auto max-w-5xl">
           <h2 className="text-center text-4xl font-bold text-white">
             How It Works
@@ -65,7 +105,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Key Features Section */}
-      <section className="bg-gray-950 py-20 px-6">
+      <section className="bg-gray-900 py-20 px-6"> {/* Changed color for contrast */}
         <div className="mx-auto max-w-5xl">
           <h2 className="text-center text-4xl font-bold text-white">
             Trust is a Liability
@@ -90,28 +130,31 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Thematic Section */}
-      <section className="bg-gray-900 py-20 px-6">
+      {/* Thematic Section --- MODIFIED --- */}
+      <section className="bg-gray-950 py-20 px-6"> {/* Changed color for contrast */}
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-4xl font-bold text-white">
-            Welcome to the B.O.Z.O.s
+            Welcome to the G.I.M.P.
           </h2>
           <p className="mt-6 text-xl text-gray-400">
-            The Benevolent Order of Zany Obligations.
+            Guardians of Ineffable Manifest Power.
           </p>
           <p className="mt-4 text-lg text-gray-300">
-            We believe the fate of existence depends on... bizarrely mundane
-            tasks. Like guiding an unwitting member of the public to deliver an offering
-            to a sleeping vagrant.
+            "We are the G.I.M.P, bearers of the Ineffable Manifest Power: the
+            sacred force that makes prophecy real through perfect, ordained
+            action. Every chore is a sigil. Every checklist, a covenant. The
+            apocalypse trembles before a well-folded sheet.”
           </p>
           <p className="mt-4 text-lg font-bold text-orange-400">
             It's very, very important.
           </p>
         </div>
       </section>
+      {/* --- END MODIFICATION --- */}
+
 
       {/* Final CTA Section */}
-      <section className="bg-gray-950 py-20 px-6 text-center">
+      <section className="bg-gray-900 py-20 px-6 text-center"> {/* Changed color for contrast */}
         <h2 className="text-4xl font-bold text-white">Ready to Join?</h2>
         <p className="mt-4 text-xl text-gray-400">
           The Order is waiting.
@@ -145,3 +188,4 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
     <p className="text-gray-400">{description}</p>
   </div>
 );
+
