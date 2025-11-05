@@ -19,6 +19,7 @@ export interface PrioritySlot { playerId: string; identity: SecretIdentity; }
 export interface SubmittedAction { playerId: string; card: CommandCard; priority: number; }
 
 // --- NEW: Full Scenario Definition (from DB) ---
+// This is now fully data-driven to support the new GameEngine
 
 export interface Scenario {
   id: string;
@@ -33,11 +34,13 @@ export interface Scenario {
     win_action: string;
     trigger_message: string;
     winner: PlayerRole;
+    vp: number; // <-- Added VP
   };
   doomsday_condition: {
     lose_location: string;
     trigger_message: string;
     winner: PlayerRole;
+    vp: number; // <-- Added VP
   };
   global_fail_condition: {
     lose_location: string;
@@ -45,19 +48,30 @@ export interface Scenario {
     trigger_message: string;
     winner: PlayerRole;
   };
-  complication_effects: Record<string, { duration: number; effect: string; }>;
-  object_effects: Record<string, { effect: string; }>;
-  npc_effects: Record<string, { positive: string; negative: string; }>;
+  // NEW: Data-driven effect definitions
+  complication_effects: Record<string, {
+    description: string;
+    duration: number; // 0 = immediate, -1 = permanent
+    trigger: any; // e.g., { "type": "ACTION_PLAYED", "condition": { ... } }
+    effect: any; // e.g., { "type": "MODIFY_TURN", "moveValue": -1 }
+  }>;
+  object_effects: Record<string, {
+    effects: any[]; // Array of possible effects, e.g., [{ "description": "...", "type": "ADD_ACTION", "cardName": "Move 1" }]
+  }>;
+  npc_effects: Record<string, {
+    static_location?: string; // Optional static location
+    effects: {
+      positive: any; // e.g., { "description": "...", "type": "MODIFY_VP", "amount": 3 }
+      negative: any; // e.g., { "description": "...", "type": "MOVE_TOWARDS", "target_location": "..." }
+    };
+  }>;
   opportunist_goals: {
     'Data Broker': string[][];
   };
-  sub_role_definitions: {
-    'The Guide': { type: 'location_vp'; location_tag: string; vp: number; locations: string[]; };
-    'The Fixer': { type: 'event_vp'; event: 'complication_removed'; vp: number; };
-    'The Instigator': { type: 'card_play_vp'; cards: CardName[]; vp: number; };
-    'The Waster': { type: 'location_vp'; location_tag: 'previous_space'; vp: number; };
-    'The Mimic': { type: 'event_vp'; event: 'copy_true_believer'; vp: number; };
-  };
+  sub_role_definitions: Record<string, {
+    vp: number;
+    trigger: any; // e.g., { "type": "END_OF_ROUND", "condition": { "type": "NO_MOVE" } }
+  }>;
 }
 
 // --- Player & Game State ---
@@ -80,6 +94,13 @@ export interface PublicPlayerState {
   username: string;
   vp: number;
   submittedAction: boolean;
+  is_disconnected: boolean; // <-- NEW
+}
+
+// Represents the dynamic state of the game board
+export interface BoardModifiers {
+  impassable: BoardSpace[];
+  swapped: { a: BoardSpace, b: BoardSpace }[];
 }
 
 export interface GameState {
@@ -87,13 +108,14 @@ export interface GameState {
   status: "lobby" | "active" | "finished";
   currentRound: number;
   scenario: {
-    // GameState only needs a *subset* of the full scenario data
-    id: string; // Store scenario ID
+    id: string;
     name: string;
     locations: Location[];
     boardSize: BoardSpace;
   };
   harbingerPosition: BoardSpace;
+  stalkerPosition: BoardSpace | null; // <-- NEW
+  boardModifiers: BoardModifiers; // <-- NEW
   priorityTrack: PrioritySlot[];
   activeComplications: ActiveComplication[];
   boardObjects: GameObject[];
@@ -106,5 +128,5 @@ export interface Profile {
   id: string;
   username: string;
   created_at: string;
-  is_admin?: boolean; // Added for admin panel
+  is_admin?: boolean;
 }

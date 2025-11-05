@@ -3,7 +3,7 @@
 import React from 'react';
 import { useGameStore } from '../../stores/useGameStore';
 import { BoardSpace, Location } from '../../types/game';
-import clsx from 'clsx'; // Using this again!
+import clsx from 'clsx'; 
 
 // You'll want to add this to your src/index.css for the grid
 /*
@@ -25,10 +25,22 @@ const HarbingerPawn: React.FC = () => (
   </div>
 );
 
+// --- NEW: Stalker Pawn ---
+const StalkerPawn: React.FC = () => (
+  <div
+    className="relative z-10 h-5 w-5 transform rounded-full bg-gray-900 shadow-lg ring-2 ring-purple-500"
+    title="The Stalker"
+  >
+    <div className="absolute inset-0.5 z-20 rounded-full bg-purple-300 opacity-60" />
+  </div>
+);
+
+
 interface BoardCellProps {
   x: number;
   y: number;
   isHarbinger: boolean;
+  isStalker: boolean; // <-- NEW
   location?: Location;
 }
 
@@ -36,8 +48,10 @@ const BoardCell: React.FC<BoardCellProps> = ({
   x,
   y,
   isHarbinger,
+  isStalker, // <-- NEW
   location,
 }) => {
+  // TODO: Read this from scenario data
   const isGoal = location?.name === 'Squalid Bench';
   const isHazard = location?.name === 'Collapsital One Bank';
 
@@ -51,8 +65,9 @@ const BoardCell: React.FC<BoardCellProps> = ({
       )}
       title={location ? location.name : `Space (${x}, ${y})`}
     >
-      {/* Render Harbinger if on this square */}
+      {/* Render Pawns */}
       {isHarbinger && <HarbingerPawn />}
+      {isStalker && <StalkerPawn />} 
 
       {/* Render location name */}
       {location && (
@@ -65,16 +80,17 @@ const BoardCell: React.FC<BoardCellProps> = ({
 };
 
 export const GameBoard: React.FC = () => {
-  const { harbingerPosition, locations } = useGameStore((state) => ({
+  // --- NEW: Get stalkerPosition ---
+  const { harbingerPosition, stalkerPosition, locations } = useGameStore((state) => ({
     harbingerPosition: state.publicState?.harbingerPosition,
-    locations: state.publicS ate?.scenario.locations,
+    stalkerPosition: state.publicState?.stalkerPosition, // <-- NEW
+    locations: state.publicState?.scenario.locations,
   }));
 
   if (!harbingerPosition || !locations) {
     return <div>Loading board...</div>;
   }
 
-  // Create a quick lookup map for locations
   const locationMap = new Map<string, Location>();
   locations.forEach((loc) => {
     locationMap.set(`${loc.position.x},${loc.position.y}`, loc);
@@ -85,6 +101,9 @@ export const GameBoard: React.FC = () => {
     for (let x = 1; x <= BOARD_SIZE; x++) {
       const isHarbinger =
         harbingerPosition.x === x && harbingerPosition.y === y;
+      // --- NEW: Check for stalker ---
+      const isStalker =
+        stalkerPosition?.x === x && stalkerPosition?.y === y;
       const location = locationMap.get(`${x},${y}`);
 
       cells.push(
@@ -93,6 +112,7 @@ export const GameBoard: React.FC = () => {
           x={x}
           y={y}
           isHarbinger={isHarbinger}
+          isStalker={isStalker} // <-- NEW
           location={location}
         />
       );

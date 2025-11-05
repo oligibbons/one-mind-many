@@ -2,66 +2,51 @@
 
 import React from 'react';
 import { useGameStore } from '../../stores/useGameStore';
-import { ActiveComplication } from '../../types/game';
-import { AlertTriangle, Clock } from 'lucide-react';
+import { AlertTriangle, Timer } from 'lucide-react';
 import clsx from 'clsx';
 
-const MAX_COMPLICATIONS = 3; // From your GDD
-
-const ComplicationCard: React.FC<{ comp: ActiveComplication }> = ({ comp }) => {
-  return (
-    <div
-      className="flex h-10 w-48 items-center space-x-2 rounded-md border border-red-700 bg-red-900/40 p-2 shadow-inner"
-      title={comp.effect}
-    >
-      <AlertTriangle className="h-5 w-5 flex-shrink-0 text-red-400" />
-      <div className="overflow-hidden">
-        <p className="truncate text-xs font-bold text-red-300">{comp.name}</p>
-        <div className="flex items-center space-x-1">
-          <Clock className="h-3 w-3 text-red-400/70" />
-          <p className="text-xs text-red-400/70">
-            {comp.duration === -1
-              ? 'Permanent'
-              : `${comp.duration} rounds left`}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const EmptySlot: React.FC<{ index: number }> = ({ index }) => (
-  <div
-    className="flex h-10 w-48 items-center justify-center rounded-md border-2 border-dashed border-gray-700 bg-gray-900/50"
-    title={`Complication Slot ${index + 1}`}
-  >
-    <span className="text-xs text-gray-600">Empty</span>
-  </div>
-);
-
 export const ComplicationTrack: React.FC = () => {
-  const { activeComplications } = useGameStore((state) => ({
-    activeComplications: state.publicState?.activeComplications,
+  const { complications } = useGameStore((state) => ({
+    complications: state.publicState?.activeComplications,
   }));
 
-  const slots = [];
-  for (let i = 0; i < MAX_COMPLICATIONS; i++) {
-    if (activeComplications && activeComplications[i]) {
-      slots.push(
-        <ComplicationCard
-          key={activeComplications[i].id}
-          comp={activeComplications[i]}
-        />
-      );
-    } else {
-      slots.push(<EmptySlot key={i} index={i} />);
-    }
-  }
-
   return (
-    <div className="flex items-center space-x-2 rounded-lg bg-gray-900/50 p-2">
-      <h4 className="mr-2 text-sm font-bold text-gray-400">COMPLICATIONS:</h4>
-      <div className="flex space-x-2">{slots}</div>
+    <div className="flex h-10 items-center space-x-2 rounded-lg bg-gray-900/50 p-2">
+      <h4 className="mr-2 text-sm font-bold text-red-400">COMPLICATIONS:</h4>
+      
+      {(!complications || complications.length === 0) && (
+        <span className="text-sm text-gray-500">All clear... for now.</span>
+      )}
+
+      {complications && complications.map((comp) => (
+        <div
+          key={comp.id}
+          className={clsx(
+            'flex h-8 items-center space-x-2 rounded-md border border-red-700 bg-red-900/30 p-2',
+            comp.duration === -1 && 'border-red-400' // Permanent
+          )}
+          title={comp.effect}
+        >
+          <AlertTriangle size={14} className="text-red-400" />
+          <span className="text-xs font-semibold text-gray-200">
+            {comp.name}
+          </span>
+          {comp.duration > 0 && (
+            <div className="flex items-center text-xs text-gray-400">
+              <Timer size={12} className="mr-1" />
+              {comp.duration}
+            </div>
+          )}
+          {comp.duration === -1 && (
+            <span className="text-xs font-bold text-red-400">PERM</span>
+          )}
+        </div>
+      ))}
+
+      {/* Fill empty slots */}
+      {complications && Array(Math.max(0, 3 - complications.length)).fill(0).map((_, i) => (
+         <div key={i} className="h-8 w-24 rounded-md border border-dashed border-gray-700 bg-gray-800/50" />
+      ))}
     </div>
   );
 };

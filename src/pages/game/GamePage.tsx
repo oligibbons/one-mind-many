@@ -15,7 +15,7 @@ import { ComplicationTrack } from '../../components/game/ComplicationTrack';
 import { PrivateDashboard } from '../../components/game/PrivateDashboard';
 import { ChatBox } from '../../components/game/ChatBox';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
-import { MovementOverlay } from '../../components/game/MovementOverlay'; // <-- NEW
+import { MovementOverlay } from '../../components/game/MovementOverlay';
 
 export const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -30,6 +30,7 @@ export const GamePage: React.FC = () => {
     updatePublicState,
     updatePrivateState, // <-- NEW
     updatePlayerSubmitted,
+    updatePlayerDisconnect, // <-- NEW
     setAwaitingMove, // <-- NEW
     setError,
     clearGame,
@@ -54,6 +55,8 @@ export const GamePage: React.FC = () => {
     const onStateUpdate = (newPublicState: GameState) => {
       console.log('Received game:state_update', newPublicState);
       updatePublicState(newPublicState);
+      // Clear move overlay on any state update
+      useGameStore.getState().clearAwaitingMove();
     };
 
     // NEW: For when server sends just our private state (e.g., new hand)
@@ -65,6 +68,21 @@ export const GamePage: React.FC = () => {
     const onPlayerSubmitted = (data: { userId: string }) => {
       console.log('Received game:player_submitted', data.userId);
       updatePlayerSubmitted(data.userId);
+    };
+    
+    // --- NEW: Handle player join/left for disconnect status ---
+    const onPlayerJoined = (data: { userId: string, username: string }) => {
+        console.log('Received game:player_joined', data.username);
+        if (data.userId) { // Ensure userId is present
+            updatePlayerDisconnect(data.userId, false);
+        }
+    };
+    
+    const onPlayerLeft = (data: { userId: string, username: string }) => {
+        console.log('Received game:player_left', data.username);
+        if (data.userId) { // Ensure userId is present
+            updatePlayerDisconnect(data.userId, true);
+        }
     };
 
     // NEW: Server is asking for movement input
@@ -85,6 +103,8 @@ export const GamePage: React.FC = () => {
     socket.on('game:state_update', onStateUpdate);
     socket.on('game:private_update', onPrivateUpdate); // <-- NEW
     socket.on('game:player_submitted', onPlayerSubmitted);
+    socket.on('game:player_joined', onPlayerJoined); // <-- NEW
+    socket.on('game:player_left', onPlayerLeft); // <-- NEW
     socket.on('game:await_move', onAwaitingMove); // <-- NEW
     socket.on('error:game', onGameError);
 
@@ -99,6 +119,8 @@ export const GamePage: React.FC = () => {
       socket.off('game:state_update', onStateUpdate);
       socket.off('game:private_update', onPrivateUpdate); // <-- NEW
       socket.off('game:player_submitted', onPlayerSubmitted);
+      socket.off('game:player_joined', onPlayerJoined); // <-- NEW
+      socket.off('game:player_left', onPlayerLeft); // <-- NEW
       socket.off('game:await_move', onAwaitingMove); // <-- NEW
       socket.off('error:game', onGameError);
       
@@ -113,6 +135,7 @@ export const GamePage: React.FC = () => {
     updatePublicState,
     updatePrivateState, // <-- NEW
     updatePlayerSubmitted,
+    updatePlayerDisconnect, // <-- NEW
     setAwaitingMove, // <-- NEW
     setError,
     clearGame,

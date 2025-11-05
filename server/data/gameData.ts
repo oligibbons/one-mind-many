@@ -29,6 +29,8 @@ import {
     'True Believer', 'Heretic', 'Opportunist'
   ];
   
+  // NOTE: This is now legacy. Sub-roles are defined in scenario.sub_role_definitions
+  // This is just kept for reference or potential fallback
   export const SUB_ROLES: Record<PlayerRole, PlayerSubRole[]> = {
     'True Believer': ['The Guide', 'The Fixer'],
     'Heretic': ['The Instigator', 'The Waster'],

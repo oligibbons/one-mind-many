@@ -5,7 +5,7 @@ import {
   GameState,
   PrivatePlayerState,
   PublicPlayerState,
-  BoardSpace, // <-- NEW
+  BoardSpace,
 } from '../types/game';
 
 // Define the shape of the store's state
@@ -14,7 +14,6 @@ interface GameStoreState {
   privateState: PrivatePlayerState | null;
   error: string | null;
   
-  // --- NEW state for interactive movement ---
   isAwaitingMove: boolean;
   actingPlayerId: string | null; // The player who needs to move
   validMoves: BoardSpace[];
@@ -27,12 +26,12 @@ interface GameStoreActions {
     privateState: PrivatePlayerState;
   }) => void;
   updatePublicState: (newState: GameState) => void;
-  updatePrivateState: (newState: PrivatePlayerState) => void; // <-- NEW
+  updatePrivateState: (newState: PrivatePlayerState) => void;
   updatePlayerSubmitted: (userId: string) => void;
+  updatePlayerDisconnect: (userId: string, isDisconnected: boolean) => void; // <-- NEW
   setError: (message: string) => void;
   clearGame: () => void;
   
-  // --- NEW actions for movement ---
   setAwaitingMove: (data: {
     playerId: string;
     validMoves: BoardSpace[];
@@ -58,17 +57,20 @@ export const useGameStore = create<GameStoreState & GameStoreActions>(
         publicState: data.publicState,
         privateState: data.privateState,
         error: null,
-        isAwaitingMove: false, // Ensure state is clean on load
+        isAwaitingMove: false, 
         validMoves: [],
         actingPlayerId: null,
       }),
 
     updatePublicState: (newState) =>
-      set({
+      set((state) => ({
+        // Merge new public state, but preserve client-side UI state
         publicState: newState,
-      }),
+        isAwaitingMove: state.isAwaitingMove,
+        actingPlayerId: state.actingPlayerId,
+        validMoves: state.validMoves,
+      })),
       
-    // NEW: For when the server sends just our private state (e.g., new hand)
     updatePrivateState: (newState) =>
       set({
         privateState: newState,
@@ -85,6 +87,19 @@ export const useGameStore = create<GameStoreState & GameStoreActions>(
           publicState: { ...state.publicState, players: newPlayers },
         };
       }),
+      
+    // --- NEW: Handle disconnects/reconnects in UI ---
+    updatePlayerDisconnect: (userId, isDisconnected) =>
+      set((state) => {
+        if (!state.publicState) return state;
+        const newPlayers = state.publicState.players.map(
+          (p: PublicPlayerState) =>
+            p.userId === userId ? { ...p, is_disconnected: isDisconnected } : p
+        );
+        return {
+            publicState: { ...state.publicState, players: newPlayers },
+        };
+      }),
 
     setError: (message) => set({ error: message }),
 
@@ -98,8 +113,6 @@ export const useGameStore = create<GameStoreState & GameStoreActions>(
         actingPlayerId: null,
       }),
       
-    // --- NEW Movement Actions ---
-    
     setAwaitingMove: (data) =>
       set({
         isAwaitingMove: true,

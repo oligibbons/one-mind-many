@@ -1,81 +1,65 @@
 // server/index.js
 
+import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createClient } from '@supabase/supabase-js';
-import { registerGameHandlers, handleGameDisconnect } from './sockets/gameHandler.js';
 import { registerLobbyHandlers, handleLobbyDisconnect } from './sockets/lobbyHandler.js';
+import { registerGameHandlers, handleGameDisconnect } from './sockets/gameHandler.js';
 import { registerAdminHandlers } from './sockets/adminHandler.js';
-import 'dotenv/config';
 
+const port = process.env.PORT || 3001;
 const app = express();
-const httpServer = createServer(app);
+const server = createServer(app);
 
-// --- Environment Setup ---
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-  console.error(
-    'Error: SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in server/.env'
-  );
-  process.exit(1);
-}
-
-// --- Supabase Admin Client ---
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
-console.log('Supabase admin client initialized.');
-
-// --- NEW: Central Connection Maps ---
-const socketToUser = new Map<string, { userId: string; username: string }>();
-const socketInRoom = new Map<string, { roomId: string, type: 'lobby' | 'game' }>();
-
-// --- Socket.io Server ---
-const io = new Server(httpServer, {
+const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     methods: ['GET', 'POST'],
   },
 });
 
-// --- Socket.io Event Handlers ---
-const onConnection = (socket) => {
-  console.log(`New connection: ${socket.id}`);
+// Create a single Supabase client for the server
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY // Use the service role key for admin-level access
+);
 
-  // Pass the central maps to all handlers
-  registerLobbyHandlers(io, socket, supabaseAdmin, socketToUser, socketInRoom);
-  registerGameHandlers(io, socket, supabaseAdmin, socketToUser, socketInRoom);
-  registerAdminHandlers(io, socket, supabaseAdmin, socketToUser); // Admin only needs user map
+// --- Centralized connection management ---
+const socketToUser = new Map(); // socket.id -> { userId, username }
+const socketInRoom = new Map(); // socket.id -> { roomId, type: 'lobby' | 'game' }
 
-  // Handle disconnects centrally
-  socket.on('disconnecting', (reason) => {
-    console.log(`Socket disconnecting: ${socket.id}. Reason: ${reason}`);
-    
+io.on('connection', (socket) => {
+  console.log(`[${socket.id}] user connected`);
+
+  // Register all handlers
+  registerLobbyHandlers(io, socket, supabase, socketToUser, socketInRoom);
+  registerGameHandlers(io, socket, supabase, socketToUser, socketInRoom);
+  registerAdminHandlers(io, socket, supabase, socketToUser, socketInRoom);
+
+  socket.on('disconnect', () => {
+    console.log(`[${socket.id}] user disconnected`);
+
+    // --- NEW: Disconnect Logic ---
     const roomInfo = socketInRoom.get(socket.id);
     const userInfo = socketToUser.get(socket.id);
 
     if (roomInfo && userInfo) {
       if (roomInfo.type === 'lobby') {
-        // Let lobby handler clean up (e.g., remove from DB)
-        handleLobbyDisconnect(io, socket, supabaseAdmin, roomInfo.roomId, userInfo);
+        handleLobbyDisconnect(io, socket, supabase, roomInfo.roomId, userInfo);
       } else if (roomInfo.type === 'game') {
-        // Let game handler clean up
-        handleGameDisconnect(io, socket, supabaseAdmin, roomInfo.roomId, userInfo);
+        handleGameDisconnect(io, socket, supabase, roomInfo.roomId, userInfo);
       }
     }
     
-    // Clean up central maps
+    // Clean up maps
     socketToUser.delete(socket.id);
     socketInRoom.delete(socket.id);
   });
-};
+});
 
-io.on('connection', onConnection);
-
-// --- Server Start ---
-const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
-  console.log(`Socket.io server listening on http://localhost:${PORT}`);
+// Start the server
+server.listen(port, () => {
+  console.log(`Socket.IO server running at http://localhost:${port}`);
 });

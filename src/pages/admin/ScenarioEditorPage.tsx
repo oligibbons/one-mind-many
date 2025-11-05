@@ -8,57 +8,140 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { Save, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Scenario } from '../../types/game';
-import JSONEditor from 'react-json-editor-ajrm'; // The editor you installed
+import JSONEditor from 'react-json-editor-ajrm';
 // @ts-ignore
 import locale from 'react-json-editor-ajrm/locale/en';
 import { v4 as uuid } from 'uuid';
 
-// A blank template for creating new scenarios
-const BLANK_SCENARIO: Scenario = {
+// --- NEW DATA-DRIVEN TEMPLATE ---
+const BLANK_SCENARIO = {
   id: uuid(),
   name: 'New Scenario',
   description: 'A brief description of the scenario.',
   is_published: false,
   board_size_x: 12,
   board_size_y: 12,
-  locations: [{ name: 'Start', position: { x: 6, y: 6 } }],
+  locations: [
+    { "name": "The Park in the Centre", "position": { "x": 6, "y": 7 } },
+    { "name": "Squalid Bench", "position": { "x": 6, "y": 6 } },
+    { "name": "Collapsital One Bank", "position": { "x": 1, "y": 1 } },
+    { "name": "Deja Brew Coffee Shop", "position": { "x": 12, "y": 1 } },
+    { "name": "Bazaar of Gross-eries", "position": { "x": 1, "y": 12 } },
+    { "name": "Boutique of Useless Trinkets", "position": { "x": 12, "y": 12 } },
+    { "name": "Statue of Despairing Monks", "position": { "x": 1, "y": 6 } }
+  ],
   main_prophecy: {
-    win_location: 'Start',
-    win_action: 'Interact',
-    trigger_message: 'PROPHECY FULFILLED!',
-    winner: 'True Believer',
+    "win_location": "Squalid Bench",
+    "win_action": "Interact",
+    "trigger_message": "PROPHECY FULFILLED!",
+    "winner": "True Believer",
+    "vp": 20
   },
   doomsday_condition: {
-    lose_location: 'Start',
-    trigger_message: 'DOOMSDAY!',
-    winner: 'Heretic',
+    "lose_location": "Collapsital One Bank",
+    "trigger_message": "DOOMSDAY!",
+    "winner": "Heretic",
+    "vp": 20
   },
   global_fail_condition: {
-    lose_location: 'Start',
-    max_round: 10,
-    trigger_message: 'GLOBAL FAIL!',
-    winner: 'Heretic',
+    "lose_location": "Statue of Despairing Monks",
+    "max_round": 10,
+    "trigger_message": "GLOBAL FAIL! The Monks despair!",
+    "winner": "Heretic"
   },
   complication_effects: {
-    'Example Complication': { duration: 3, effect: 'Something bad happens.' },
+    "Gaggle of Feral Youths": {
+      "description": "Move actions have -1 value within 3 spaces of The Park in the Centre.",
+      "duration": 3,
+      "trigger": {
+        "type": "ACTION_PLAYED",
+        "cards": ["Move 1", "Move 2", "Move 3"],
+        "condition": { "type": "IS_NEAR", "location": "The Park in the Centre", "distance": 3 }
+      },
+      "effect": { "type": "MODIFY_TURN", "moveValue": -1 }
+    },
+    "Intrepid Stalker": {
+      "description": "A Stalker follows the Harbinger, blocking movement if on the same space.",
+      "duration": 3,
+      "trigger": { "type": "ON_ADD" },
+      "effect": { "type": "SPAWN_STALKER" }
+    }
   },
   object_effects: {
-    'Example Object': { effect: 'Something cool happens.' },
+    "The Rubber Duck": {
+      "effects": [
+        { "description": "A strange sense of forward momentum.", "type": "ADD_ACTION", "cardName": "Move 1" }
+      ]
+    },
+    "Empty Can of Beans": {
+      "effects": [
+        { "description": "Pauses for quiet reflection.", "type": "MODIFY_TURN", "skipNextMove": true }
+      ]
+    },
+    "Warped Penny": {
+      "effects": [
+        { "description": "Shimmers with unexpected temporal displacement.", "type": "WARP", "target": "random_empty" }
+      ]
+    },
+    "Mysterious Red Thread": {
+      "effects": [
+        { "description": "Momentarily unraveling chaos.", "type": "REMOVE_COMPLICATION", "target": "last" }
+      ]
+    },
+    "A Very Large Rock": {
+      "effects": [
+        {
+          "description": "A heavy, ethical dilemma...",
+          "type": "CONDITIONAL_VP",
+          "conditions": [
+            { "if_role": "True Believer", "target_role": "True Believer", "amount": 2 },
+            { "if_role": "Heretic", "target_role": "True Believer", "amount": -2 },
+            { "if_role": "Opportunist", "target_self": 1, "target_others": -1 }
+          ]
+        }
+      ]
+    }
   },
   npc_effects: {
-    'Example NPC': { positive: 'Something good.', negative: 'Something bad.' },
+    "The Slumbering Vagrant": {
+      "static_location": "Squalid Bench",
+      "effects": {
+        "positive": { "description": "True Believers gain +3 VP.", "type": "MODIFY_VP", "target": "role", "role": "True Believer", "amount": 3 },
+        "negative": { "description": "True Believers gain +3 VP.", "type": "MODIFY_VP", "target": "role", "role": "True Believer", "amount": 3 }
+      }
+    },
+    "Gossip Karen": {
+      "static_location": "Deja Brew Coffee Shop",
+      "effects": {
+        "positive": { "description": "You get to look at the top 3 cards of the Complication deck.", "type": "EMIT_EVENT", "eventName": "show_complication_deck" },
+        "negative": { "description": "Harbinger moved 1 space toward the Collapsital One Bank.", "type": "MOVE_TOWARDS", "target_location": "Collapsital One Bank", "distance": 1 }
+      }
+    },
+    "Anxious Businessman": {
+      "static_location": "Boutique of Useless Trinkets",
+      "effects": {
+        "positive": { "description": "The next Move action has +1 value.", "type": "MODIFY_TURN", "nextMoveValueModifier": 1 },
+        "negative": { "description": "Lose one Command Card randomly from your hand.", "type": "DISCARD_CARD", "target": "self", "amount": 1, "selection": "random" }
+      }
+    }
   },
   opportunist_goals: {
-    'Data Broker': [['Start', 'Start', 'Start']],
+    "Data Broker": [
+      ["Deja Brew Coffee Shop", "Bazaar of Gross-eries", "Boutique of Useless Trinkets"]
+    ]
   },
   sub_role_definitions: {
-    "The Guide": { "type": "location_vp", "location_tag": "Safe Zone", "vp": 5, "locations": ["Start"]},
-    "The Fixer": { "type": "event_vp", "event": "complication_removed", "vp": 5},
-    "The Instigator": { "type": "card_play_vp", "cards": ["Deny", "Rethink", "Gamble"], "vp": 5},
-    "The Waster": { "type": "location_vp", "location_tag": "previous_space", "vp": 5},
-    "The Mimic": { "type": "event_vp", "event": "copy_true_believer", "vp": 5}
-  },
+    "The Guide": {
+      "vp": 5,
+      "trigger": { "type": "END_OF_ROUND", "condition": { "type": "IS_ON_LOCATION", "location": "The Park in the Centre" } }
+    },
+    "The Fixer": { "vp": 5, "trigger": { "type": "EVENT", "event": "complication_removed" } },
+    "The Instigator": { "vp": 5, "trigger": { "type": "EVENT", "event": "card_played", "cards": ["Deny", "Rethink", "Gamble"] } },
+    "The Waster": { "vp": 5, "trigger": { "type": "END_OF_ROUND", "condition": { "type": "NO_MOVE" } } },
+    "The Mimic": { "vp": 5, "trigger": { "type": "EVENT", "event": "copy_true_believer" } }
+  }
 };
+
 
 export const ScenarioEditorPage: React.FC = () => {
   const { scenarioId } = useParams<{ scenarioId: string }>();
@@ -67,19 +150,18 @@ export const ScenarioEditorPage: React.FC = () => {
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false); // Track if JSON is valid
+  const [isDirty, setIsDirty] = useState(false); 
 
   useEffect(() => {
     if (!socket || !isConnected) return;
 
-    // --- Socket Listeners ---
     const onScenarioDetails = (data: Scenario) => {
       setScenario(data);
       setLoading(false);
     };
     
     const onScenarioSaved = () => {
-      navigate('/admin/scenarios'); // Go back to list on success
+      navigate('/admin/scenarios');
     };
     
     const onAdminError = (data: { message: string }) => {
@@ -91,9 +173,8 @@ export const ScenarioEditorPage: React.FC = () => {
     socket.on('admin:scenario_saved', onScenarioSaved);
     socket.on('error:admin', onAdminError);
 
-    // --- Initial Data Fetch ---
     if (scenarioId === 'new') {
-      setScenario(BLANK_SCENARIO);
+      setScenario(BLANK_SCENARIO as any); // Cast as any to bypass strict type check for editor
       setLoading(false);
     } else {
       socket.emit('admin:get_scenario_details', { scenarioId });
@@ -159,7 +240,7 @@ export const ScenarioEditorPage: React.FC = () => {
       <Card className="border-gray-700 bg-gray-800">
         <CardContent className="p-0">
           <JSONEditor
-            id={scenario.id}
+            id={scenario?.id || 'new'}
             placeholder={scenario}
             onChange={handleJsonChange}
             locale={locale}
