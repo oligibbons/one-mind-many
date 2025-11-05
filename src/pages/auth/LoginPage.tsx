@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button'; // <-- Corrected
+import { Input } from '../../components/ui/Input'; // <-- Corrected
 import { Mail, Lock } from 'lucide-react';
 
 const LoginPage = () => {
@@ -79,7 +79,7 @@ const LoginPage = () => {
           type="password"
           label="Password"
           value={formData.password}
-          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, password: e.targe.value })}
           placeholder="Enter your password"
           leftIcon={<Lock size={18} />}
           required

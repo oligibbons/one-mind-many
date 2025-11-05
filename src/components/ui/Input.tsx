@@ -7,7 +7,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   rightIcon?: React.ReactNode;
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({
+export const Input = forwardRef<HTMLInputElement, InputProps>(({
   className = '',
   label,
   error,
@@ -77,4 +77,4 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
 
 Input.displayName = 'Input';
 
-export default Input;
+// Removed 'export default Input;'
