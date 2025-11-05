@@ -289,7 +289,7 @@ const AddFriendForm: React.FC<{ onSent: () => void }> = ({ onSent }) => {
             />
             <Button type="submit" className="game-button" disabled={isSending || !username}>
               {isSending ? <LoadingSpinner /> : <Send className="h-5 w-5" />}
-            </CSSProperties>
+            </Button>
           </form>
           {success && <p className="mt-3 text-green-400">{success}</p>}
           {error && <p className="mt-3 text-red-400">{error}</p>}
