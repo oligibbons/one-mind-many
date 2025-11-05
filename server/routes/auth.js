@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
     
     // Check if username exists
     const { data: existingUsername, error: usernameError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('username')
       .eq('username', username)
       .single();
@@ -57,7 +57,7 @@ router.post('/register', async (req, res) => {
     
     // Create user profile in users table
     const { error: profileError } = await supabase
-      .from('users')
+      .from('profiles')
       .insert([
         { 
           id: authData.user.id, 
@@ -112,7 +112,7 @@ router.post('/login', async (req, res) => {
     
     // Get user data from database
     const { data: userData, error: userError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
@@ -123,7 +123,7 @@ router.post('/login', async (req, res) => {
     
     // Update last login timestamp
     await supabase
-      .from('users')
+      .from('profiles')
       .update({ last_login: new Date() })
       .eq('id', data.user.id);
     
@@ -170,7 +170,7 @@ router.get('/verify', async (req, res) => {
     
     // Get user data from database
     const { data: userData, error: userError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();

@@ -1,4 +1,5 @@
 // src/pages/auth/RegisterPage.tsx
+// (Complete file with the email redirect fix)
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -9,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState(''); // <-- NEW
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,17 +21,22 @@ export const RegisterPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
+    // Get the base URL (e.g., "http://localhost:5173")
+    const redirectTo = `${window.location.origin}/main-menu`;
+
     try {
-      // --- Step 1: Sign up and pass username in options.data ---
-      // The database trigger 'handle_new_user' (from the previous step)
-      // will now automatically create the profile.
+      // --- Step 1: Sign up and pass username AND emailRedirectTo ---
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            username: username, // This data is passed to the trigger
+            username: username, // For your 'handle_new_user' trigger
           },
+          // --- THIS IS THE FIX ---
+          // This tells Supabase where to send the user
+          // after they click the confirmation link in their email.
+          emailRedirectTo: redirectTo,
         },
       });
 
@@ -38,18 +44,14 @@ export const RegisterPage: React.FC = () => {
       if (!authData.user) throw new Error('Registration successful but no user data returned.');
 
       // --- Step 2: (REMOVED!) ---
-      // The manual client-side insert has been removed.
-      // The database trigger is handling this, which fixes the recursion error.
+      // The database trigger 'handle_new_user' is doing this work.
       
-      // On success, show alert and redirect
       alert('Registration successful! Please check your email to verify your account.');
       navigate('/login');
 
     } catch (error: any) {
       console.error('Registration error:', error.message);
       
-      // Add specific error handling for duplicate username, which the
-      // database trigger will now catch because of your UNIQUE constraint.
       if (error.message.includes('duplicate key') || error.message.includes('profiles_username_key')) {
         setError('This username is already taken. Please choose another.');
       } else if (error.message.includes('User already registered')) {
@@ -72,7 +74,6 @@ export const RegisterPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* --- NEW Username Field --- */}
             <div>
               <label
                 htmlFor="username"

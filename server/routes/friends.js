@@ -69,7 +69,7 @@ router.post('/request', async (req, res) => {
     
     // Find user by username
     const { data: receiverData, error: receiverError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('id, username')
       .eq('username', username)
       .single();

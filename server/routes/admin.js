@@ -95,7 +95,7 @@ router.get('/stats', isAdmin, async (req, res) => {
     
     // Get total users count
     const { count: totalUsers, error: usersError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*', { count: 'exact', head: true });
     
     if (usersError) {
@@ -129,7 +129,7 @@ router.get('/stats', isAdmin, async (req, res) => {
     yesterday.setDate(yesterday.getDate() - 1);
     
     const { count: activeUsers, error: activeUsersError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*', { count: 'exact', head: true })
       .gte('last_login', yesterday.toISOString());
 
@@ -143,7 +143,7 @@ router.get('/stats', isAdmin, async (req, res) => {
     today.setHours(0, 0, 0, 0);
     
     const { count: newUsersToday, error: newUsersError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', today.toISOString());
 
@@ -154,7 +154,7 @@ router.get('/stats', isAdmin, async (req, res) => {
 
     // Get banned users
     const { count: bannedUsers, error: bannedError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'banned');
 
@@ -197,7 +197,7 @@ router.get('/users', isAdmin, async (req, res) => {
     const offset = (page - 1) * limit;
     
     let query = supabase
-      .from('users')
+      .from('profiles')
       .select('*', { count: 'exact' });
     
     if (search) {
@@ -275,7 +275,7 @@ router.patch('/users/:id/role', isAdmin, async (req, res) => {
     }
     
     const { error } = await supabase
-      .from('users')
+      .from('profiles')
       .update({ role })
       .eq('id', id);
     
@@ -304,7 +304,7 @@ router.patch('/users/:id/status', isAdmin, async (req, res) => {
     }
     
     const { error } = await supabase
-      .from('users')
+      .from('profiles')
       .update({ status })
       .eq('id', id);
     
