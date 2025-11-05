@@ -134,7 +134,7 @@ export const HowToPlayPage: React.FC = () => {
       <section className="bg-gray-900 py-16 px-6 text-center">
         <h1 className="text-5xl font-bold text-white">How to Play</h1>
         <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-400">
-          Welcome to the Benevolent Order. Your goal is simple: have the most
+          Welcome to the <b>G.I.M.P</b>. Your goal is simple: have the most
           Victory Points (VP) by the time the game ends. How you get them...
           is a secret.
         </p>
