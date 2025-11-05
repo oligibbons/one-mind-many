@@ -1,5 +1,3 @@
-// src/contexts/AuthContext.tsx
-
 import React, {
   createContext,
   useContext,
@@ -11,7 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Session, User } from '@supabase/supabase-js';
 import { api } from '../lib/api';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { Profile } from '../types/game'; // Assuming you have this type
+import { Profile } from '../types/game';
 
 interface AuthUser extends User {
   profile: Profile;
@@ -24,7 +22,6 @@ interface AuthContextType {
   updateUser: (updatedProfile: Profile) => void;
 }
 
-// FIX: AuthContext must be exported to be used in other files.
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -32,68 +29,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Start as true
 
   const fetchProfile = useCallback(async (authedUser: User) => {
     try {
-      // Calls GET /api/auth/user
+      // This is the new API route from server/routes/auth.js
+      // It correctly fetches the user and their profile data
       const { data, error } = await api.get('/auth/user');
-      
       if (error) throw error;
-      
       setUser(data);
       return data;
-      
     } catch (error: any) {
       console.error('Error fetching full user profile:', error.message);
+      // If profile fetch fails, the user is in a bad state. Log them out.
+      await supabase.auth.signOut();
+      setUser(null);
       return null;
     }
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-
-    const getInitialSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setSession(session);
-      
-      if (session?.user) {
-        await fetchProfile(session.user);
-      }
-      
-      setLoading(false);
-    };
-
-    getInitialSession();
+    setLoading(true); // Ensure loading is true on mount
+    
+    // This flag ensures we only set loading to false ONCE,
+    // on the very first auth event.
+    let initialAuthProcessed = false;
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('Auth state changed:', _event);
       setSession(session);
-      
+
       if (session?.user) {
-        if (_event === 'USER_UPDATED') {
-          // Re-fetch profile on user update (e.g., email change)
-          await fetchProfile(session.user);
-        } else if (_event === 'SIGNED_IN') {
-          // Fetch profile on sign in
-          await fetchProfile(session.user);
+        // If the user exists but isn't in our state, fetch their profile.
+        // This handles the initial sign-in.
+        if (!user) {
+            await fetchProfile(session.user);
+        } else if (_event === 'USER_UPDATED') {
+            // This handles re-fetching data if the user changes their email/pass
+            await fetchProfile(session.user);
         }
       } else {
+        // This handles sign-out
         setUser(null);
       }
       
-      // Stop loading only after auth state is fully processed
-      if (loading) setLoading(false);
+      // Only set loading to false on the *first* auth event (initial load)
+      if (!initialAuthProcessed) {
+        setLoading(false);
+        initialAuthProcessed = true;
+      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchProfile, loading]);
+  }, [fetchProfile, user]); // Add 'user' to dependency array
 
   // Function to allow components to update the user context
   // (e.g., after updating profile settings)
@@ -110,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-brand-charcoal">
+        {/* This will now use your new thematic spinner */}
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -122,8 +114,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-// This hook is also defined in src/hooks/useAuth.ts, but
-// it's fine to have it here too for components that import directly.
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === null) {

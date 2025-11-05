@@ -1,34 +1,35 @@
-// src/components/ui/LoadingSpinner.tsx
-
-import { forwardRef } from 'react';
+import React from 'react';
+import clsx from 'clsx';
+// Use your project's icon for a thematic loader
+import GameIcon from '/OneMindMany Icon PNG Orange.png';
 
 interface LoadingSpinnerProps {
-  size?: number;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
-export const LoadingSpinner = forwardRef<
-  SVGSVGElement,
-  LoadingSpinnerProps
->(({ size = 24, className = '', ...props }, ref) => {
-  return (
-    <svg
-      ref={ref}
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`animate-spin ${className}`}
-      {...props}
-    >
-      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-    </svg>
-  );
-});
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+  size = 'md',
+  className,
+}) => {
+  // Map size prop to valid Tailwind CSS classes
+  const sizeClasses = {
+    sm: 'h-6 w-6',
+    md: 'h-10 w-10',
+    lg: 'h-16 w-16',
+    xl: 'h-24 w-24',
+  };
 
-LoadingSpinner.displayName = 'LoadingSpinner';
+  return (
+    <div className={clsx('flex items-center justify-center', className)}>
+      <img
+        src={GameIcon}
+        alt="Loading..."
+        className={clsx(
+          'animate-pulse opacity-75', // Thematic pulse animation
+          sizeClasses[size]
+        )}
+      />
+    </div>
+  );
+};
