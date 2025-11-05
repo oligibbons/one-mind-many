@@ -1,27 +1,23 @@
-import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+// src/components/auth/AdminRoute.tsx
+
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { LoadingSpinner } from '../ui/LoadingSpinner'; // <-- Corrected import
 
-interface AdminRouteProps {
-  children: ReactNode;
-  redirectTo?: string;
-}
+export const AdminRoute = () => {
+  const { user, profile, loading } = useAuth();
 
-const AdminRoute = ({ children, redirectTo = "/game" }: AdminRouteProps) => {
-  const { user, loading, isAdmin } = useAuth();
-
-  // Show nothing while checking auth (no loading spinner to avoid issues)
   if (loading) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <LoadingSpinner size={48} />
+      </div>
+    );
   }
 
-  // Redirect if not authenticated or not admin
-  if (!user || !isAdmin) {
-    return <Navigate to={redirectTo} replace />;
+  if (!user || !profile?.is_admin) {
+    return <Navigate to="/menu" replace />;
   }
 
-  // Render admin content
-  return <>{children}</>;
+  return <Outlet />;
 };
-
-export default AdminRoute;

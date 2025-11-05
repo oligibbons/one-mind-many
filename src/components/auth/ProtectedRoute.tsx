@@ -1,27 +1,23 @@
-import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+// src/components/auth/ProtectedRoute.tsx
+
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { LoadingSpinner } from '../ui/LoadingSpinner'; // <-- Corrected import
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-  redirectTo?: string;
-}
-
-const ProtectedRoute = ({ children, redirectTo = "/auth/login" }: ProtectedRouteProps) => {
+export const ProtectedRoute = () => {
   const { user, loading } = useAuth();
 
-  // Show nothing while checking auth (no loading spinner to avoid issues)
   if (loading) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <LoadingSpinner size={48} />
+      </div>
+    );
   }
 
-  // Redirect to login if not authenticated
   if (!user) {
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  // Render protected content
-  return <>{children}</>;
+  return <Outlet />;
 };
-
-export default ProtectedRoute;
