@@ -9,7 +9,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   rightIcon?: React.ReactNode;
 }
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
   className = '',
   variant = 'primary',
   size = 'md',
@@ -85,4 +85,4 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
 
 Button.displayName = 'Button';
 
-export default Button;
+// Removed 'export default Button;'
