@@ -46,7 +46,7 @@ export const MainMenuPage: React.FC = () => {
       userId: user.id,
       username: profile.username || 'BOZO',
       // TODO: This scenarioId needs to be a real UUID from your 'scenarios' table
-      // You'll need to manually insert the scenario in Supabase and get its ID.
+      // You'll need to manually insert  the scenario in Supabase and get its ID.
       scenarioId: 'b3f5b0a0-0b1e-4b0e-9b0a-0b1e4b0e9b0a',
     });
   };
