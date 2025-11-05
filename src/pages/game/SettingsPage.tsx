@@ -233,7 +233,7 @@ export const SettingsPage: React.FC = () => {
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-200">Change Password</h3>
             <div>
-              <label className="text-sm font-medium text-gray-300">New Password</glabel>
+              <label className="text-sm font-medium text-gray-300">New Password</label>
               <Input
                 type="password"
                 placeholder="Must be at least 6 characters"
