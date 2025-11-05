@@ -1,9 +1,9 @@
+/* Import Quicksand font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import Quicksand font from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 /* Custom Font Face */
 @font-face {

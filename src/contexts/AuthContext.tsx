@@ -2,7 +2,7 @@
 
 import React, {
   createContext,
-  useContext,
+  // useContext, // <-- REMOVED (no longer needed in this file)
   useEffect,
   useState,
   ReactNode,
@@ -18,7 +18,8 @@ interface AuthContextType {
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// --- MODIFIED: Added 'export' ---
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -112,11 +113,5 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
-// This hook is unchanged but now provides 'profile'
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+// --- MODIFIED: Removed the duplicate useAuth hook ---
+// (The correct one is in src/hooks/useAuth.ts)
