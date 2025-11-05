@@ -421,3 +421,12 @@
     border-width: 1px;
   }
 }
+
+@layer components {
+  .game-board {
+    display: grid;
+    /* Your GDD specified a 12x12 grid */
+    grid-template-columns: repeat(12, 1fr);
+    grid-template-rows: repeat(12, 1fr);
+  }
+}

@@ -1,45 +1,19 @@
+// src/layouts/MainLayout.tsx
+
+import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import Navbar from '../components/layout/Navbar';
-import Footer from '../components/layout/Footer';
+import { Navbar } from '../components/layout/Navbar';
+import { Footer } from '../components/layout/Footer';
 
-const MainLayout = () => {
-  const pageVariants = {
-    initial: {
-      opacity: 0,
-    },
-    in: {
-      opacity: 1,
-    },
-    out: {
-      opacity: 0,
-    },
-  };
-
-  const pageTransition = {
-    type: 'tween',
-    ease: 'anticipate',
-    duration: 0.5,
-  };
-
+export const MainLayout: React.FC = () => {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex min-h-screen flex-col bg-gray-900 text-gray-200">
       <Navbar />
-      
-      <motion.main 
-        className="flex-1 pt-16"
-        initial="initial"
-        animate="in"
-        exit="out"
-        variants={pageVariants}
-        transition={pageTransition}
-      >
+      <main className="flex-1">
+        {/* All child routes (e.g., HomePage, MainMenuPage) will render here */}
         <Outlet />
-      </motion.main>
-      
+      </main>
       <Footer />
     </div>
   );
 };
-
-export default MainLayout;

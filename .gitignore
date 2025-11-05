@@ -23,3 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+
+# .gitignore (in the root folder)
+
+# Ignore client-side environment file
+/.env
+
+# Ignore server-side environment file
+/server/.env

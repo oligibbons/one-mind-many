@@ -1,245 +1,210 @@
-import { useState, useEffect } from 'react';
+// src/pages/game/LobbyPage.tsx
+
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Users, Settings, Play, ArrowLeft } from 'lucide-react';
-import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
-import { useSocket } from '../../hooks/useSocket';
+import { supabase } from '../../lib/supabaseClient'; // Your existing Supabase client
+import { RealtimeChannel } from '@supabase/realtime-js';
+import { Button } from '../../components/ui/Button';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Check, Loader, User, Crown } from 'lucide-react';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
-// Mock data - replace with API calls
-const MOCK_LOBBY = {
-  id: '1',
-  name: 'Prison Break Scenario',
-  host: {
-    id: '1',
-    username: 'GameMaster42'
-  },
-  scenario: {
-    id: '1',
-    title: 'Prison Break',
-    description: 'Work together to escape a high-security prison facility.',
-    minPlayers: 4,
-    maxPlayers: 8
-  },
-  settings: {
-    timeLimit: 30,
-    difficultyLevel: 'medium'
-  },
-  status: 'waiting',
-  players: [
-    { id: '1', username: 'GameMaster42', role: 'host', status: 'ready' },
-    { id: '2', username: 'Player2', role: 'player', status: 'not_ready' },
-    { id: '3', username: 'Player3', role: 'player', status: 'ready' }
-  ]
-};
+interface LobbyPlayer {
+  id: string;
+  user_id: string;
+  username: string;
+  is_ready: boolean;
+}
+interface LobbyState {
+  id: string;
+  host_id: string;
+  status: string;
+  game_players: LobbyPlayer[];
+}
 
-const LobbyPage = () => {
-  const { id } = useParams();
+export const LobbyPage: React.FC = () => {
+  const { lobbyId } = useParams<{ lobbyId: string }>(); // This is the gameId
   const navigate = useNavigate();
+  const { socket, isConnected } = useSocket();
   const { user } = useAuth();
-  const { socket, connected } = useSocket();
-  
-  const [lobby, setLobby] = useState(MOCK_LOBBY);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  
-  const isHost = user?.id === lobby.host.id;
-  
+  const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const isHost = lobbyState?.host_id === user?.id;
+  const myPlayerState = lobbyState?.game_players.find(
+    (p) => p.user_id === user?.id
+  );
+
+  // --- Main Effect for Socket & Realtime ---
   useEffect(() => {
-    // Fetch lobby data
+    if (!socket || !isConnected || !lobbyId || !user) return;
+
+    let realtimeChannel: RealtimeChannel;
+
+    // Fetch the initial lobby state
     const fetchLobby = async () => {
-      setLoading(true);
-      try {
-        // In a real implementation, this would be an API call
-        setTimeout(() => {
-          setLobby(MOCK_LOBBY);
-          setLoading(false);
-        }, 1000);
-      } catch (err) {
-        setError('Failed to load lobby data');
-        setLoading(false);
+      const { data, error } = await supabase
+        .from('games')
+        .select(
+          `
+          id,
+          host_id,
+          status,
+          game_players ( id, user_id, username, is_ready )
+        `
+        )
+        .eq('id', lobbyId)
+        .single();
+
+      if (error || !data) {
+        console.error('Error fetching lobby:', error);
+        navigate('/menu');
+        return;
       }
+      
+      setLobbyState(data as LobbyState);
+      setIsLoading(false);
+
+      // --- Setup Supabase Realtime ---
+      // Listen for changes in the 'game_players' table for this game
+      realtimeChannel = supabase
+        .channel(`lobby:${lobbyId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'game_players',
+            filter: `game_id=eq:${lobbyId}`,
+          },
+          (payload) => {
+            console.log('Realtime update received:', payload);
+            // Re-fetch the lobby state on any change
+            fetchLobby();
+          }
+        )
+        .subscribe((status, err) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('Subscribed to lobby realtime channel');
+          }
+          if (err) {
+            console.error('Realtime subscription error:', err);
+          }
+        });
+    };
+
+    fetchLobby();
+    
+    // --- Setup Socket Listeners ---
+    // Listen for the server forcing the game to start
+    const onGameStarting = () => {
+      console.log('Game is starting! Navigating...');
+      navigate(`/game/${lobbyId}`);
     };
     
-    fetchLobby();
-  }, [id]);
-  
-  useEffect(() => {
-    if (socket && connected) {
-      // Join lobby room
-      socket.emit('join:lobby', id);
-      
-      // Listen for lobby updates
-      socket.on('lobby:update', (updatedLobby) => {
-        setLobby(updatedLobby);
-      });
-      
-      // Listen for game start
-      socket.on('game:start', (gameId) => {
-        navigate(`/game/active/${gameId}`);
-      });
-      
-      return () => {
-        socket.emit('leave:lobby', id);
-        socket.off('lobby:update');
-        socket.off('game:start');
-      };
-    }
-  }, [socket, connected, id, navigate]);
-  
-  const handleStartGame = async () => {
-    try {
-      // In a real implementation, this would be an API call
-      console.log('Starting game...');
-      navigate(`/game/active/${id}`);
-    } catch (err) {
-      setError('Failed to start game');
-    }
+    socket.on('game:starting', onGameStarting);
+
+    // Cleanup
+    return () => {
+      socket.off('game:starting', onGameStarting);
+      if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+      }
+    };
+  }, [socket, isConnected, lobbyId, user, navigate]);
+
+  const handleReadyToggle = () => {
+    if (!socket || !myPlayerState) return;
+    const newReadyState = !myPlayerState.is_ready;
+    socket.emit('lobby:set_ready', {
+      gameId: lobbyId,
+      userId: user?.id,
+      isReady: newReadyState,
+    });
+  };
+
+  const handleStartGame = () => {
+    if (!socket || !isHost) return;
+    socket.emit('lobby:start_game', { gameId: lobbyId });
   };
   
-  const handleLeaveLobby = async () => {
-    try {
-      // In a real implementation, this would be an API call
-      console.log('Leaving lobby...');
-      navigate('/game/play');
-    } catch (err) {
-      setError('Failed to leave lobby');
-    }
-  };
-  
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 py-12">
-        <LoadingSpinner size="lg\" text="Loading lobby..." />
-      </div>
-    );
+  if (isLoading || !lobbyState) {
+    return <div className="flex h-screen items-center justify-center"><LoadingSpinner /></div>
   }
-  
+
+  const allReady = lobbyState.game_players.every(p => p.is_ready);
+  const canStart = allReady && lobbyState.game_players.length >= 3 && lobbyState.game_players.length <= 6;
+
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-12">
-      <motion.div
-        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div>
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/game/play')}
-            leftIcon={<ArrowLeft size={18} />}
-            className="mb-2"
-          >
-            Back to Lobbies
-          </Button>
-          <h1 className="text-3xl font-bold text-white">{lobby.name}</h1>
-          <p className="text-slate-400">Hosted by {lobby.host.username}</p>
-        </div>
-        
-        <div className="flex gap-4">
-          {isHost ? (
-            <>
-              <Button
-                onClick={() => setShowSettings(!showSettings)}
-                leftIcon={<Settings size={18} />}
-                variant="outline"
-              >
-                Settings
-              </Button>
+    <div className="mx-auto w-full max-w-3xl p-8">
+      <h1 className="mb-2 text-3xl font-bold text-white">Lobby Room</h1>
+      <p className="mb-6 text-sm text-gray-400">ID: {lobbyId}</p>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* Player List */}
+        <Card className="border-gray-700 bg-gray-800 md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-orange-400">Players ({lobbyState.game_players.length} / 6)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {lobbyState.game_players.map((player) => (
+              <div key={player.id} className="flex items-center justify-between rounded-lg bg-gray-700/50 p-3">
+                <div className="flex items-center">
+                  <User size={16} className="mr-2 text-gray-400" />
+                  <span className="font-medium text-gray-200">{player.username}</span>
+                  {player.user_id === lobbyState.host_id && (
+                    <Crown size={16} className="ml-2 text-yellow-400" title="Host" />
+                  )}
+                </div>
+                {player.is_ready ? (
+                  <span className="flex items-center text-xs font-bold text-green-400">
+                    <Check size={16} className="mr-1" />
+                    Ready
+                  </span>
+                ) : (
+                  <span className="flex items-center text-xs font-medium text-gray-400">
+                    <Loader size={16} className="mr-1 animate-spin" />
+                    Waiting
+                  </span>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <Card className="border-gray-700 bg-gray-800">
+          <CardHeader>
+            <CardTitle className="text-gray-200">Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              onClick={handleReadyToggle}
+              className="w-full"
+              variant={myPlayerState?.is_ready ? 'secondary' : 'default'}
+            >
+              {myPlayerState?.is_ready ? 'Set Not Ready' : 'Set Ready'}
+            </Button>
+            
+            {isHost && (
               <Button
                 onClick={handleStartGame}
-                leftIcon={<Play size={18} />}
-                disabled={lobby.players.length < lobby.scenario.minPlayers}
+                className="w-full"
+                disabled={!canStart}
+                title={!canStart ? 'All players must be ready (min 3, max 6)' : 'Start the game'}
               >
                 Start Game
               </Button>
-            </>
-          ) : (
-            <Button
-              onClick={handleLeaveLobby}
-              variant="outline"
-            >
+            )}
+            
+            <Button as={Link} to="/menu" variant="outline" className="w-full">
               Leave Lobby
             </Button>
-          )}
-        </div>
-      </motion.div>
-      
-      {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg text-red-500">
-          {error}
-        </div>
-      )}
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Scenario Information */}
-        <Card className="lg:col-span-2">
-          <div className="p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Scenario</h2>
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">{lobby.scenario.title}</h3>
-              <p className="text-slate-400">{lobby.scenario.description}</p>
-              <div className="flex flex-wrap gap-4">
-                <div className="bg-slate-800 rounded-lg px-4 py-2">
-                  <span className="text-sm text-slate-400">Min Players</span>
-                  <p className="text-white font-semibold">{lobby.scenario.minPlayers}</p>
-                </div>
-                <div className="bg-slate-800 rounded-lg px-4 py-2">
-                  <span className="text-sm text-slate-400">Max Players</span>
-                  <p className="text-white font-semibold">{lobby.scenario.maxPlayers}</p>
-                </div>
-                <div className="bg-slate-800 rounded-lg px-4 py-2">
-                  <span className="text-sm text-slate-400">Difficulty</span>
-                  <p className="text-white font-semibold capitalize">{lobby.settings.difficultyLevel}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-        
-        {/* Players List */}
-        <Card>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Players</h2>
-              <div className="flex items-center text-slate-400">
-                <Users size={18} className="mr-2" />
-                <span>{lobby.players.length}/{lobby.scenario.maxPlayers}</span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {lobby.players.map((player) => (
-                <div
-                  key={player.id}
-                  className="flex items-center justify-between p-3 bg-slate-800 rounded-lg"
-                >
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
-                      {player.username[0].toUpperCase()}
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-white font-medium">{player.username}</p>
-                      <p className="text-sm text-slate-400 capitalize">{player.role}</p>
-                    </div>
-                  </div>
-                  <div className={`px-2 py-1 rounded text-xs font-medium ${
-                    player.status === 'ready' 
-                      ? 'bg-green-500/20 text-green-500' 
-                      : 'bg-slate-500/20 text-slate-400'
-                  }`}>
-                    {player.status === 'ready' ? 'Ready' : 'Not Ready'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          </CardContent>
         </Card>
       </div>
     </div>
   );
 };
-
-export default LobbyPage;
