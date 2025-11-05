@@ -4,9 +4,9 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createClient } from '@supabase/supabase-js';
-import { registerGameHandlers } from './sockets/gameHandler.js';
-import { registerLobbyHandlers } from './sockets/lobbyHandler.js';
-import { registerAdminHandlers } from './sockets/adminHandler.js'; // <-- NEW
+import { registerGameHandlers, handleGameDisconnect } from './sockets/gameHandler.js';
+import { registerLobbyHandlers, handleLobbyDisconnect } from './sockets/lobbyHandler.js';
+import { registerAdminHandlers } from './sockets/adminHandler.js';
 import 'dotenv/config';
 
 const app = express();
@@ -24,14 +24,13 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+  { auth: { autoRefreshToken: false, persistSession: false } }
 );
 console.log('Supabase admin client initialized.');
+
+// --- NEW: Central Connection Maps ---
+const socketToUser = new Map<string, { userId: string; username: string }>();
+const socketInRoom = new Map<string, { roomId: string, type: 'lobby' | 'game' }>();
 
 // --- Socket.io Server ---
 const io = new Server(httpServer, {
@@ -45,14 +44,31 @@ const io = new Server(httpServer, {
 const onConnection = (socket) => {
   console.log(`New connection: ${socket.id}`);
 
-  // Register all our different handlers for this socket
-  registerLobbyHandlers(io, socket, supabaseAdmin);
-  registerGameHandlers(io, socket, supabaseAdmin);
-  registerAdminHandlers(io, socket, supabaseAdmin); // <-- NEW
+  // Pass the central maps to all handlers
+  registerLobbyHandlers(io, socket, supabaseAdmin, socketToUser, socketInRoom);
+  registerGameHandlers(io, socket, supabaseAdmin, socketToUser, socketInRoom);
+  registerAdminHandlers(io, socket, supabaseAdmin, socketToUser); // Admin only needs user map
 
-  socket.on('disconnect', (reason) => {
-    console.log(`Socket disconnected: ${socket.id}. Reason: ${reason}`);
-    // Handlers themselves will clean up (e.g., in gameHandler)
+  // Handle disconnects centrally
+  socket.on('disconnecting', (reason) => {
+    console.log(`Socket disconnecting: ${socket.id}. Reason: ${reason}`);
+    
+    const roomInfo = socketInRoom.get(socket.id);
+    const userInfo = socketToUser.get(socket.id);
+
+    if (roomInfo && userInfo) {
+      if (roomInfo.type === 'lobby') {
+        // Let lobby handler clean up (e.g., remove from DB)
+        handleLobbyDisconnect(io, socket, supabaseAdmin, roomInfo.roomId, userInfo);
+      } else if (roomInfo.type === 'game') {
+        // Let game handler clean up
+        handleGameDisconnect(io, socket, supabaseAdmin, roomInfo.roomId, userInfo);
+      }
+    }
+    
+    // Clean up central maps
+    socketToUser.delete(socket.id);
+    socketInRoom.delete(socket.id);
   });
 };
 

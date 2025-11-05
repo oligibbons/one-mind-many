@@ -6,96 +6,103 @@ import { v4 as uuid } from 'uuid';
 import { Scenario } from '../../src/types/game.js';
 
 type AdminSupabaseClient = SupabaseClient<any, 'public', any>;
+type UserMap = Map<string, { userId: string; username: string }>;
 
-// TODO: Add a check to ensure only admins can use these functions.
-// This requires an 'is_admin' column on your 'profiles' table.
-// const checkIsAdmin = async (userId: string) => {
-//   const { data, error } = await supabase
-//     .from('profiles')
-//     .select('is_admin')
-//     .eq('id', userId)
-//     .single();
-//   if (error || !data.is_admin) throw new Error('Not authorized');
-// };
+/**
+ * (NEW) Helper function to securely check if a socket is an admin.
+ */
+const checkIsAdmin = async (
+  socket: Socket,
+  supabase: AdminSupabaseClient,
+  userMap: UserMap
+): Promise<string> => {
+  const userInfo = userMap.get(socket.id);
+  if (!userInfo) {
+    throw new Error('User not found for this socket. Please log in.');
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', userInfo.userId)
+    .single();
+
+  if (error || !data || !data.is_admin) {
+    console.warn(`[${socket.id}] User ${userInfo.username} failed admin check.`);
+    throw new Error('Not authorized as an admin.');
+  }
+  
+  console.log(`[${socket.id}] Admin check passed for ${userInfo.username}`);
+  return userInfo.userId;
+};
 
 export const registerAdminHandlers = (
   io: Server,
   socket: Socket,
-  supabase: AdminSupabaseClient
+  supabase: AdminSupabaseClient,
+  socketToUser: UserMap // <-- NEW
 ) => {
-  /**
-   * Fetches a list of all scenarios (names and IDs).
-   */
   const getScenarioList = async () => {
     try {
-      // TODO: Add admin check
+      await checkIsAdmin(socket, supabase, socketToUser); // Secure
+      
       const { data, error } = await supabase
         .from('scenarios')
         .select('id, name, is_published, created_at');
-      
       if (error) throw new Error(`DB scenario list fetch error: ${error.message}`);
       
-      // Send the list back to the requester
       socket.emit('admin:scenario_list', data);
     } catch (error: any) {
       console.error(`[${socket.id}] Error in getScenarioList: ${error.message}`);
-      socket.emit('error:admin', { message: 'Failed to fetch scenarios.' });
+      socket.emit('error:admin', { message: error.message });
     }
   };
 
-  /**
-   * Fetches the full JSON data for a single scenario.
-   */
   const getScenarioDetails = async (payload: { scenarioId: string }) => {
     try {
-      // TODO: Add admin check
+      await checkIsAdmin(socket, supabase, socketToUser); // Secure
+      
       const { scenarioId } = payload;
       const { data, error } = await supabase
         .from('scenarios')
         .select('*')
         .eq('id', scenarioId)
         .single();
-        
       if (error) throw new Error(`DB scenario fetch error: ${error.message}`);
       
-      // Send the full scenario object back
       socket.emit('admin:scenario_details', data);
     } catch (error: any) {
       console.error(`[${socket.id}] Error in getScenarioDetails: ${error.message}`);
-      socket.emit('error:admin', { message: 'Failed to fetch scenario details.' });
+      socket.emit('error:admin', { message: error.message });
     }
   };
   
-  /**
-   * Saves (updates or creates) a scenario.
-   */
   const saveScenario = async (payload: { scenario: Scenario }) => {
     try {
-      // TODO: Add admin check
+      await checkIsAdmin(socket, supabase, socketToUser); // Secure
+      
       const { scenario } = payload;
       
-      // 'upsert' will create if ID doesn't exist, or update if it does.
       const { data, error } = await supabase
         .from('scenarios')
         .upsert(scenario)
         .select()
         .single();
-        
       if (error) throw new Error(`DB scenario save error: ${error.message}`);
       
       socket.emit('admin:scenario_saved', data);
       
-      // Notify all connected admins that the list has changed
-      // This is the "real-time update"
-      io.emit('admin:scenario_list_updated');
+      // Notify all other connected admin sockets
+      // This requires sockets to join an 'admin' room
+      socket.broadcast.emit('admin:scenario_list_updated');
       
     } catch (error: any) {
       console.error(`[${socket.id}] Error in saveScenario: ${error.message}`);
-      socket.emit('error:admin', { message: 'Failed to save scenario.' });
+      socket.emit('error:admin', { message: error.message });
     }
   };
 
-  // --- Register Listeners ---
+  // Register Listeners
   socket.on('admin:get_scenario_list', getScenarioList);
   socket.on('admin:get_scenario_details', getScenarioDetails);
   socket.on('admin:save_scenario', saveScenario);
