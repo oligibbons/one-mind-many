@@ -436,17 +436,24 @@
   }
 }
 
-@layer components {
-  .game-board {
-    display: grid;
-    /* Your GDD specified a 12x12 grid */
-    grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: repeat(12, 1fr);
-  }
+.game-board {
+  display: grid;
+  /* Your GDD specified a 12x12 grid */
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(12, 1fr);
 }
 
-@keyframes floating {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
-}
+} /* <-- THIS IS THE FIX (added on line 270) */
+
+/* DELETED DUPLICATE BLOCKS FROM HERE:
+
+  @layer components {
+    .game-board {
+      ...
+    }
+  }
+
+  @keyframes floating {
+    ...
+  }
+*/
