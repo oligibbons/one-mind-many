@@ -2,73 +2,64 @@
 
 import React, {
   createContext,
-  useState,
-  useEffect,
   useContext,
-  useCallback, // <-- NEW
+  useEffect,
+  useState,
+  useCallback,
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session, User } from '@supabase/supabase-js';
-import { Profile } from '../types/game'; // Assuming Profile is in game.d.ts
+import { api } from '../lib/api';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { Profile } from '../types/game'; // Assuming you have this type
 
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  profile: Profile | null;
-  loading: boolean;
-  refreshProfile: () => void; // <-- NEW
+interface AuthUser extends User {
+  profile: Profile;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface AuthContextType {
+  user: AuthUser | null;
+  session: Session | null;
+  loading: boolean;
+  updateUser: (updatedProfile: Profile) => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // --- NEW: useCallback for fetching profile ---
   const fetchProfile = useCallback(async (authedUser: User) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authedUser.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        setProfile(null);
-      } else {
-        setProfile(data as Profile);
-      }
-    } catch (error) {
-      console.error('Error in fetchProfile:', error);
-      setProfile(null);
+      // Calls GET /api/auth/user
+      const { data, error } = await api.get('/auth/user');
+      
+      if (error) throw error;
+      
+      setUser(data);
+      return data;
+      
+    } catch (error: any) {
+      console.error('Error fetching full user profile:', error.message);
+      return null;
     }
   }, []);
-
-  // --- NEW: Public function to refresh profile ---
-  const refreshProfile = useCallback(() => {
-    if (user) {
-      fetchProfile(user);
-    }
-  }, [user, fetchProfile]);
 
   useEffect(() => {
     setLoading(true);
 
     const getInitialSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      const currentSession = data.session;
-      setSession(currentSession);
-      const currentUser = currentSession?.user || null;
-      setUser(currentUser);
-
-      if (currentUser) {
-        await fetchProfile(currentUser);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setSession(session);
+      
+      if (session?.user) {
+        await fetchProfile(session.user);
       }
       
       setLoading(false);
@@ -76,45 +67,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     getInitialSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log('Auth event:', event);
-        setSession(newSession);
-        const currentUser = newSession?.user || null;
-        setUser(currentUser);
-
-        if (event === 'SIGNED_IN' && currentUser) {
-          setLoading(true);
-          await fetchProfile(currentUser);
-          setLoading(false);
-        } else if (event === 'SIGNED_OUT') {
-          setProfile(null);
-        } else if (event === 'USER_UPDATED' && currentUser) {
-          // e.g., if email is confirmed or password changed
-          await fetchProfile(currentUser);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('Auth state changed:', _event);
+      setSession(session);
+      
+      if (session?.user) {
+        if (_event === 'USER_UPDATED') {
+          // Re-fetch profile on user update (e.g., email change)
+          await fetchProfile(session.user);
+        } else if (_event === 'SIGNED_IN') {
+          // Fetch profile on sign in
+          await fetchProfile(session.user);
         }
-      },
-    );
+      } else {
+        setUser(null);
+      }
+      
+      // Stop loading only after auth state is fully processed
+      if (loading) setLoading(false);
+    });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, loading]);
 
-  const value = {
-    user,
-    session,
-    profile,
-    loading,
-    refreshProfile, // <-- NEW
+  // Function to allow components to update the user context
+  // (e.g., after updating profile settings)
+  const updateUser = (updatedProfile: Profile) => {
+    setUser((prevUser) => {
+      if (!prevUser) return null;
+      return {
+        ...prevUser,
+        profile: updatedProfile,
+      };
+    });
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-brand-charcoal">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, session, loading, updateUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-export const useAuth = ()_ => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
