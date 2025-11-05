@@ -3,145 +3,276 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../lib/api';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Label } from '../../components/ui/Switch';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
-import { AlertCircle, Check, User } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
-import { useNavigate } from 'react-router-dom';
+import { User, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
-  const { profile, refreshProfile } = useAuth(); // <-- NEW: Get refreshProfile
-  const navigate = useNavigate();
+  const { user, updateUser } = useAuth(); // Use auth context
+
+  // Profile Settings
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+
+  // Account Settings: Email
+  const [newEmail, setNewEmail] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+
+  // Account Settings: Password
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passLoading, setPassLoading] = useState(false);
+  const [passError, setPassError] = useState<string | null>(null);
+  const [passSuccess, setPassSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile) {
-      setUsername(profile.username);
-      setAvatarUrl(profile.avatar_url || '');
+    if (user?.profile) {
+      setUsername(user.profile.username);
+      setAvatarUrl(user.profile.avatar_url || '');
     }
-  }, [profile]);
+    if (user) {
+      setNewEmail(user.email);
+    }
+  }, [user]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
+    setProfileLoading(true);
+    setProfileError(null);
+    setProfileSuccess(null);
 
     try {
-      const { data } = await api.patch('/profile', {
-        username,
+      // Calls PATCH /api/profile
+      const response = await api.patch('/profile', {
+        username: username,
         avatar_url: avatarUrl || null,
       });
       
-      // Update was successful
-      setSuccess('Profile updated successfully!');
-      if (refreshProfile) {
-        refreshProfile(); // <-- Refresh the profile in AuthContext
-      }
+      // Update the user in the auth context with the new profile data
+      updateUser(response.data); 
+      setProfileSuccess('Profile updated successfully!');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update profile.');
+      setProfileError(err.response?.data?.error || 'Failed to update profile.');
     }
-    setIsLoading(false);
-  };
-  
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
+    setProfileLoading(false);
   };
 
-  if (!profile) {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newEmail === user?.email) {
+      setEmailError('This is already your email address.');
+      return;
+    }
+    setEmailLoading(true);
+    setEmailError(null);
+    setEmailSuccess(null);
+
+    try {
+      // Calls POST /api/auth/update-email
+      const response = await api.post('/auth/update-email', { email: newEmail });
+      setEmailSuccess(response.data.message);
+    } catch (err: any) {
+      setEmailError(err.response?.data?.error || 'Failed to update email.');
+    }
+    setEmailLoading(false);
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setPassError('Passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPassError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    setPassLoading(true);
+    setPassError(null);
+    setPassSuccess(null);
+
+    try {
+      // Calls POST /api/auth/update-password
+      const response = await api.post('/auth/update-password', { newPassword });
+      setPassSuccess(response.data.message);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPassError(err.response?.data?.error || 'Failed to update password.');
+    }
+    setPassLoading(false);
+  };
+
+  if (!user) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <LoadingSpinner />
+      <div className="flex h-64 items-center justify-center">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
     <div className="mx-auto w-full max-w-2xl p-8">
-      <h1 className="mb-6 text-5xl font-bold game-title">Settings</h1>
+      <h1 className="mb-8 text-5xl font-bold game-title">Settings</h1>
       
-      <Card className="game-card">
-        <form onSubmit={handleSave}>
-          <CardHeader>
-            <CardTitle className="text-2xl text-orange-400">Your Profile</CardTitle>
-            <CardDescription className="text-gray-300">
-              Update your public username and avatar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center gap-4">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="h-20 w-20 rounded-full" />
-              ) : (
-                <User className="h-20 w-20 rounded-full bg-brand-navy p-4 text-gray-400" />
-              )}
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="avatar-url">Avatar URL</Label>
-                <Input
-                  id="avatar-url"
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://.../my-image.png"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                maxLength={20}
-                minLength={3}
-              />
-              <p className="text-sm text-gray-400">
-                Must be 3-20 characters. This is how other players see you.
-              </p>
-            </div>
-            
-            {error && (
-              <div className="flex items-center gap-2 text-red-400">
-                <AlertCircle className="h-5 w-5" />
-                <p>{error}</p>
-              </div>
-            )}
-            {success && (
-              <div className="flex items-center gap-2 text-green-400">
-                <Check className="h-5 w-5" />
-                <p>{success}</p>
-              </div>
-            )}
-            
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button type="submit" className="game-button" disabled={isLoading}>
-              {isLoading ? <LoadingSpinner /> : 'Save Changes'}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-      
-      <Card className="game-card mt-8">
+      {/* --- Profile Settings Card --- */}
+      <Card className="game-card mb-8">
         <CardHeader>
-          <CardTitle className="text-2xl text-orange-400">Account</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-2xl text-brand-orange">
+            <User /> Profile Settings
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Button
-            variant="outline"
-            className="btn-outline border-red-500/50 text-red-400 hover:bg-red-900/30 hover:border-red-500 hover:text-red-300"
-            onClick={handleLogout}
-          >
-            Log Out
-          </Button>
+          <form onSubmit={handleProfileSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-300">Username</label>
+              <Input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="mt-1 text-lg"
+                disabled={profileLoading}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300">Avatar URL</label>
+              <Input
+                type="text"
+                placeholder="https://..."
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+                className="mt-1 text-lg"
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <Button type="submit" className="game-button" disabled={profileLoading}>
+                {profileLoading ? <LoadingSpinner /> : 'Save Profile'}
+              </Button>
+              {profileSuccess && (
+                <div className="flex items-center gap-2 text-green-400">
+                  <CheckCircle className="h-5 w-5" />
+                  {profileSuccess}
+                </div>
+              )}
+              {profileError && (
+                <div className="flex items-center gap-2 text-red-400">
+                  <AlertCircle className="h-5 w-5" />
+                  {profileError}
+                </div>
+              )}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* --- Account Settings Card (NEW) --- */}
+      <Card className="game-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-2xl text-brand-orange">
+            <Lock /> Account Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          
+          {/* Change Email Form */}
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-200">Change Email</h3>
+            <div>
+              <label className="text-sm font-medium text-gray-300">Current Email</label>
+              <Input
+                type="email"
+                value={user.email}
+                disabled
+                className="mt-1 text-lg bg-gray-800 border-gray-700"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300">New Email</label>
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="mt-1 text-lg"
+                disabled={emailLoading}
+              />
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <Button type="submit" className="game-button btn-secondary" disabled={emailLoading}>
+                {emailLoading ? <LoadingSpinner /> : 'Update Email'}
+              </Button>
+              {emailSuccess && (
+                <div className="flex items-center gap-2 text-green-400">
+                  <CheckCircle className="h-5 w-5" />
+                  Success!
+                </div>
+              )}
+              {emailError && (
+                <div className="flex items-center gap-2 text-red-400">
+                  <AlertCircle className="h-5 w-5" />
+                  {emailError}
+                </div>
+              )}
+            </div>
+             {emailSuccess && (
+                <p className="text-sm text-green-300">{emailSuccess}</p>
+             )}
+          </form>
+          
+          <hr className="border-gray-700" />
+
+          {/* Change Password Form */}
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-200">Change Password</h3>
+            <div>
+              <label className="text-sm font-medium text-gray-300">New Password</glabel>
+              <Input
+                type="password"
+                placeholder="Must be at least 6 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="mt-1 text-lg"
+                disabled={passLoading}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300">Confirm New Password</label>
+              <Input
+                type="password"
+                placeholder="Repeat your new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mt-1 text-lg"
+                disabled={passLoading}
+              />
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <Button type="submit" className="game-button btn-secondary" disabled={passLoading}>
+                {passLoading ? <LoadingSpinner /> : 'Update Password'}
+              </Button>
+              {passSuccess && (
+                <div className="flex items-center gap-2 text-green-400">
+                  <CheckCircle className="h-5 w-5" />
+                  {passSuccess}
+                </div>
+              )}
+              {passError && (
+                <div className="flex items-center gap-2 text-red-400">
+                  <AlertCircle className="h-5 w-5" />
+                  {passError}
+                </div>
+              )}
+            </div>
+          </form>
+
         </CardContent>
       </Card>
     </div>

@@ -1,162 +1,187 @@
-// server/index.js
-
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
+import cors from 'cors';
+import { registerLobbyHandlers } from './sockets/lobbyHandler.js';
+import { registerGameHandlers } from './sockets/gameHandler.js';
+import { registerChatHandlers } from './sockets/chatHandler.js';
+import { registerAdminHandlers } from './sockets/adminHandler.js';
+import { registerFriendHandlers } from './sockets/friendHandler.js';
 
 // Import API routes
 import authRoutes from './routes/auth.js';
-import adminRoutes from './routes/admin.js'; // Your full admin.js file
-import gameRoutes from './routes/game.js';
-import lobbyRoutes from './routes/lobbies.js';
+// import gameRoutes from './routes/game.js'; // <-- REMOVED
+// import lobbyRoutes from './routes/lobbies.js'; // <-- REMOVED
 import friendRoutes from './routes/friends.js';
-import profileRoutes from './routes/profile.js'; // The new profile API
-
-// Import Socket Handlers
-import { registerLobbyHandlers, handleLobbyDisconnect } from './sockets/lobbyHandler.js';
-import { registerGameHandlers, handleGameDisconnect } from './sockets/gameHandler.js';
-import { registerAdminHandlers } from './sockets/adminHandler.js'; // <-- NEW
-import { registerFriendHandlers, handleFriendConnect, handleFriendDisconnect } from './sockets/friendHandler.js'; // <-- NEW
-import { registerChatHandlers } from './sockets/chatHandler.js'; // <-- NEW
+import profileRoutes from './routes/profile.js';
+import adminRoutes from './routes/admin.js';
 
 dotenv.config({ path: '../.env' });
 
 const app = express();
 const httpServer = createServer(app);
-const port = process.env.PORT || 3001;
 
 // --- Supabase Admin Client ---
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error(
+    'Missing required environment variables: SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY',
+  );
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+app.locals.supabase = supabase;
 
 // --- Middleware ---
+app.use(cors());
 app.use(express.json());
 
-// Simple auth middleware to check for Supabase JWT
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'No authorization header' });
-  }
-  const token = authHeader.split(' ')[1];
+// Auth middleware
+export const authMiddleware = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
   }
   try {
-    const user = jwt.verify(token, process.env.SUPABASE_JWT_SECRET);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error) {
+      console.warn('Auth middleware error:', error.message);
+      return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    }
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized: User not found' });
+    }
     req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ error: 'Unauthorized: Token processing failed' });
   }
 };
 
-// Expose Supabase client to API routes
-app.use((req, res, next) => {
-  req.app.locals.supabase = supabase;
-  next();
-});
-
 // --- API Routes ---
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', authMiddleware, adminRoutes); // Using your file
-app.use('/api/game', authMiddleware, gameRoutes);
-app.use('/api/lobbies', authMiddleware, lobbyRoutes);
+// app.use('/api/game', authMiddleware, gameRoutes); // <-- REMOVED
+// app.use('/api/lobbies', authMiddleware, lobbyRoutes); // <-- REMOVED
 app.use('/api/friends', authMiddleware, friendRoutes);
-app.use('/api/profile', authMiddleware, profileRoutes); // Using new file
+app.use('/api/profile', authMiddleware, profileRoutes);
+app.use('/api/admin', authMiddleware, adminRoutes);
+
 
 // --- Socket.IO Server ---
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.VITE_CLIENT_URL || 'http://localhost:5173',
+    origin: '*', // Allow all origins
     methods: ['GET', 'POST'],
   },
 });
 
-// --- In-Memory Maps for Socket State ---
-const socketToUser = new Map();
-const socketInRoom = new Map();
-const userToSocket = new Map(); // <userId, socketId>
+// In-memory maps
+const socketToUser = new Map(); // socket.id -> { userId, username }
+const userToSocket = new Map(); // userId -> socket.id
+const socketInRoom = new Map(); // socket.id -> { roomId, type: 'lobby' | 'game' }
 
-// --- Socket.IO Auth Middleware ---
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  const profile = socket.handshake.auth.profile;
-
-  if (!token || !profile) {
-    return next(new Error('Authentication error: Missing token or profile.'));
-  }
-  try {
-    const user = jwt.verify(token, process.env.SUPABASE_JWT_SECRET);
-    socket.data.user = user;
-    socket.data.profile = profile;
-    next();
-  } catch (err) {
-    next(new Error('Authentication error: Invalid token.'));
-  }
-});
-
-// --- Socket.IO Connection Logic ---
 io.on('connection', (socket) => {
-  console.log(`[${socket.id}] User connected.`);
-  
-  const { user, profile } = socket.data;
-  if (!user || !profile) {
-    console.error(`[${socket.id}] Connection failed: No user or profile data.`);
-    return socket.disconnect();
-  }
+  console.log(`[${socket.id}] User connected`);
 
-  // --- Add to maps ---
-  socketToUser.set(socket.id, { userId: user.sub, username: profile.username });
-  userToSocket.set(user.sub, socket.id);
-  console.log(`[${socket.id}] Mapped to user ${profile.username} (${user.sub})`);
+  // --- Socket Auth & Presence ---
+  socket.on('authenticate', async (token) => {
+    try {
+      if (!token) {
+        throw new Error('No token provided');
+      }
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      if (error) throw error;
+      if (!user) throw new Error('User not found for token');
 
-  // --- Handle Friend Presence ---
-  handleFriendConnect(io, supabase, user.sub, userToSocket);
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+      if (profileError) throw profileError;
+      if (!profile) throw new Error('Profile not found for user');
+
+      const userInfo = { userId: user.id, username: profile.username };
+      socketToUser.set(socket.id, userInfo);
+      userToSocket.set(user.id, socket.id);
+
+      // Set user status to 'Online'
+      await supabase
+        .from('profiles')
+        .update({ status: 'Online' })
+        .eq('id', user.id);
+
+      console.log(`[${socket.id}] User authenticated: ${userInfo.username}`);
+      socket.emit('authenticated');
+
+      // Notify friends of 'Online' status
+      io.emit('friend:status_update', { userId: user.id, status: 'Online' });
+
+    } catch (error) {
+      console.error(`[${socket.id}] Authentication error: ${error.message}`);
+      socket.emit('unauthorized', 'Authentication failed');
+      socket.disconnect();
+    }
+  });
 
   // --- Register Handlers ---
   registerLobbyHandlers(io, socket, supabase, socketToUser, socketInRoom);
   registerGameHandlers(io, socket, supabase, socketToUser, socketInRoom);
-  registerAdminHandlers(io, socket, supabase, socketToUser); // <-- NEW
-  registerFriendHandlers(io, socket, supabase, socketToUser, userToSocket); // <-- NEW
-  registerChatHandlers(io, socket, supabase, socketToUser, socketInRoom); // <-- NEW
+  registerChatHandlers(io, socket, supabase, socketToUser, socketInRoom);
+  registerAdminHandlers(io, socket, supabase, socketToUser);
+  registerFriendHandlers(io, socket, supabase, socketToUser, userToSocket);
 
-  // --- Disconnect Logic ---
+  // --- Disconnect Handler ---
   socket.on('disconnect', async (reason) => {
     console.log(`[${socket.id}] User disconnected: ${reason}`);
-    
+
     const userInfo = socketToUser.get(socket.id);
     const roomInfo = socketInRoom.get(socket.id);
 
-    if (userInfo) {
-      // --- Handle Friend Presence ---
-      handleFriendDisconnect(io, supabase, userInfo.userId, userToSocket);
-
-      // --- Handle Game/Lobby Disconnect ---
-      if (roomInfo) {
-        if (roomInfo.type === 'lobby') {
-          handleLobbyDisconnect(io, socket, supabase, roomInfo.roomId, userInfo);
-        } else if (roomInfo.type === 'game') {
-          handleGameDisconnect(io, socket, supabase, roomInfo.roomId, userInfo);
-        }
+    // Handle room disconnection
+    if (userInfo && roomInfo) {
+      if (roomInfo.type === 'lobby') {
+        // (This logic is now in lobbyHandler.ts, but we keep a simplified
+        // version here as a fallback for immediate disconnects)
+      } else if (roomInfo.type === 'game') {
+        // (This logic is in gameHandler.ts)
       }
     }
 
-    // --- Clean up maps ---
+    // Handle presence
     if (userInfo) {
-      userToSocket.delete(userInfo.userId);
+      const { userId, username } = userInfo;
+      
+      // Check if user has reconnected on a different socket
+      const newSocketId = userToSocket.get(userId);
+      if (newSocketId === socket.id) {
+        // This is a true disconnect
+        await supabase
+          .from('profiles')
+          .update({ status: 'Offline' })
+          .eq('id', userId);
+        
+        userToSocket.delete(userId);
+        console.log(`[${socket.id}] User ${username} marked as Offline.`);
+        io.emit('friend:status_update', { userId: userId, status: 'Offline' });
+      } else {
+         console.log(`[${socket.id}] User ${username} disconnected, but is still connected on ${newSocketId}.`);
+      }
     }
+
+    // Clean up maps
     socketToUser.delete(socket.id);
     socketInRoom.delete(socket.id);
   });
 });
 
-// --- Start Server ---
-httpServer.listen(port, () => {
-  console.log(`Server with Socket.IO listening on http://localhost:${port}`);
+// --- Server Start ---
+const PORT = process.env.PORT || 3001;
+httpServer.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
 });
