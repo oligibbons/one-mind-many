@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../../components/ui/Button'; // Corrected
-import { Input } from '../../components/ui/Input'; // Corrected
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { Mail, Lock } from 'lucide-react';
 
-export const LoginPage = () => { // Changed to export const
+export const LoginPage = () => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -102,7 +102,7 @@ export const LoginPage = () => { // Changed to export const
         >
           Don't have an account?{' '}
           <Link 
-            to="/auth/register" 
+            to="/register" // <-- THIS IS THE FIX
             className="text-orange-500 hover:text-orange-600"
             style={{ fontFamily: "'CustomHeading', 'Quicksand', system-ui, sans-serif" }}
           >
@@ -113,5 +113,3 @@ export const LoginPage = () => { // Changed to export const
     </div>
   );
 };
-
-// Removed 'export default LoginPage;'
