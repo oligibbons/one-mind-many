@@ -31,7 +31,7 @@ export const HomePage: React.FC = () => {
         <p className="mt-6 max-w-2xl text-xl text-gray-400">
           A social deduction game of conflicting agendas and hidden motives.
           Control a single shared pawn, but trust no one.
-        </imgp>
+        </p>
         <Button as={Link} to={user ? '/menu' : '/login'} size="lg" className="mt-10 text-lg">
           {user ? 'Enter the Order' : 'Play Now'}
           <ArrowRight className="ml-2 h-5 w-5" />
