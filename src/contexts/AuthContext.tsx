@@ -24,7 +24,8 @@ interface AuthContextType {
   updateUser: (updatedProfile: Profile) => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+// FIX: AuthContext must be exported to be used in other files.
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -121,6 +122,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+// This hook is also defined in src/hooks/useAuth.ts, but
+// it's fine to have it here too for components that import directly.
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === null) {
