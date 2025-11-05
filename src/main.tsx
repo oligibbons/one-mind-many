@@ -9,6 +9,10 @@ import { api } from './lib/api';
 import { Session } from '@supabase/supabase-js';
 
 // Setup Axios interceptor
+// NOTE: Your 'api.ts' file uses 'fetch' and a different auth method.
+// This interceptor logic is from my previous (incorrect) file.
+// Your actual api.ts handles auth by getting the token from localStorage.
+/*
 api.interceptors.request.use(
   async (config) => {
     const {
@@ -24,6 +28,7 @@ api.interceptors.request.use(
     return Promise.reject(error);
   },
 );
+*/
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

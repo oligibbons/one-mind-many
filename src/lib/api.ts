@@ -76,4 +76,4 @@ class ApiClient {
 export const api = new ApiClient(BACKEND_URL);
 
 // Export the backend WebSocket URL
-export { BACKEND_WS_URL };
+export { BACKEND_WS_URL }; 
