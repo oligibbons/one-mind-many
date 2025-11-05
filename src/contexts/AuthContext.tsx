@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // --- NEW: useCallback for fetching profile ---
   const fetchProfile = useCallback(async (authedUser: User) => {
     try {
-      const { data, error }_ = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authedUser.id)
