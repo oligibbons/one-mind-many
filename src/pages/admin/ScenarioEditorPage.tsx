@@ -1,266 +1,323 @@
 // src/pages/admin/ScenarioEditorPage.tsx
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link }_ from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { api } from '../../lib/api';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
-import { Save, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Scenario } from '../../types/game';
-import JSONEditor from 'react-json-editor-ajrm';
-// @ts-ignore
-import locale from 'react-json-editor-ajrm/locale/en';
-import { v4 as uuid } from 'uuid';
-import { api } from '../../lib/api'; // <-- NEW: Import API helper
+import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 
-// (BLANK_SCENARIO template is unchanged)
-const BLANK_SCENARIO = {
-  id: uuid(),
-  name: 'New Scenario',
-  description: 'A brief description of the scenario.',
-  is_published: false,
-  board_size_x: 12,
-  board_size_y: 12,
-  locations: [
-    { "name": "The Park in the Centre", "position": { "x": 6, "y": 7 } },
-    { "name": "Squalid Bench", "position": { "x": 6, "y": 6 } },
-    { "name": "Collapsital One Bank", "position": { "x": 1, "y": 1 } },
-    { "name": "Deja Brew Coffee Shop", "position": { "x": 12, "y": 1 } },
-    { "name": "Bazaar of Gross-eries", "position": { "x": 1, "y": 12 } },
-    { "name": "Boutique of Useless Trinkets", "position": { "x": 12, "y": 12 } },
-    { "name": "Statue of Despairing Monks", "position": { "x": 1, "y": 6 } }
-  ],
-  main_prophecy: {
-    "win_location": "Squalid Bench",
-    "win_action": "Interact",
-    "trigger_message": "PROPHECY FULFILLED!",
-    "winner": "True Believer",
-    "vp": 20
-  },
-  doomsday_condition: {
-    "lose_location": "Collapsital One Bank",
-    "trigger_message": "DOOMSDAY!",
-    "winner": "Heretic",
-    "vp": 20
-  },
-  global_fail_condition: {
-    "lose_location": "Statue of Despairing Monks",
-    "max_round": 10,
-    "trigger_message": "GLOBAL FAIL! The Monks despair!",
-    "winner": "Heretic"
-  },
-  complication_effects: {
-    "Gaggle of Feral Youths": {
-      "description": "Move actions have -1 value within 3 spaces of The Park in the Centre.",
-      "duration": 3,
-      "trigger": {
-        "type": "ACTION_PLAYED",
-        "cards": ["Move 1", "Move 2", "Move 3"],
-        "condition": { "type": "IS_NEAR", "location": "The Park in the Centre", "distance": 3 }
-      },
-      "effect": { "type": "MODIFY_TURN", "moveValue": -1 }
-    },
-    "Intrepid Stalker": {
-      "description": "A Stalker follows the Harbinger, blocking movement if on the same space.",
-      "duration": 3,
-      "trigger": { "type": "ON_ADD" },
-      "effect": { "type": "SPAWN_STALKER" }
+// A simple JSON editor (for a real app, use a library like react-json-editor-ajrm)
+const JsonEditor: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  height?: string;
+}> = ({ value, onChange, height = '400px' }) => {
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    onChange(newValue);
+    try {
+      JSON.parse(newValue);
+      setError(null);
+    } catch (err: any) {
+      setError(`Invalid JSON: ${err.message}`);
     }
-  },
-  object_effects: {
-    "The Rubber Duck": {
-      "effects": [
-        { "description": "A strange sense of forward momentum.", "type": "ADD_ACTION", "cardName": "Move 1" }
-      ]
-    },
-    "Empty Can of Beans": {
-      "effects": [
-        { "description": "Pauses for quiet reflection.", "type": "MODIFY_TURN", "skipNextMove": true }
-      ]
-    },
-    "Warped Penny": {
-      "effects": [
-        { "description": "Shimmers with unexpected temporal displacement.", "type": "WARP", "target": "random_empty" }
-      ]
-    },
-    "Mysterious Red Thread": {
-      "effects": [
-        { "description": "Momentarily unraveling chaos.", "type": "REMOVE_COMPLICATION", "target": "last" }
-      ]
-    },
-    "A Very Large Rock": {
-      "effects": [
-        {
-          "description": "A heavy, ethical dilemma...",
-          "type": "CONDITIONAL_VP",
-          "conditions": [
-            { "if_role": "True Believer", "target_role": "True Believer", "amount": 2 },
-            { "if_role": "Heretic", "target_role": "True Believer", "amount": -2 },
-            { "if_role": "Opportunist", "target_self": 1, "target_others": -1 }
-          ]
-        }
-      ]
-    }
-  },
-  npc_effects: {
-    "The Slumbering Vagrant": {
-      "static_location": "Squalid Bench",
-      "effects": {
-        "positive": { "description": "True Believers gain +3 VP.", "type": "MODIFY_VP", "target": "role", "role": "True Believer", "amount": 3 },
-        "negative": { "description": "True Believers gain +3 VP.", "type": "MODIFY_VP", "target": "role", "role": "True Believer", "amount": 3 }
-      }
-    },
-    "Gossip Karen": {
-      "static_location": "Deja Brew Coffee Shop",
-      "effects": {
-        "positive": { "description": "You get to look at the top 3 cards of the Complication deck.", "type": "EMIT_EVENT", "eventName": "show_complication_deck" },
-        "negative": { "description": "Harbinger moved 1 space toward the Collapsital One Bank.", "type": "MOVE_TOWARDS", "target_location": "Collapsital One Bank", "distance": 1 }
-      }
-    },
-    "Anxious Businessman": {
-      "static_location": "Boutique of Useless Trinkets",
-      "effects": {
-        "positive": { "description": "The next Move action has +1 value.", "type": "MODIFY_TURN", "nextMoveValueModifier": 1 },
-        "negative": { "description": "Lose one Command Card randomly from your hand.", "type": "DISCARD_CARD", "target": "self", "amount": 1, "selection": "random" }
-      }
-    }
-  },
-  opportunist_goals: {
-    "Data Broker": [
-      ["Deja Brew Coffee Shop", "Bazaar of Gross-eries", "Boutique of Useless Trinkets"]
-    ]
-  },
-  sub_role_definitions: {
-    "The Guide": {
-      "vp": 5,
-      "trigger": { "type": "END_OF_ROUND", "condition": { "type": "IS_ON_LOCATION", "location": "The Park in the Centre" } }
-    },
-    "The Fixer": { "vp": 5, "trigger": { "type": "EVENT", "event": "complication_removed" } },
-    "The Instigator": { "vp": 5, "trigger": { "type": "EVENT", "event": "card_played", "cards": ["Deny", "Rethink", "Gamble"] } },
-    "The Waster": { "vp": 5, "trigger": { "type": "END_OF_ROUND", "condition": { "type": "NO_MOVE" } } },
-    "The Mimic": { "vp": 5, "trigger": { "type": "EVENT", "event": "copy_true_believer" } }
-  }
+  };
+
+  return (
+    <div>
+      <textarea
+        value={value}
+        onChange={handleChange}
+        className={`w-full p-4 font-mono text-sm bg-brand-navy border rounded-md custom-scrollbar ${
+          error ? 'border-red-500' : 'border-brand-purple'
+        }`}
+        style={{ height }}
+        spellCheck="false"
+      />
+      {error && (
+        <p className="mt-2 text-sm text-red-400">
+          <AlertCircle className="inline h-4 w-4 mr-1" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
 };
 
-
 export const ScenarioEditorPage: React.FC = () => {
-  const { scenarioId } = useParams<{ scenarioId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  // Sockets are no longer needed here
-  // const { socket, isConnected } = useSocket(); 
-  const [scenario, setScenario] = useState<Scenario | null>(null);
+  const [scenario, setScenario] = useState<Partial<Scenario> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false); // Tracks if JSON editor is valid
 
   useEffect(() => {
-    // This effect now uses the REST API
-    if (scenarioId === 'new') {
-      setScenario(BLANK_SCENARIO as any);
-      setLoading(false);
-    } else {
-      const fetchScenario = async () => {
-        setLoading(true);
-        try {
-          const response = await api.get(`/admin/scenario/${scenarioId}`);
-          setScenario(response.data);
-        } catch (err: any) {
-          setError(err.response?.data?.message || 'Failed to load scenario.');
-        }
+    const fetchScenario = async () => {
+      if (!id || id === 'new') {
+        // Initialize a new scenario with default structure
+        setScenario({
+          name: '',
+          description: '',
+          board_size_x: 12,
+          board_size_y: 12,
+          is_published: false,
+          locations: [],
+          main_prophecy: {},
+          doomsday_condition: {},
+          global_fail_condition: {},
+          complication_effects: {},
+          object_effects: {},
+          npc_effects: {},
+          opportunist_goals: [],
+          sub_role_definitions: [],
+        });
         setLoading(false);
-      };
-      fetchScenario();
-    }
-  }, [scenarioId]);
+        return;
+      }
+      try {
+        setLoading(true);
+        const response = await api.get(`/admin/scenario/${id}`);
+        setScenario(response.data);
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to load scenario.');
+      }
+      setLoading(false);
+    };
+    fetchScenario();
+  }, [id]);
 
   const handleSave = async () => {
-    if (!scenario || isDirty) {
-      setError('JSON is invalid, cannot save.');
+    if (!scenario) return;
+
+    // Basic validation
+    if (!scenario.name) {
+      setError('Scenario name is required.');
       return;
     }
-    setLoading(true);
-    setError(null);
-    
+
     try {
-      if (scenarioId === 'new') {
+      setSaving(true);
+      setError(null);
+
+      if (id === 'new') {
         // Create new scenario
-        await api.post('/admin/scenario', scenario);
+        const response = await api.post('/admin/scenario', scenario);
+        navigate(`/admin/scenarios/edit/${response.data.id}`); // Navigate to edit page of new scenario
       } else {
         // Update existing scenario
-        await api.put(`/admin/scenario/${scenarioId}`, scenario);
+        await api.put(`/admin/scenario/${id}`, scenario);
       }
-      navigate('/admin/scenarios');
+      setSaving(false);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to save scenario.');
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleJsonChange = (e: any) => {
-    if (e.error) {
-      setIsDirty(true);
-      setError(`JSON Error: ${e.error.reason} on line ${e.error.line}`);
-    } else {
-      setIsDirty(false);
-      setError(null);
-      setScenario(e.jsObject);
+  const handleJsonChange = (field: keyof Scenario, value: string) => {
+    try {
+      const parsed = JSON.parse(value);
+      setScenario((prev) => (prev ? { ...prev, [field]: parsed } : null));
+    } catch (e) {
+      // If JSON is invalid, we don't update the state, but the editor shows the error
     }
   };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    let processedValue: string | number | boolean = value;
+    
+    if (type === 'number') {
+      processedValue = parseInt(value, 10) || 0;
+    }
 
-  if (loading || !scenario) {
+    setScenario((prev) => (prev ? { ...prev, [name]: processedValue } : null));
+  };
+
+
+  if (loading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <LoadingSpinner />
+      <div className="flex h-64 items-center justify-center">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
+  if (error) {
+    return <p className="p-8 text-red-400">{error}</p>;
+  }
+
+  if (!scenario) {
+    return <p className="p-8 text-gray-400">No scenario data.</p>;
+  }
+
+  // Helper to safely stringify JSON fields
+  const safeStringify = (data: any) => {
+    try {
+      return JSON.stringify(data, null, 2);
+    } catch {
+      return '{}';
+    }
+  };
+
   return (
-    <div className="mx-auto w-full max-w-7xl p-8">
-      <div className="mb-6 flex items-center justify-between">
-        <Button as={Link} to="/admin/scenarios" variant="outline" className="btn-outline">
-          <ArrowLeft size={16} className="mr-2" />
-          Back to List
-        </Button>
-        <h1 className="text-3xl font-bold text-white">Scenario Editor</h1>
-        <Button onClick={handleSave} disabled={isDirty || loading} className="game-button">
-          <Save size={16} className="mr-2" />
-          {loading ? 'Saving...' : 'Save Scenario'}
+    <div className="p-8">
+      <Button
+        variant="outline"
+        className="btn-outline mb-6"
+        onClick={() => navigate('/admin/scenarios')}
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Scenarios
+      </Button>
+
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="game-title text-4xl">
+          {id === 'new' ? 'Create New Scenario' : 'Edit Scenario'}
+        </h1>
+        <Button className="game-button" onClick={handleSave} disabled={saving}>
+          {saving ? <LoadingSpinner /> : <Save className="h-4 w-4 mr-2" />}
+          Save Scenario
         </Button>
       </div>
 
       {error && (
-        <div className="mb-4 flex items-center rounded-md border border-red-700 bg-red-900/40 p-3 text-red-300">
-          <AlertTriangle size={16} className="mr-2" />
+        <div className="mb-4 rounded-md border border-red-700 bg-red-900/30 p-3 text-red-300">
+          <AlertCircle className="h-5 w-5 inline mr-2" />
           {error}
         </div>
       )}
 
-      <Card className="border-gray-700 bg-gray-800">
-        <CardContent className="p-0">
-          <JSONEditor
-            id={scenario?.id || 'new'}
-            placeholder={scenario}
-            onChange={handleJsonChange}
-            locale={locale}
-            height="80vh"
-            width="100%"
-            theme="dark_vscode_tribute"
-            colors={{
-              primitive: '#E0B453',
-              string: '#CE9178',
-              number: '#B5CEA8',
-              boolean: '#569CD6',
-              background: '#1E1E1E',
-              surface: '#252526',
-              text: '#D4D4D4',
-            }}
-            style={{
-              container: { borderRadius: '0.5rem' },
-              outerBox: { borderRadius: '0.5rem' },
-              contentBox: { borderRadius: '0.5rem' },
-            }}
-          />
+      <Card className="game-card">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Basic Info */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-300">Scenario Name</label>
+                <Input
+                  name="name"
+                  value={scenario.name || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 text-lg"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-300">Description</label>
+                <textarea
+                  name="description"
+                  value={scenario.description || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 w-full p-2 font-mono text-sm bg-brand-navy border rounded-md custom-scrollbar border-brand-purple"
+                  rows={5}
+                />
+              </div>
+              <div className="flex gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Board X</label>
+                  <Input
+                    name="board_size_x"
+                    type="number"
+                    value={scenario.board_size_x || 12}
+                    onChange={handleInputChange}
+                    className="mt-1 text-lg"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Board Y</label>
+                  <Input
+                    name="board_size_y"
+                    type="number"
+                    value={scenario.board_size_y || 12}
+                    onChange={handleInputChange}
+                    className="mt-1 text-lg"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* JSON Editors */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-300">Locations (JSON)</label>
+                <JsonEditor
+                  value={safeStringify(scenario.locations)}
+                  onChange={(val) => handleJsonChange('locations' as keyof Scenario, val)}
+                  height="200px"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-300">Main Prophecy (JSON)</label>
+                <JsonEditor
+                  value={safeStringify(scenario.main_prophecy)}
+                  onChange={(val) => handleJsonChange('main_prophecy' as keyof Scenario, val)}
+                  height="150px"
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* Full-width JSON Editors */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <label className="text-sm font-medium text-gray-300">Doomsday Condition (JSON)</label>
+              <JsonEditor
+                value={safeStringify(scenario.doomsday_condition)}
+                onChange={(val) => handleJsonChange('doomsday_condition' as keyof Scenario, val)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300">Global Fail Condition (JSON)</label>
+              <JsonEditor
+                value={safeStringify(scenario.global_fail_condition)}
+                onChange={(val) => handleJsonChange('global_fail_condition' as keyof Scenario, val)}
+              />
+            </div>
+             <div>
+              <label className="text-sm font-medium text-gray-300">Complication Effects (JSON)</label>
+              <JsonEditor
+                value={safeStringify(scenario.complication_effects)}
+                onChange={(val) => handleJsonChange('complication_effects' as keyof Scenario, val)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300">Object Effects (JSON)</label>
+              <JsonEditor
+                value={safeStringify(scenario.object_effects)}
+                onChange={(val) => handleJsonChange('object_effects' as keyof Scenario, val)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300">NPC Effects (JSON)</label>
+              <JsonEditor
+                value={safeStringify(scenario.npc_effects)}
+                onChange={(val) => handleJsonChange('npc_effects' as keyof Scenario, val)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300">Opportunist Goals (JSON)</label>
+              <JsonEditor
+                value={safeStringify(scenario.opportunist_goals)}
+                onChange={(val) => handleJsonChange('opportunist_goals' as keyof Scenario, val)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300">Sub-Role Definitions (JSON)</label>
+              <JsonEditor
+                value={safeStringify(scenario.sub_role_definitions)}
+                onChange={(val) => handleJsonChange('sub_role_definitions' as keyof Scenario, val)}
+              />
+            </div>
+          </div>
+
         </CardContent>
       </Card>
     </div>
