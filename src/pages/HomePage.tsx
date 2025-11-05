@@ -101,7 +101,7 @@ export const HomePage: React.FC = () => {
           </p>
           <p className="mt-4 text-lg text-gray-300">
             We believe the fate of existence depends on... bizarrely mundane
-            tasks. Like guiding an unwitting accountant to deliver an offering
+            tasks. Like guiding an unwitting member of the public to deliver an offering
             to a sleeping vagrant.
           </p>
           <p className="mt-4 text-lg font-bold text-orange-400">
