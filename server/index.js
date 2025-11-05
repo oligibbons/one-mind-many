@@ -5,7 +5,8 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createClient } from '@supabase/supabase-js';
 import { registerGameHandlers } from './sockets/gameHandler.js';
-import { registerLobbyHandlers } from './sockets/lobbyHandler.js'; // <-- NEW
+import { registerLobbyHandlers } from './sockets/lobbyHandler.js';
+import { registerAdminHandlers } from './sockets/adminHandler.js'; // <-- NEW
 import 'dotenv/config';
 
 const app = express();
@@ -45,11 +46,12 @@ const onConnection = (socket) => {
   console.log(`New connection: ${socket.id}`);
 
   // Register all our different handlers for this socket
-  registerLobbyHandlers(io, socket, supabaseAdmin); // <-- NEW
+  registerLobbyHandlers(io, socket, supabaseAdmin);
   registerGameHandlers(io, socket, supabaseAdmin);
+  registerAdminHandlers(io, socket, supabaseAdmin); // <-- NEW
 
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
+  socket.on('disconnect', (reason) => {
+    console.log(`Socket disconnected: ${socket.id}. Reason: ${reason}`);
     // Handlers themselves will clean up (e.g., in gameHandler)
   });
 };

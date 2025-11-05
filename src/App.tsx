@@ -5,10 +5,9 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Navigate,
 } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import { SocketProvider } from './contexts/SocketContext'; // <-- NEW
+import { SocketProvider } from './contexts/SocketContext';
 
 import { MainLayout } from './layouts/MainLayout';
 import { AuthLayout } from './layouts/AuthLayout';
@@ -19,22 +18,26 @@ import { MainMenuPage } from './pages/game/MainMenuPage';
 import { HowToPlayPage } from './pages/HowToPlayPage';
 import { FriendsPage } from './pages/game/FriendsPage';
 import { SettingsPage } from './pages/game/SettingsPage';
-import { GamePage } from './pages/game/GamePage'; // <-- NEW
-import { LobbyPage } from './pages/game/LobbyPage'; // Kept for future use
+import { GamePage } from './pages/game/GamePage';
+import { LobbyPage } from './pages/game/LobbyPage';
+import { LobbyListPage } from './pages/game/LobbyListPage'; // <-- Make sure this is imported
 import { NotFoundPage } from './pages/NotFoundPage';
 
 import ProtectedRoute from './components/auth/ProtectedRoute';
-// Admin routes are kept but simplified for now
 import AdminRoute from './components/auth/AdminRoute';
 import { AdminPage } from './pages/admin/AdminPage';
 import { UserManagementPage } from './pages/admin/UserManagementPage';
+
+// --- NEW Imports for Scenario Manager ---
+import { ScenarioManagementPage } from './pages/admin/ScenarioManagementPage';
+import { ScenarioEditorPage } from './pages/admin/ScenarioEditorPage';
+// --- (End of New Imports) ---
+
 
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <SocketProvider>
-        {' '}
-        {/* <-- Wrap app in SocketProvider */}
         <Router>
           <Routes>
             {/* --- Public Routes --- */}
@@ -56,6 +59,7 @@ const App: React.FC = () => {
               }
             >
               <Route path="/menu" element={<MainMenuPage />} />
+              <Route path="/lobbies" element={<LobbyListPage />} /> {/* <-- NEW route */}
               <Route path="/lobby/:lobbyId" element={<LobbyPage />} />
               <Route path="/friends" element={<FriendsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
@@ -81,6 +85,16 @@ const App: React.FC = () => {
             >
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/users" element={<UserManagementPage />} />
+              
+              {/* --- NEW Scenario Routes --- */}
+              <Route
+                path="/admin/scenarios"
+                element={<ScenarioManagementPage />}
+              />
+              <Route
+                path="/admin/scenario/:scenarioId"
+                element={<ScenarioEditorPage />}
+              />
             </Route>
 
             {/* --- Catch-all --- */}
