@@ -1,98 +1,112 @@
 // src/pages/game/MainMenuPage.tsx
-import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
-import { LogOut, Play, Users, Settings, User, Shield } from 'lucide-react';
+import { Card } from '../../components/ui/Card';
+import { LogOut, Users, Settings, Play, Target } from 'lucide-react';
+import { Logo } from '../../components/ui/Logo';
 
-// FIX: Changed from 'export const' to 'const'
-const MainMenuPage: React.FC = () => {
-  // FIX: 'useAuth' provides 'user' (which contains profile) and 'logout'.
-  // It does NOT provide 'profile' as a separate variable.
+export const MainMenuPage = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // Determine user name for welcome message
+  const username = user?.profile?.username || user?.email?.split('@')[0] || 'Seeker';
 
   const handleLogout = async () => {
     await logout();
-    // Redirect is handled by ProtectedRoute & AuthLayout
+    navigate('/login');
   };
 
+  const menuItems = [
+    { 
+      name: "New Prophecy", 
+      icon: <Target className="w-6 h-6 text-orange-400" />, 
+      path: "/lobbies/create", 
+      description: "Begin a new game, either public or private." 
+    },
+    { 
+      name: "Find Other Seekers", 
+      icon: <Play className="w-6 h-6 text-orange-400" />, 
+      path: "/lobbies", 
+      description: "Join a game already in progress or view public lobbies." 
+    },
+    { 
+      name: "Your G.I.M.P cohorts", 
+      icon: <Users className="w-6 h-6 text-orange-400" />, 
+      path: "/friends", 
+      description: "Manage your friends list and send invitations." 
+    },
+  ];
+
+  const secondaryActions = [
+    { name: "Profile", path: "/profile" },
+    { name: "Settings", path: "/settings" },
+    { name: "How to Play", path: "/how-to-play" },
+  ];
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-gray-950 text-gray-200">
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4"
+         style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}>
+      
+      {/* Header and Welcome */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-white">
-          {/* FIX: Changed 'profile.username' to 'user.profile.username' */}
-          Welcome, {user?.profile?.username || 'Guardian'}
+        <Logo size="large" />
+        <h1 className="text-4xl sm:text-5xl font-extrabold mt-4 tracking-wider text-orange-500"
+            style={{ fontFamily: "'CustomHeading', system-ui, sans-serif" }}>
+          The Oracle Awaits
         </h1>
-        <p className="text-lg text-gray-400 mt-2">
-          The Order awaits your guidance.
+        <p className="text-lg text-slate-300 mt-2">
+          Welcome, <span className="font-bold text-orange-400">{username}</span>. Your journey begins now.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
-        <Button as={Link} to="/app/lobbies" size="lg" className="justify-center">
-          <Play className="mr-2 h-5 w-5" />
-          Play
-        </Button>
-        <Button
-          as={Link}
-          to="/app/friends"
-          size="lg"
-          variant="secondary"
-          className="justify-center"
-        >
-          <Users className="mr-2 h-5 w-5" />
-          Friends
-        </Button>
-        <Button
-          as={Link}
-          // FIX: Changed 'user.id' to 'user.profile.id' or 'user.id'
-          // 'user.id' is correct as it's the auth user's ID.
-          to={`/app/profile/${user?.id}`}
-          size="lg"
-          variant="secondary"
-          className="justify-center"
-        >
-          <User className="mr-2 h-5 w-5" />
-          Profile
-        </Button>
-        <Button
-          as={Link}
-          to="/app/settings"
-          size="lg"
-          variant="secondary"
-          className="justify-center"
-        >
-          <Settings className="mr-2 h-5 w-5" />
-          Settings
-        </Button>
-        
-        {/* FIX: Changed 'profile.is_admin' to 'user.profile.is_admin' */}
-        {user?.profile?.is_admin && (
-           <Button
-            as={Link}
-            to="/admin"
-            size="lg"
-            variant="danger"
-            className="justify-center"
+      {/* Main Menu Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full mb-10">
+        {menuItems.map((item) => (
+          <Card 
+            key={item.name} 
+            className="p-6 bg-slate-800 hover:bg-slate-700/80 transition-all duration-200 cursor-pointer border border-transparent hover:border-orange-500 group"
+            onClick={() => navigate(item.path)}
           >
-            <Shield className="mr-2 h-5 w-5" />
-            Admin Panel
+            <div className="flex items-center space-x-4">
+              {item.icon}
+              <h2 className="text-xl font-semibold text-white group-hover:text-orange-400 transition-colors">
+                {item.name}
+              </h2>
+            </div>
+            <p className="text-sm text-slate-400 mt-3">{item.description}</p>
+          </Card>
+        ))}
+      </div>
+
+      {/* Secondary Actions and Logout */}
+      <div className="flex flex-wrap justify-center gap-4 max-w-4xl w-full">
+        {secondaryActions.map((action) => (
+          <Button 
+            key={action.name}
+            variant="ghost"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 px-4 py-2"
+            onClick={() => navigate(action.path)}
+          >
+            {action.name}
           </Button>
-        )}
+        ))}
 
         <Button
+          variant="secondary"
+          className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2 px-4 py-2"
           onClick={handleLogout}
-          size="lg"
-          variant="ghost"
-          className="justify-center mt-4"
         >
-          <LogOut className="mr-2 h-5 w-5" />
-          Sign Out
+          <LogOut className="w-4 h-4" />
+          <span>Log Out</span>
         </Button>
       </div>
+
+      {/* Footer message for atmosphere */}
+      <p className="mt-16 text-sm text-slate-500">
+        "The mind of the many is a whisper. The voice of the one is a shadow."
+      </p>
     </div>
   );
 };
-
-// FIX: Added 'export default'
-export default MainMenuPage;

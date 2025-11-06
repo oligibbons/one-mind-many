@@ -33,11 +33,10 @@ const SettingsPage: React.FC = () => {
   const [passSuccess, setPassSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.profile) {
-      setUsername(user.profile.username);
-      setAvatarUrl(user.profile.avatar_url || '');
-    }
     if (user) {
+      // FIX: Use optional chaining and fallback for username/avatar URL
+      setUsername(user.profile?.username || user.email.split('@')[0] || '');
+      setAvatarUrl(user.profile?.avatar_url || '');
       setNewEmail(user.email);
     }
   }, [user]);
