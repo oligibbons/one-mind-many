@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth'; // <-- THIS IS THE CORRECTED IMPORT PATH
 import { Logo } from '../ui/Logo';
 import { Button } from '../ui/Button';
 import { Menu, X } from 'lucide-react';
