@@ -84,7 +84,6 @@ export const Footer: React.FC = () => {
               <SocialIcon href="#" icon={Twitter} label="X (formerly Twitter)" />
               <SocialIcon href="#" icon={MessageSquare} label="Discord" />
               <SocialIcon href="#" icon={Twitch} label="Twitch" />
-              <SocialIcon href="#" icon={Reddit} label="Reddit" />
               <SocialIcon href="#" icon={Instagram} label="Instagram" />
               <SocialIcon href="#" icon={Youtube} label="TikTok" />
               <SocialIcon href="#" icon={Facebook} label="Facebook" />
