@@ -6,7 +6,8 @@ import { Card } from '../../components/ui/Card';
 import { LogOut, Users, Settings, Play, Target } from 'lucide-react';
 import { Logo } from '../../components/ui/Logo';
 
-export const MainMenuPage = () => {
+// FIX: Removed 'export' from here
+const MainMenuPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -22,26 +23,26 @@ export const MainMenuPage = () => {
     { 
       name: "New Prophecy", 
       icon: <Target className="w-6 h-6 text-orange-400" />, 
-      path: "/lobbies/create", 
+      path: "/app/lobbies", // FIX: Was '/lobbies/create', now points to list
       description: "Begin a new game, either public or private." 
     },
     { 
       name: "Find Other Seekers", 
       icon: <Play className="w-6 h-6 text-orange-400" />, 
-      path: "/lobbies", 
+      path: "/app/lobbies", // FIX: Added /app prefix
       description: "Join a game already in progress or view public lobbies." 
     },
     { 
       name: "Your G.I.M.P cohorts", 
       icon: <Users className="w-6 h-6 text-orange-400" />, 
-      path: "/friends", 
+      path: "/app/friends", // FIX: Added /app prefix
       description: "Manage your friends list and send invitations." 
     },
   ];
 
   const secondaryActions = [
-    { name: "Profile", path: "/profile" },
-    { name: "Settings", path: "/settings" },
+    { name: "Profile", path: `/app/profile/${user?.profile?.id}` }, // FIX: Corrected path
+    { name: "Settings", path: "/app/settings" }, // FIX: Added /app prefix
     { name: "How to Play", path: "/how-to-play" },
   ];
 
@@ -110,3 +111,6 @@ export const MainMenuPage = () => {
     </div>
   );
 };
+
+// FIX: Added 'export default' at the end
+export default MainMenuPage;

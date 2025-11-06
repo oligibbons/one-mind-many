@@ -9,8 +9,8 @@ import { AlertCircle, User, Shield, UserX, UserCheck, Search, ChevronLeft, Chevr
 import { format } from 'date-fns';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select'; // Assuming you have a Select component
-import { useDebounce } from '../../hooks/useDebounce'; // We'll create this simple hook next
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
+import { useDebounce } from '../../hooks/useDebounce'; // <-- Now correctly uses the imported hook
 
 interface Profile {
   id: string;
@@ -111,7 +111,6 @@ const UserManagementPage: React.FC = () => {
           </div>
           <div>
             <Label htmlFor="role-filter">Role</Label>
-            {/* Assuming you have a <Select> component. If not, replace with <select> */}
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger id="role-filter" className="w-full md:w-40">
                 <SelectValue placeholder="Filter by role..." />
@@ -249,20 +248,7 @@ const UserManagementPage: React.FC = () => {
   );
 };
 
-// --- NEW: useDebounce hook ---
-// Create a new file for this at 'src/hooks/useDebounce.ts'
-// or just include it here if you prefer
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-  return debouncedValue;
-}
+// FIX: Removed the inline useDebounce hook definition
+// (It should be imported from src/hooks/useDebounce.ts)
 
 export default UserManagementPage;

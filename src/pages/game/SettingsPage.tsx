@@ -35,9 +35,11 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       // FIX: Use optional chaining and fallback for username/avatar URL
-      setUsername(user.profile?.username || user.email.split('@')[0] || '');
+      setUsername(user.profile?.username || user.email?.split('@')[0] || '');
       setAvatarUrl(user.profile?.avatar_url || '');
-      setNewEmail(user.email);
+      if (user.email) {
+        setNewEmail(user.email);
+      }
     }
   }, [user]);
 
@@ -55,7 +57,9 @@ const SettingsPage: React.FC = () => {
       });
       
       // Update the user in the auth context with the new profile data
-      updateUser(response.data); 
+      if (updateUser) {
+        updateUser(response.data); 
+      }
       setProfileSuccess('Profile updated successfully!');
     } catch (err: any) {
       setProfileError(err.response?.data?.error || 'Failed to update profile.');
@@ -278,4 +282,5 @@ const SettingsPage: React.FC = () => {
   );
 };
 
+// FIX: Added 'export default'
 export default SettingsPage;

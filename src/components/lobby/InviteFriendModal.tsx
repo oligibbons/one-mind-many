@@ -6,7 +6,8 @@ import { Button } from '../ui/Button';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { AlertCircle, User, Send, Check } from 'lucide-react';
 import { api } from '../../lib/api'; // Your configured axios instance
-import { useSocket } from '../../contexts/SocketContext'; // <-- NEW
+import { useSocket } from '../../contexts/SocketContext';
+import { useAuth } from '../../hooks/useAuth'; // <-- FIX: Imported useAuth
 import clsx from 'clsx';
 
 // This interface matches YOUR server's GET /friends response
@@ -33,6 +34,7 @@ export const InviteFriendModal: React.FC<InviteFriendModalProps> = ({
   onClose,
 }) => {
   const { socket } = useSocket();
+  const { user } = useAuth(); // <-- FIX: Added useAuth hook
   const [friends, setFriends] = useState<FriendData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,8 +58,9 @@ export const InviteFriendModal: React.FC<InviteFriendModalProps> = ({
   }, []);
 
   const handleInvite = (friendUserId: string) => {
-    if (!socket) {
-      setError('Socket not connected.');
+    // FIX: Check for socket and user
+    if (!socket || !user) {
+      setError('Socket or user not available.');
       return;
     }
 
@@ -70,7 +73,10 @@ export const InviteFriendModal: React.FC<InviteFriendModalProps> = ({
       { 
         gameId, 
         lobbyName,
-        inviteeId: friendUserId 
+        inviteeId: friendUserId,
+        // FIX: Send sender info from the authenticated user
+        senderId: user.id, 
+        senderUsername: user.profile?.username || 'A friend',
       },
       (response: { status: 'ok' } | { status: 'error'; message: string }) => {
         if (response.status === 'ok') {
@@ -174,7 +180,7 @@ export const InviteFriendModal: React.FC<InviteFriendModalProps> = ({
           <CardTitle className="text-3xl game-title">Invite Friends</CardTitle>
           <CardDescription className="text-gray-300">
             Invite friends from your list to this lobby.
-          </CardDescription>
+          </ReadDescription>
         </CardHeader>
         <CardContent>
           {error && (

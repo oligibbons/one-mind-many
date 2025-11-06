@@ -18,7 +18,7 @@ interface Game {
   created_at: string;
   scenario: {
     id: string;
-    name: string; // Your API returns 'name', not 'title'
+    name: string;
   };
   players: {
     user_id: string;
@@ -35,7 +35,7 @@ interface GameData {
 }
 
 const GameManagementPage: React.FC = () => {
-  const { profile } = useAuth(); // To check if admin
+  const { user } = useAuth(); // FIX: Changed from 'profile' to 'user'
   const [data, setData] = useState<GameData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,8 +55,6 @@ const GameManagementPage: React.FC = () => {
       });
       const response = await api.get(`/admin/games?${params.toString()}`);
       
-      // Fix for API mock data vs. real data
-      // Your API mock sends 'scenario.title', but schema has 'scenario.name'
       const fixedData = response.data.games.map((game: any) => ({
         ...game,
         scenario: game.scenario || { id: 'unknown', name: 'Unknown' },
@@ -98,8 +96,8 @@ const GameManagementPage: React.FC = () => {
     }
   };
   
-  // Only admins should see this page, but as a fallback:
-  if (!profile?.is_admin) {
+  // FIX: Check user.profile.is_admin
+  if (!user?.profile?.is_admin) {
     return <p className="p-8 text-red-400">You do not have permission to view this page.</p>;
   }
 

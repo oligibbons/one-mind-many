@@ -10,16 +10,15 @@ import { supabase } from '../../lib/supabaseClient';
 import clsx from 'clsx';
 
 export const Navbar: React.FC = () => {
-  const { user, loading } = useAuth(); // <-- FIX: 'profile' is inside 'user'
+  const { user, loading, logout } = useAuth(); // FIX: Get 'logout' from useAuth
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // <-- NEW: State for mobile menu
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
     isActive
       ? 'text-brand-orange font-bold flex items-center gap-2'
       : 'text-gray-300 hover:text-brand-orange flex items-center gap-2';
 
-  // --- NEW: Mobile version of the NavLink class ---
   const getMobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
     clsx(
       'block rounded-md px-3 py-2 text-base font-medium',
@@ -29,8 +28,8 @@ export const Navbar: React.FC = () => {
     );
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setIsMobileMenuOpen(false); // <-- NEW: Close menu on logout
+    await logout(); // FIX: Use 'logout' from context
+    setIsMobileMenuOpen(false);
     navigate('/');
   };
 
@@ -49,7 +48,7 @@ export const Navbar: React.FC = () => {
             </Link>
             {/* --- DESKTOP NAV --- */}
             <div className="hidden space-x-4 md:flex">
-              {user && (
+              {user && user.profile && ( // FIX: Check for user.profile
                 <>
                   <NavLink to="/app/main-menu" className={getNavLinkClass}>
                     <User size={16} />
@@ -69,7 +68,7 @@ export const Navbar: React.FC = () => {
                 <HelpCircle size={16} />
                 How to Play
               </NavLink>
-              {user?.profile?.is_admin && ( // <-- FIX: Check user.profile
+              {user?.profile?.is_admin && ( // FIX: Check user.profile
                 <NavLink to="/admin" className={getNavLinkClass}>
                   <Shield size={16} />
                   Admin
@@ -82,16 +81,16 @@ export const Navbar: React.FC = () => {
           <div className="hidden items-center md:flex">
             {loading ? (
               <div className="h-5 w-24 animate-pulse rounded-md bg-gray-700" />
-            ) : user && user.profile ? (
+            ) : user && user.profile ? ( // FIX: Check for user.profile
               // --- Logged In (Desktop) ---
               <div className="flex items-center space-x-4">
                 <NavLink
-                  to={`/app/profile/${user.profile.id}`} // <-- FIX: Check user.profile
+                  to={`/app/profile/${user.profile.id}`} // FIX: Use user.profile
                   className={getNavLinkClass}
                   title="View Profile"
                 >
                   <User size={16} />
-                  {user.profile.username} {/* <-- FIX: Check user.profile */}
+                  {user.profile.username} {/* FIX: Use user.profile */}
                 </NavLink>
                 <Button
                   variant="ghost"
@@ -103,7 +102,21 @@ export const Navbar: React.FC = () => {
                   <LogOut size={20} />
                 </Button>
               </div>
-            ) : !user ? (
+            ) : user && !user.profile ? ( // FIX: Handle user logged in but profile is null
+              // This is the state right after sign-up before profile is created
+              <div className="flex items-center space-x-4">
+                <span className="text-gray-400">Loading profile...</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  title="Log Out"
+                  className="text-gray-400 hover:text-brand-orange"
+                >
+                  <LogOut size={20} />
+                </Button>
+              </div>
+            ) : (
               // --- Logged Out (Desktop) ---
               <div className="flex items-center space-x-2">
                 <Button
@@ -125,7 +138,7 @@ export const Navbar: React.FC = () => {
                   Register
                 </Button>
               </div>
-            ) : null}
+            )}
           </div>
 
           {/* --- NEW: Mobile Menu Button --- */}
@@ -148,7 +161,7 @@ export const Navbar: React.FC = () => {
           <div className="space-y-1 px-4 pt-2 pb-4">
             {loading ? (
               <div className="h-5 w-24 animate-pulse rounded-md bg-gray-700" />
-            ) : user && user.profile ? (
+            ) : user && user.profile ? ( // FIX: Check user.profile
               // --- Logged In (Mobile) ---
               <>
                 <NavLink
@@ -213,7 +226,7 @@ export const Navbar: React.FC = () => {
               <HelpCircle size={16} className="inline-block mr-2" />
               How to Play
             </NavLink>
-            {user?.profile?.is_admin && (
+            {user?.profile?.is_admin && ( // FIX: Check user.profile
               <NavLink
                 to="/admin"
                 className={getMobileNavLinkClass}

@@ -25,11 +25,10 @@ interface Lobby {
   game_players: LobbyPlayer[];
 }
 
-// FIX: Changed from 'export const'
 const LobbyListPage: React.FC = () => {
   const navigate = useNavigate();
   const { socket, isConnected } = useSocket();
-  const { user, profile } = useAuth(); // This page also has the 'profile' bug
+  const { user } = useAuth(); // FIX: Removed 'profile' from here
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -208,5 +207,4 @@ const LobbyListPage: React.FC = () => {
   );
 };
 
-// FIX: Added 'export default'
 export default LobbyListPage;

@@ -40,12 +40,11 @@ interface LobbyState {
   } | null;
 }
 
-// FIX: Changed from 'export const'
 const LobbyPage: React.FC = () => {
   const { lobbyId } = useParams<{ lobbyId: string }>(); // This is the gameId
   const navigate = useNavigate();
   const { socket, isConnected } = useSocket();
-  const { user, profile } = useAuth(); // This page also has the 'profile' bug
+  const { user } = useAuth(); // FIX: Removed 'profile' from here
   const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -196,7 +195,8 @@ const LobbyPage: React.FC = () => {
     });
   };
   
-  if (isLoading || !lobbyState || !user?.profile || !lobbyId) { // FIX: Check user.profile
+  // FIX: Check user.profile here
+  if (isLoading || !lobbyState || !user?.profile || !lobbyId) { 
     return (
       <div className="flex h-screen items-center justify-center bg-brand-charcoal">
         <LoadingSpinner size="lg" />
@@ -249,9 +249,9 @@ const LobbyPage: React.FC = () => {
                         
                         <PlayerName
                           player={{ userId: player.user_id, username: player.username }}
-                          isHost={isHost} // This should be 'isHost' not 'isHost'
+                          isHost={isHost}
                           isTargetHost={isTargetHost}
-                          allowKick={isHost} // Pass isHost to allowKick
+                          allowKick={isHost}
                           onKick={handleKickPlayer}
                           className={clsx("text-lg", player.is_disconnected ? "text-gray-500 italic" : "text-gray-200")}
                         />
@@ -393,5 +393,4 @@ const LobbyPage: React.FC = () => {
   );
 };
 
-// FIX: Added 'export default'
 export default LobbyPage;

@@ -4,14 +4,19 @@ import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
-import { useSocket } from '../contexts/SocketContext'; // <-- NEW
-import { InviteToast, InviteData } from '../components/ui/InviteToast'; // <-- NEW
-import { usePresenceStore } from '../stores/usePresenceStore'; // <-- NEW
+import { useSocket } from '../contexts/SocketContext';
+import { InviteToast, InviteData } from '../components/ui/InviteToast';
+import { usePresenceStore } from '../stores/usePresenceStore';
+import { useAuth } from '../hooks/useAuth'; // <-- FIX: Import useAuth
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'; // <-- FIX: Import LoadingSpinner
 
 export const MainLayout: React.FC = () => {
-  const { socket, isConnected } = useSocket(); // <-- NEW
-  const { setFriendStatus } = usePresenceStore(); // <-- NEW
-  const [activeInvite, setActiveInvite] = useState<InviteData | null>(null); // <-- NEW
+  const { socket, isConnected } = useSocket();
+  const { setFriendStatus } = usePresenceStore();
+  const [activeInvite, setActiveInvite] = useState<InviteData | null>(null);
+  
+  // --- FIX: Add useAuth hook to get loading state ---
+  const { loading, user } = useAuth(); 
 
   // --- NEW: Global Socket Listeners ---
   useEffect(() => {
@@ -38,6 +43,18 @@ export const MainLayout: React.FC = () => {
       socket.off('friend:status_update', onStatusUpdate);
     };
   }, [socket, isConnected, setFriendStatus]);
+  
+  // --- FIX: Add loading check ---
+  // This ensures we don't render the app until the user and profile are loaded,
+  // preventing layout shifts or errors in the Navbar.
+  if (loading || (user && !user.profile)) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-950">
+        <LoadingSpinner size="lg" />
+        <p className="ml-4 text-xl text-gray-300">Loading User Data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
