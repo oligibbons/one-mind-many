@@ -62,8 +62,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       });
 
     // 2. Listen for auth changes
+
+    // FIX 3: ADDED DIAGNOSTIC LOGGING
+    // Let's see what the supabase.auth object contains right before we call the function
+    console.log('AuthContext Debug: supabase.auth object:', supabase.auth);
+
     const { data: authListener } = supabase.auth.onAuthStateChanged(
       async (event, session) => {
+        console.log('AuthContext: Auth state changed', event, session);
         setSession(session);
         const currentUser = session?.user ?? null;
 
@@ -93,7 +99,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       if (error) {
         // This can happen if the user is created but the profile trigger hasn't run yet.
-        // We log the error but treat the user as logged out for now.
         console.warn('Error fetching profile:', error.message);
         setUser(null);
       } else if (profile) {
