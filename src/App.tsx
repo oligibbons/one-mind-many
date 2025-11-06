@@ -7,7 +7,7 @@ import 'react-toastify/dist/ReactToastify.css';
 // Layouts
 import { MainLayout } from './layouts/MainLayout';
 import { AuthLayout } from './layouts/AuthLayout';
-import { PublicLayout } from './layouts/PublicLayout'; // <-- IMPORT NEW LAYOUT
+import { PublicLayout } from './layouts/PublicLayout';
 
 // Auth Components
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -22,24 +22,27 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 
+// --- CORRECTED IMPORTS (Removed curly braces) ---
+
 // Protected Pages
-import { MainMenuPage } from './pages/game/MainMenuPage';
-import { LobbyListPage } from './pages/game/LobbyListPage';
-import { LobbyPage } from './pages/game/LobbyPage';
-import { GamePage } from './pages/game/GamePage';
-import { FriendsPage } from './pages/game/FriendsPage';
-import { ProfilePage } from './pages/game/ProfilePage';
-import { SettingsPage } from './pages/game/SettingsPage';
+import MainMenuPage from './pages/game/MainMenuPage';
+import LobbyListPage from './pages/game/LobbyListPage';
+import LobbyPage from './pages/game/LobbyPage';
+import GamePage from './pages/game/GamePage';
+import FriendsPage from './pages/game/FriendsPage';
+import ProfilePage from './pages/game/ProfilePage';
+import SettingsPage from './pages/game/SettingsPage';
 
 // Admin Pages
-import { AdminPage } from './pages/admin/AdminPage';
-import { UserManagementPage } from './pages/admin/UserManagementPage';
-import { GameManagementPage } from './pages/admin/GameManagementPage';
-import { ScenarioManagementPage } from './pages/admin/ScenarioManagementPage';
-import { ScenarioEditorPage } from './pages/admin/ScenarioEditorPage';
-import { ContentManagementPage } from './pages/admin/ContentManagementPage';
-import { RulesManagementPage } from './pages/admin/RulesManagementPage';
-import { TestGameViewPage } from './pages/admin/TestGameViewPage';
+import AdminPage from './pages/admin/AdminPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
+import GameManagementPage from './pages/admin/GameManagementPage';
+import ScenarioManagementPage from './pages/admin/ScenarioManagementPage';
+import ScenarioEditorPage from './pages/admin/ScenarioEditorPage';
+import ContentManagementPage from './pages/admin/ContentManagementPage';
+import RulesManagementPage from './pages/admin/RulesManagementPage';
+import TestGameViewPage from './pages/admin/TestGameViewPage';
+// --- End of corrections ---
 
 function App() {
   return (
