@@ -9,7 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { Card } from '../../components/ui/Card';
 
-// --- FIX: Re-importing all components ---
+// Re-importing all components
 import { GameBoard } from '../../components/game/GameBoard';
 import { PriorityTrack } from '../../components/game/PriorityTrack';
 import { ComplicationTrack } from '../../components/game/ComplicationTrack';
@@ -18,15 +18,13 @@ import { PrivateDashboard } from '../../components/game/PrivateDashboard';
 import { ChatBox } from '../../components/game/ChatBox';
 import { InGameMenuModal } from '../../components/game/InGameMenuModal';
 import { RulesReferenceModal } from '../../components/game/RulesReferenceModal';
-// --- END FIX ---
 
 import { toast } from 'react-toastify';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 
-// --- FIX: Import the *real* SocketContext to provide a fake value ---
+// Import the *real* SocketContext to provide a fake value
 import { SocketContext } from '../../contexts/SocketContext';
 import { Socket } from 'socket.io-client';
-// --- END FIX ---
 
 /**
  * Generates a complete dummy game state for the sandbox.
@@ -162,7 +160,6 @@ const TestGameSandbox: React.FC<{
   onExit: () => void;
 }> = ({ scenario, onExit }) => {
   const { user } = useAuth();
-  // --- FIX: Added state for modals back ---
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
 
@@ -179,7 +176,7 @@ const TestGameSandbox: React.FC<{
     };
   }, [scenario, user]);
 
-  // --- FIX: Create a dummy socket that does nothing ---
+  // Create a dummy socket that does nothing
   const dummySocket = {
     on: () => {},
     off: () => {},
@@ -196,7 +193,7 @@ const TestGameSandbox: React.FC<{
 
   // This layout is copied from GamePage.tsx to ensure an identical view
   return (
-    // --- FIX: Wrap the entire UI in the SocketContext.Provider ---
+    // Wrap the entire UI in the SocketContext.Provider
     <SocketContext.Provider value={{ socket: dummySocket }}>
       <div className="flex flex-col h-full overflow-hidden">
         {/* Top Bar (with exit button) */}
@@ -211,7 +208,6 @@ const TestGameSandbox: React.FC<{
             </h1>
             <p className="text-sm text-gray-400">Round 1</p>
           </div>
-          {/* --- FIX: Added buttons back --- */}
           <div>
             <Button
               onClick={() => setIsRulesOpen(true)}
@@ -229,7 +225,6 @@ const TestGameSandbox: React.FC<{
               Menu
             </Button>
           </div>
-          {/* --- END FIX --- */}
         </div>
 
         {/* Main Game Area */}
@@ -238,7 +233,6 @@ const TestGameSandbox: React.FC<{
           <div className="w-1/4 flex-shrink-0 bg-gray-900 overflow-y-auto p-2 space-y-2">
             <PriorityTrack />
             <ComplicationTrack />
-            {/* --- FIX: Added ChatBox back --- */}
             <ChatBox gameId="test-game" />
           </div>
 
@@ -258,7 +252,7 @@ const TestGameSandbox: React.FC<{
           <PlayerHand />
         </div>
 
-        {/* --- FIX: Added Modals back --- */}
+        {/* Modals */}
         <InGameMenuModal
           isOpen={isMenuOpen}
           onClose={() => setIsMenuOpen(false)}
@@ -272,7 +266,6 @@ const TestGameSandbox: React.FC<{
           isOpen={isRulesOpen}
           onClose={() => setIsRulesOpen(false)}
         />
-        {/* --- END FIX --- */}
       </div>
     </SocketContext.Provider>
   );
@@ -292,17 +285,31 @@ const TestGameViewPage: React.FC = () => {
     const fetchScenarios = async () => {
       try {
         setIsLoading(true);
+        setError(null); // Clear previous errors
+        
         const { data, error } = await supabase
           .from('scenarios')
           .select('*')
           .order('name', { ascending: true });
 
-        if (error) throw error;
+        // --- FIX: Add explicit error handling ---
+        console.log('Supabase scenarios fetch result:', { data, error });
+
+        if (error) {
+          throw new Error(`Supabase error: ${error.message}`);
+        }
+
+        if (!data || data.length === 0) {
+          throw new Error(
+            'No scenarios found. This is likely due to Row Level Security (RLS) policies. Please ensure your admin role has SELECT permission on both the "scenarios" and "profiles" tables.'
+          );
+        }
+        // --- END FIX ---
+
         setScenarios(data || []);
-        setError(null);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch scenarios.');
-        toast.error(err.message || 'Failed to fetch scenarios.');
+        toast.error(err.message); // Show the specific error
       } finally {
         setIsLoading(false);
       }
@@ -318,22 +325,6 @@ const TestGameViewPage: React.FC = () => {
       toast.error('Please select a valid scenario.');
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full text-red-400">
-        <p>{error}</p>
-      </div>
-    );
-  }
 
   // The Game Sandbox View
   if (activeScenario) {
@@ -363,33 +354,57 @@ const TestGameViewPage: React.FC = () => {
         <h2 className="text-xl font-semibold text-white mb-4">
           Select a Scenario to Test
         </h2>
-        <p className="text-sm text-slate-400 mb-6">
-          This will load the game UI in a 'read-only' sandbox mode using the
-          selected scenario's data. No game logic will be active.
-        </p>
-        <div className="flex flex-col space-y-4">
-          <Select
-            value={selectedScenarioId}
-            onChange={(e) => setSelectedScenarioId(e.target.value)}
-            className="bg-gray-900 text-white"
-          >
-            <option value="" disabled>
-              -- Choose a scenario --
-            </option>
-            {scenarios.map((scenario) => (
-              <option key={scenario.id} value={scenario.id}>
-                {scenario.name}
+
+        {/* --- FIX: Added Loading and Error states --- */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center my-6">
+            <LoadingSpinner />
+            <p className="text-slate-400 mt-3">Fetching scenarios...</p>
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <div className="my-4 p-4 bg-red-900/50 border border-red-700 rounded-lg text-left">
+             <div className="flex items-center text-red-400">
+               <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0" />
+               <h3 className="font-semibold">Failed to Load Scenarios</h3>
+             </div>
+             <p className="text-sm text-red-200 mt-2 break-words">
+               <strong>Reason:</strong> {error}
+             </p>
+          </div>
+        )}
+        {/* --- END FIX --- */}
+
+        {!isLoading && !error && (
+          <div className="flex flex-col space-y-4">
+            <p className="text-sm text-slate-400 mb-2">
+              This will load the game UI in a 'read-only' sandbox mode using the
+              selected scenario's data. No game logic will be active.
+            </p>
+            <Select
+              value={selectedScenarioId}
+              onChange={(e) => setSelectedScenarioId(e.target.value)}
+              className="bg-gray-900 text-white"
+            >
+              <option value="" disabled>
+                -- Choose a scenario --
               </option>
-            ))}
-          </Select>
-          <Button
-            onClick={handleStartSandbox}
-            disabled={!selectedScenarioId}
-            className="w-full"
-          >
-            Load Sandbox
-          </Button>
-        </div>
+              {scenarios.map((scenario) => (
+                <option key={scenario.id} value={scenario.id}>
+                  {scenario.name}
+                </option>
+              ))}
+            </Select>
+            <Button
+              onClick={handleStartSandbox}
+              disabled={!selectedScenarioId}
+              className="w-full"
+            >
+              Load Sandbox
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   );
