@@ -1,79 +1,66 @@
-// Centralized API utility for backend communication
-const isDevelopment = import.meta.env.DEV;
-const PRODUCTION_BACKEND_URL = 'https://one-mind-many-backend.onrender.com';
+// src/lib/api.ts
+import { supabase } from './supabaseClient'; // Import the client
 
-// In development, use relative paths for API calls (Vite will proxy them)
-// In production, use the full backend URL
-const BACKEND_URL = isDevelopment ? '' : (import.meta.env.VITE_BACKEND_URL || PRODUCTION_BACKEND_URL);
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-// For WebSocket connections, we need absolute URLs in both environments
-const BACKEND_WS_URL = isDevelopment 
-  ? 'http://localhost:3000' 
-  : (import.meta.env.VITE_BACKEND_URL || PRODUCTION_BACKEND_URL);
+// Helper function to get auth token
+const getAuthToken = async () => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token;
+};
 
-interface ApiOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  body?: any;
-  headers?: Record<string, string>;
-}
+// Main request function
+const request = async (
+  endpoint: string,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  body?: unknown,
+) => {
+  const token = await getAuthToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
 
-class ApiClient {
-  private baseUrl: string;
-
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  private getAuthHeaders(): Record<string, string> {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-    };
+  const config: RequestInit = {
+    method,
+    headers,
+  };
+
+  if (body) {
+    config.body = JSON.stringify(body);
   }
 
-  async request(endpoint: string, options: ApiOptions = {}): Promise<Response> {
-    const { method = 'GET', body, headers = {} } = options;
-    
-    const config: RequestInit = {
-      method,
-      headers: {
-        ...this.getAuthHeaders(),
-        ...headers,
-      },
-    };
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, config);
 
-    if (body && method !== 'GET') {
-      config.body = typeof body === 'string' ? body : JSON.stringify(body);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: 'An unknown error occurred',
+      }));
+      throw new Error(errorData.message || 'API request failed');
     }
 
-    const url = `${this.baseUrl}${endpoint}`;
-    return fetch(url, config);
+    if (response.status === 204) {
+      // No Content
+      return null;
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error(`API Error (${method} ${endpoint}):`, error);
+    throw error;
   }
+};
 
-  async get(endpoint: string, headers?: Record<string, string>): Promise<Response> {
-    return this.request(endpoint, { method: 'GET', headers });
-  }
-
-  async post(endpoint: string, body?: any, headers?: Record<string, string>): Promise<Response> {
-    return this.request(endpoint, { method: 'POST', body, headers });
-  }
-
-  async put(endpoint: string, body?: any, headers?: Record<string, string>): Promise<Response> {
-    return this.request(endpoint, { method: 'PUT', body, headers });
-  }
-
-  async patch(endpoint: string, body?: any, headers?: Record<string, string>): Promise<Response> {
-    return this.request(endpoint, { method: 'PATCH', body, headers });
-  }
-
-  async delete(endpoint: string, headers?: Record<string, string>): Promise<Response> {
-    return this.request(endpoint, { method: 'DELETE', headers });
-  }
-}
-
-// Export a singleton instance
-export const api = new ApiClient(BACKEND_URL);
-
-// Export the backend WebSocket URL
-export { BACKEND_WS_URL }; 
+// API object for convenience
+export const api = {
+  get: (endpoint: string) => request(endpoint, 'GET'),
+  post: (endpoint: string, body: unknown) => request(endpoint, 'POST', body),
+  put: (endpoint: string, body: unknown) => request(endpoint, 'PUT', body),
+  delete: (endpoint: string) => request(endpoint, 'DELETE'),
+};

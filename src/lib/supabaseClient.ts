@@ -42,6 +42,10 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
+// --- REMOVED CONFLICTING CONNECTION TEST ---
+// The following block was causing a race condition with AuthContext.tsx
+// AuthContext.tsx is now the ONLY place session logic is handled.
+/*
 // Test basic connection on initialization
 supabase.auth.getSession().then(({ data, error }) => {
   if (error) {
@@ -57,3 +61,4 @@ supabase.auth.getSession().then(({ data, error }) => {
 }).catch((error) => {
   console.error('💥 Supabase connection test exception:', error);
 });
+*/
