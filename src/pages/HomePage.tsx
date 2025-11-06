@@ -4,7 +4,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
-// import { Logo } from '../components/ui/Logo'; // No longer using the Logo component here
 import {
   Users,
   EyeOff,
@@ -13,7 +12,8 @@ import {
   AlertTriangle,
   Target,
   ArrowRight,
-  Key, // Added for the new section
+  Key,
+  BookOpen, // <-- NEW: Imported BookOpen icon
 } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
@@ -23,7 +23,6 @@ export const HomePage: React.FC = () => {
     <div className="w-full bg-gray-900 text-gray-200">
       {/* Hero Section */}
       <section className="flex min-h-[calc(100vh-80px)] w-full flex-col items-center justify-center bg-gray-950 px-6 text-center">
-        {/* --- MODIFIED: Replaced Logo with animated Orange Icon --- */}
         <div className="mb-8">
           <img
             src="/OneMindMany Icon PNG Orange.png"
@@ -33,7 +32,6 @@ export const HomePage: React.FC = () => {
             className="animate-[floating_6s_ease-in-out_infinite]"
           />
         </div>
-        {/* --- END MODIFICATION --- */}
 
         <h1 className="text-5xl font-bold text-white md:text-6xl">
           One Pawn. Many Minds.
@@ -42,10 +40,20 @@ export const HomePage: React.FC = () => {
           A social deduction game of conflicting agendas and hidden motives.
           Control a single shared pawn, but trust no one.
         </p>
-        <Button as={Link} to={user ? '/menu' : '/login'} size="lg" className="mt-10 text-lg">
-          {user ? 'Enter the Order' : 'Play Now'}
-          <ArrowRight className="ml-2 h-5 w-5" />
-        </Button>
+        
+        {/* --- MODIFICATION: Added "How to Play" button --- */}
+        <div className="mt-10 flex flex-col sm:flex-row gap-4">
+          <Button as={Link} to={user ? '/app/main-menu' : '/login'} size="lg" className="text-lg">
+            {user ? 'Enter the Order' : 'Play Now'}
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+          <Button as={Link} to="/how-to-play" size="lg" variant="outline" className="text-lg btn-outline">
+            <BookOpen className="ml-2 h-5 w-5" />
+            How to Play
+          </Button>
+        </div>
+        {/* --- END MODIFICATION --- */}
+        
       </section>
 
       {/* --- NEW: Thematic Concept Section --- */}
@@ -67,7 +75,7 @@ export const HomePage: React.FC = () => {
           </p>
           <Button
             as={Link}
-            to={user ? '/menu' : '/login'}
+            to={user ? '/app/main-menu' : '/login'}
             size="lg"
             className="mt-10 text-lg"
           >
@@ -159,7 +167,7 @@ export const HomePage: React.FC = () => {
         <p className="mt-4 text-xl text-gray-400">
           The Order is waiting.
         </p>
-        <Button as={Link} to={user ? '/menu' : '/login'} size="lg" className="mt-10 text-lg">
+        <Button as={Link} to={user ? '/app/main-menu' : '/login'} size="lg" className="mt-10 text-lg">
           {user ? 'View Main Menu' : 'Create Your Account'}
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
@@ -188,4 +196,3 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
     <p className="text-gray-400">{description}</p>
   </div>
 );
-

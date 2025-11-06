@@ -56,7 +56,7 @@ const MainMenuPage = () => {
         
         <h1 className="text-4xl sm:text-5xl font-extrabold mt-4 tracking-wider text-orange-500"
             style={{ fontFamily: "'CustomHeading', system-ui, sans-serif" }}>
-          The Oracle Awaits
+          The G.I.M.P Awaits
         </h1>
         <p className="text-lg text-slate-300 mt-2">
           Welcome, <span className="font-bold text-orange-400">{username}</span>. Your journey begins now.
