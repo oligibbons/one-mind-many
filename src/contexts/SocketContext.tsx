@@ -5,7 +5,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useState, // <-- FIX 1: Added 'useState' to the named imports
+  useState, // <-- FIX 1: Make sure this is imported
 } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../hooks/useAuth';
@@ -20,7 +20,6 @@ interface SocketContextType {
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
 // Define the server URL
-// This should match the port in your server/index.js
 const SERVER_URL = process.env.VITE_SERVER_URL || 'http://localhost:3001';
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -28,20 +27,16 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { user } = useAuth(); // Get auth state
 
-  // Use useMemo to create the socket instance only once
   const socket = useMemo(() => {
-    // We only connect if we have a user, but you can change this
-    // if you want anonymous users in the lobby
     if (user) {
       return io(SERVER_URL, {
-        // You can pass auth tokens here if needed
         // query: { token: user.token }
       });
     }
     return null;
-  }, [user]); // Re-run if the user logs in or out
+  }, [user]);
 
-  // FIX 2: Changed 'React.useState' to just 'useState' to use the named import
+  // FIX 2: Make sure this says 'useState', NOT 'React.useState'
   const [isConnected, setIsConnected] = useState(socket?.connected || false);
 
   useEffect(() => {
@@ -50,7 +45,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    // --- Standard connection events ---
     const onConnect = () => {
       console.log('Socket connected:', socket.id);
       setIsConnected(true);
@@ -63,23 +57,16 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const onConnectError = (error: Error) => {
       console.error('Socket connection error:', error.message);
-      // You could show a toast to the user here
     };
 
-    // --- Register listeners ---
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
 
-    // --- Server error handler ---
-    // Listen for custom errors from our gameHandler
     socket.on('error:game', (data: { message: string }) => {
       console.error('Server Game Error:', data.message);
-      // TODO: Show a toast to the user
-      // e.g., toast.error(data.message)
     });
 
-    // Cleanup on component unmount
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
