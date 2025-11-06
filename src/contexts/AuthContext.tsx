@@ -67,7 +67,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     // Let's see what the supabase.auth object contains right before we call the function
     console.log('AuthContext Debug: supabase.auth object:', supabase.auth);
 
-    const { data: authListener } = supabase.auth.onAuthStateChanged(
+    // FIX 4: Corrected typo from 'onAuthStateChanged' (v1) to 'onAuthStateChange' (v2+)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('AuthContext: Auth state changed', event, session);
         setSession(session);
