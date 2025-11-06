@@ -56,18 +56,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         .single();
 
       if (error) {
-        // Check for 'no rows found' error code (PGRST116).
-        if (error.code === 'PGRST116') { 
-            console.warn('Profile not found for user. Setting profile to null.');
-            setUser({
-                ...authUser,
-                profile: null, // Keep user logged in but without a profile object
-            });
-        } else {
-            // Log out for other critical errors (e.g., permission denied, database down)
-            console.warn('Error fetching profile:', error.message);
-            setUser(null); 
-        }
+        // FIX: On any Supabase API error (like the 500 RLS error), 
+        // keep the user authenticated but explicitly set the profile to null.
+        console.warn('Error fetching profile, setting user.profile to null:', error.message);
+        setUser({
+          ...authUser,
+          profile: null, // Keep user logged in, but mark profile as missing/failed
+        });
       } else if (profile) {
         setUser({
           ...authUser,
@@ -75,28 +70,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         });
       }
     } catch (error) {
-      console.error('Failed to fetch profile:', error);
-      setUser(null);
+      console.error('Failed to fetch profile (critical exception):', error);
+      // FIX: On any critical exception (e.g., network timeout), keep the base User object.
+      // This ensures the authenticated state is preserved.
+      setUser({
+        ...authUser,
+        profile: null,
+      });
     } finally {
       // This is crucial: always stop loading *after* we are done.
-      // This is primarily for the initial `getSession` call.
       setLoading(false);
     }
   };
 
   useEffect(() => {
     // 1. Get initial session
-    // We set loading to true *before* this effect, so it's already loading
     supabase.auth
       .getSession()
       .then(({ data: { session } }) => {
         setSession(session);
         if (session?.user) {
-          // If we have a session, fetch the profile.
-          // fetchUserProfile will set loading to false in its 'finally' block.
           fetchUserProfile(session.user);
         } else {
-          // No session, we are done loading.
           setLoading(false);
         }
       })
@@ -115,10 +110,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const currentUser = session?.user ?? null;
 
         if (currentUser) {
-          // FIX: Do NOT await fetchUserProfile. Run it in the background, 
-          // and set loading to false immediately to unblock the UI.
+          // User signed in or session was refreshed
+          // We run the fetch in the background and unblock the UI immediately
           fetchUserProfile(currentUser); 
-          setLoading(false); // <--- THIS IS THE KEY FIX FOR THE HANG
+          setLoading(false); 
         } else {
           // User signed out
           setUser(null);
@@ -132,7 +127,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     };
   
   // The dependency array MUST be empty [].
-  // We only want this effect to run ONCE when the app first mounts.
   }, []); 
 
   // Define the actual login function
