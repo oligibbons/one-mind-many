@@ -1,6 +1,12 @@
 // src/contexts/SocketContext.tsx
 
-import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState, // <-- FIX 1: Added 'useState' to the named imports
+} from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../hooks/useAuth';
 
@@ -35,7 +41,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     return null;
   }, [user]); // Re-run if the user logs in or out
 
-  const [isConnected, setIsConnected] = React.useState(socket?.connected || false);
+  // FIX 2: Changed 'React.useState' to just 'useState' to use the named import
+  const [isConnected, setIsConnected] = useState(socket?.connected || false);
 
   useEffect(() => {
     if (!socket) {
