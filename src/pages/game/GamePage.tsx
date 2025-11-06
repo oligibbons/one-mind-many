@@ -26,7 +26,7 @@ import { InGameMenuModal } from '../../components/game/InGameMenuModal';
 import { Button } from '../../components/ui/Button';
 import { Menu } from 'lucide-react';
 
-export const GamePage: React.FC = () => {
+const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useAuth();
   const { socket, isConnected } = useSocket();
@@ -235,3 +235,5 @@ export const GamePage: React.FC = () => {
     </div>
   );
 };
+
+export default GamePage;

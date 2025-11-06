@@ -7,7 +7,7 @@ import { Logo } from '../../components/ui/Logo';
 import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
 
-export const MainMenuPage: React.FC = () => {
+const MainMenuPage: React.FC = () => {
   const navigate = useNavigate();
   const { socket, isConnected } = useSocket();
   const { user, profile } = useAuth();
@@ -111,3 +111,5 @@ export const MainMenuPage: React.FC = () => {
     </div>
   );
 };
+
+export default MainMenuPage;

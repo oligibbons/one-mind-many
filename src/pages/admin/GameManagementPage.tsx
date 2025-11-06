@@ -34,7 +34,7 @@ interface GameData {
   totalPages: number;
 }
 
-export const GameManagementPage: React.FC = () => {
+const GameManagementPage: React.FC = () => {
   const { profile } = useAuth(); // To check if admin
   const [data, setData] = useState<GameData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -234,3 +234,5 @@ export const GameManagementPage: React.FC = () => {
     </div>
   );
 };
+
+export default GameManagementPage;

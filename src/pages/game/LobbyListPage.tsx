@@ -24,7 +24,7 @@ interface Lobby {
   game_players: LobbyPlayer[];
 }
 
-export const LobbyListPage: React.FC = () => {
+const LobbyListPage: React.FC = () => {
   const navigate = useNavigate();
   const { socket, isConnected } = useSocket();
   const { user, profile } = useAuth();
@@ -211,3 +211,5 @@ export const LobbyListPage: React.FC = () => {
     </>
   );
 };
+
+export default LobbyListPage;

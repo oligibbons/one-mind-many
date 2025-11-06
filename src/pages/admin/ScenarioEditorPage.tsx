@@ -50,7 +50,7 @@ const JsonEditor: React.FC<{
   );
 };
 
-export const ScenarioEditorPage: React.FC = () => {
+const ScenarioEditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [scenario, setScenario] = useState<Partial<Scenario> | null>(null);
@@ -323,3 +323,5 @@ export const ScenarioEditorPage: React.FC = () => {
     </div>
   );
 };
+
+export default ScenarioEditorPage;

@@ -19,24 +19,25 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 
-// --- Lazy Loaded Game Pages ---
-const MainMenuPage = lazy(() => import('./pages/game/MainMenuPage').then(m => ({ default: m.MainMenuPage })));
-const LobbyListPage = lazy(() => import('./pages/game/LobbyListPage').then(m => ({ default: m.LobbyListPage })));
-const LobbyPage = lazy(() => import('./pages/game/LobbyPage').then(m => ({ default: m.LobbyPage })));
-const GamePage = lazy(() => import('./pages/game/GamePage').then(m => ({ default: m.GamePage })));
-const FriendsPage = lazy(() => import('./pages/game/FriendsPage').then(m => ({ default: m.FriendsPage })));
-const ProfilePage = lazy(() => import('./pages/game/ProfilePage').then(m => ({ default: m.ProfilePage })));
-const SettingsPage = lazy(() => import('./pages/game/SettingsPage').then(m => ({ default: m.SettingsPage })));
+// --- FIX: Simplified lazy() imports ---
+// This syntax now expects all these pages to use 'export default'
+const MainMenuPage = lazy(() => import('./pages/game/MainMenuPage'));
+const LobbyListPage = lazy(() => import('./pages/game/LobbyListPage'));
+const LobbyPage = lazy(() => import('./pages/game/LobbyPage'));
+const GamePage = lazy(() => import('./pages/game/GamePage'));
+const FriendsPage = lazy(() => import('./pages/game/FriendsPage'));
+const ProfilePage = lazy(() => import('./pages/game/ProfilePage'));
+const SettingsPage = lazy(() => import('./pages/game/SettingsPage'));
 
-// --- Lazy Loaded Admin Pages ---
-const AdminPage = lazy(() => import('./pages/admin/AdminPage').then(m => ({ default: m.AdminPage })));
-const ScenarioManagementPage = lazy(() => import('./pages/admin/ScenarioManagementPage').then(m => ({ default: m.ScenarioManagementPage })));
-const ScenarioEditorPage = lazy(() => import('./pages/admin/ScenarioEditorPage').then(m => ({ default: m.ScenarioEditorPage })));
-const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
-const GameManagementPage = lazy(() => import('./pages/admin/GameManagementPage').then(m => ({ default: m.GameManagementPage }))); // <-- NEW
-const ContentManagementPage = lazy(() => import('./pages/admin/ContentManagementPage').then(m => ({ default: m.ContentManagementPage }))); // <-- NEW
-// const TestGameViewPage = lazy(() => import('./pages/admin/TestGameViewPage')); // For next batch
-// const RulesManagementPage = lazy(() => import('./pages/admin/RulesManagementPage')); // For next batch
+// --- Lazy Loaded Admin Pages (FIXED) ---
+const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
+const ScenarioManagementPage = lazy(() => import('./pages/admin/ScenarioManagementPage'));
+const ScenarioEditorPage = lazy(() => import('./pages/admin/ScenarioEditorPage'));
+const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
+const GameManagementPage = lazy(() => import('./pages/admin/GameManagementPage'));
+const ContentManagementPage = lazy(() => import('./pages/admin/ContentManagementPage'));
+
+// --- End of Fix ---
 
 const AppSuspense: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <Suspense fallback={
@@ -94,10 +95,8 @@ export const App: React.FC = () => {
             <Route path="scenario/new" element={<ScenarioEditorPage />} />
             <Route path="scenario/edit/:scenarioId" element={<ScenarioEditorPage />} />
             <Route path="users" element={<UserManagementPage />} />
-            <Route path="games" element={<GameManagementPage />} /> {/* <-- NEW */}
-            <Route path="content" element={<ContentManagementPage />} /> {/* <-- NEW */}
-            {/* <Route path="test-game" element={<TestGameViewPage />} /> */}
-            {/* <Route path="rules" element={<RulesManagementPage />} /> */}
+            <Route path="games" element={<GameManagementPage />} />
+            <Route path="content" element={<ContentManagementPage />} />
           </Route>
 
           {/* --- Auth (Logged Out) --- */}

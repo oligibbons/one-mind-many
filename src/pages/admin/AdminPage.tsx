@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Shield, Users, BarChart } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-export const AdminPage: React.FC = () => {
+const AdminPage: React.FC = () => {
   const { user } = useAuth(); // Changed from profile to user.profile
 
   return (
@@ -61,3 +61,5 @@ const AdminNavCard: React.FC<AdminNavCardProps> = ({ to, icon: Icon, title, desc
     </Card>
   </Link>
 );
+
+export default AdminPage;

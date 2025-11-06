@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Beaker } from 'lucide-react';
 
-export const TestGameViewPage: React.FC = () => {
+const TestGameViewPage: React.FC = () => {
   return (
     <div className="mx-auto w-full max-w-4xl p-8">
       <Button
@@ -47,3 +47,5 @@ export const TestGameViewPage: React.FC = () => {
     </div>
   );
 };
+
+export default TestGameViewPage;

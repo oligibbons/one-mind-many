@@ -33,7 +33,7 @@ interface OutgoingRequest {
 
 type Tab = 'friends' | 'requests' | 'add';
 
-export const FriendsPage: React.FC = () => {
+const FriendsPage: React.FC = () => {
   const [tab, setTab] = useState<Tab>('friends');
   const [friends, setFriends] = useState<FriendData[]>([]);
   const [incoming, setIncoming] = useState<IncomingRequest[]>([]);
@@ -298,3 +298,5 @@ const AddFriendForm: React.FC<{ onSent: () => void }> = ({ onSent }) => {
     </Card>
   );
 };
+
+export default FriendsPage;

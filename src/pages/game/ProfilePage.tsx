@@ -35,7 +35,7 @@ interface GameHistory {
   };
 }
 
-export const ProfilePage: React.FC = () => {
+const ProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [history, setHistory] = useState<GameHistory[]>([]);
@@ -195,3 +195,5 @@ const GameHistoryRow: React.FC<{ game: GameHistory }> = ({ game }) => {
     </div>
   );
 };
+
+export default ProfilePage;

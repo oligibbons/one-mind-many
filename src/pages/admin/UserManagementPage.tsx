@@ -28,7 +28,7 @@ interface UserData {
   totalPages: number;
 }
 
-export const UserManagementPage: React.FC = () => {
+const UserManagementPage: React.FC = () => {
   const [data, setData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -264,3 +264,5 @@ function useDebounce<T>(value: T, delay: number): T {
   }, [value, delay]);
   return debouncedValue;
 }
+
+export default UserManagementPage;

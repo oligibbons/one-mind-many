@@ -10,7 +10,7 @@ import JSONEditor from 'react-json-editor-ajrm';
 // @ts-ignore
 import locale from 'react-json-editor-ajrm/locale/en';
 
-export const ContentManagementPage: React.FC = () => {
+const ContentManagementPage: React.FC = () => {
   const [content, setContent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -112,3 +112,5 @@ export const ContentManagementPage: React.FC = () => {
     </div>
   );
 };
+
+export default ContentManagementPage;

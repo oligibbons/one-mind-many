@@ -40,7 +40,7 @@ interface LobbyState {
   } | null;
 }
 
-export const LobbyPage: React.FC = () => {
+const LobbyPage: React.FC = () => {
   const { lobbyId } = useParams<{ lobbyId: string }>(); // This is the gameId
   const navigate = useNavigate();
   const { socket, isConnected } = useSocket();
@@ -392,3 +392,5 @@ export const LobbyPage: React.FC = () => {
     </>
   );
 };
+
+export default LobbyPage;

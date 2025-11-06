@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, GitBranch } from 'lucide-react';
 
-export const RulesManagementPage: React.FC = () => {
+const RulesManagementPage: React.FC = () => {
   return (
     <div className="mx-auto w-full max-w-4xl p-8">
       <Button
@@ -55,3 +55,5 @@ export const RulesManagementPage: React.FC = () => {
     </div>
   );
 };
+
+export default RulesManagementPage;

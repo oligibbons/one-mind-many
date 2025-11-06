@@ -9,7 +9,7 @@ import { Input } from '../../components/ui/Input';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { User, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 
-export const SettingsPage: React.FC = () => {
+const SettingsPage: React.FC = () => {
   const { user, updateUser } = useAuth(); // Use auth context
 
   // Profile Settings
@@ -278,3 +278,5 @@ export const SettingsPage: React.FC = () => {
     </div>
   );
 };
+
+export default SettingsPage;

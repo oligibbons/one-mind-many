@@ -17,7 +17,7 @@ interface Scenario {
   created_at: string;
 }
 
-export const ScenarioManagementPage: React.FC = () => {
+const ScenarioManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -173,3 +173,5 @@ export const ScenarioManagementPage: React.FC = () => {
     </div>
   );
 };
+
+export default ScenarioManagementPage;
