@@ -45,6 +45,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true); // Start as true
   const [session, setSession] = useState<Session | null>(null);
 
+  // Helper function to fetch profile and set user state
+  const fetchUserProfile = async (authUser: User) => {
+    // Do not set loading(true) here, it causes flicker on refresh
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (error) {
+        // Check for 'no rows found' error code (PGRST116).
+        if (error.code === 'PGRST116') { 
+            console.warn('Profile not found for user. Setting profile to null.');
+            setUser({
+                ...authUser,
+                profile: null, // Keep user logged in but without a profile object
+            });
+        } else {
+            // Log out for other critical errors (e.g., permission denied, database down)
+            console.warn('Error fetching profile:', error.message);
+            setUser(null); 
+        }
+      } else if (profile) {
+        setUser({
+          ...authUser,
+          profile: profile as Profile,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+      setUser(null);
+    } finally {
+      // This is crucial: always stop loading *after* we are done.
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     // 1. Get initial session
     // We set loading to true *before* this effect, so it's already loading
@@ -77,11 +115,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         if (currentUser) {
           // User signed in or session was refreshed
-          // FIX: Do not await fetchUserProfile to prevent hanging the listener
-          // The login function sets loading to true, so we must set it to false now
-          // to unblock the UI.
-          fetchUserProfile(currentUser); 
-          setLoading(false); // <--- THIS IS THE FIX
+          // fetchUserProfile will handle setting the user and setting loading to false.
+          await fetchUserProfile(currentUser);
         } else {
           // User signed out
           setUser(null);
@@ -94,42 +129,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       authListener.subscription.unsubscribe();
     };
   
-  // --- THIS IS THE FIX ---
   // The dependency array MUST be empty [].
   // We only want this effect to run ONCE when the app first mounts.
-  // My previous inclusion of `[loading]` caused an infinite loop.
   }, []); 
-
-  // Helper function to fetch profile and set user state
-  const fetchUserProfile = async (authUser: User) => {
-    // Do not set loading(true) here, it causes flicker on refresh
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-
-      if (error) {
-        console.warn('Error fetching profile:', error.message);
-        setUser(null); // Set user to null if profile fails
-      } else if (profile) {
-        setUser({
-          ...authUser,
-          profile: profile,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch profile:', error);
-      setUser(null);
-    } finally {
-      // This is crucial: always stop loading *after* we are done.
-      // NOTE: This is primarily for the initial `getSession` logic.
-      // The `onAuthStateChange` listener is now responsible for clearing loading
-      // in all other cases to prevent the UI from hanging.
-      setLoading(false); 
-    }
-  };
 
   // Define the actual login function
   const login = async (email: string, password: string) => {
@@ -145,7 +147,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
     
     // If login is successful, the `onAuthStateChange` listener will fire,
-    // which then calls `fetchUserProfile` and sets loading to false.
+    // which then calls `fetchUserProfile`, which will set loading to false
+    // when it finishes.
     return { success: true, error: null };
   };
 
