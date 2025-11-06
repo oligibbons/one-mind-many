@@ -7,7 +7,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { Card, CardContent } from './Card';
 import { Button } from './Button';
 import { X, Mail, Gamepad2 } from 'lucide-react';
-import { Profile } from '../../types/game'; // Assuming Profile is in game.d.ts
+// FIX: The Profile type is defined in AuthContext, not game.d.ts
+import { Profile } from '../../contexts/AuthContext'; 
 
 export interface InviteData {
   gameId: string;
@@ -22,11 +23,11 @@ interface InviteToastProps {
 
 export const InviteToast: React.FC<InviteToastProps> = ({ invite, onClose }) => {
   const { socket } = useSocket();
-  const { user, profile } = useAuth();
+  const { user } = useAuth(); // FIX: Removed 'profile'
   const navigate = useNavigate();
 
   const handleJoin = () => {
-    if (!socket || !user || !profile) return;
+    if (!socket || !user || !user.profile) return; // FIX: Check for user.profile
 
     // We must first leave any room we are currently in
     // The server should handle this, but we can emit a 'leave' just in case.
@@ -36,7 +37,7 @@ export const InviteToast: React.FC<InviteToastProps> = ({ invite, onClose }) => 
       {
         gameId: invite.gameId,
         userId: user.id,
-        username: profile.username || 'AnonPlayer',
+        username: user.profile.username || 'AnonPlayer', // FIX: Use user.profile
       },
       (response: { status: 'ok'; gameId: string } | { status: 'error'; message: string }) => {
         if (response.status === 'ok') {
