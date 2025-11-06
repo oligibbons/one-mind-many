@@ -76,7 +76,10 @@ export const Navbar = () => {
           >
             Profile
           </NavLink>
-          {user.is_admin && (
+          
+          {/* --- THIS IS THE FIX --- */}
+          {/* We now check user.profile?.is_admin */}
+          {user.profile?.is_admin && (
             <NavLink
               to="/admin"
               className={linkClass}
@@ -86,6 +89,8 @@ export const Navbar = () => {
               Admin
             </NavLink>
           )}
+          {/* --- END OF FIX --- */}
+
           <Button
             onClick={handleLogout}
             variant="danger"
