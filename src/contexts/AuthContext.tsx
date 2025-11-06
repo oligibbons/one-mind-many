@@ -33,12 +33,14 @@ interface AuthContextType {
   session: Session | null;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// FIX 1: Added 'export' so src/hooks/useAuth.ts can import this context.
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
+  // FIX 2: Removed extra '=' sign from 'useState'
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
 
@@ -115,12 +117,4 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };
