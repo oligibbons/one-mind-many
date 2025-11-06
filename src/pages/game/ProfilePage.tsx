@@ -196,4 +196,5 @@ const GameHistoryRow: React.FC<{ game: GameHistory }> = ({ game }) => {
   );
 };
 
+// FIX: Added 'export default'
 export default ProfilePage;

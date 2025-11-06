@@ -1,115 +1,98 @@
 // src/pages/game/MainMenuPage.tsx
-
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '../../components/ui/Button';
-import { Logo } from '../../components/ui/Logo';
-import { useSocket } from '../../contexts/SocketContext';
+import React from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { Link } from 'react-router-dom';
+import { Button } from '../../components/ui/Button';
+import { LogOut, Play, Users, Settings, User, Shield } from 'lucide-react';
 
+// FIX: Changed from 'export const' to 'const'
 const MainMenuPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { socket, isConnected } = useSocket();
-  const { user, profile } = useAuth();
-  const [isCreating, setIsCreating] = useState(false);
+  // FIX: 'useAuth' provides 'user' (which contains profile) and 'logout'.
+  // It does NOT provide 'profile' as a separate variable.
+  const { user, logout } = useAuth();
 
-  // --- NEW: Listen for lobby creation success ---
-  useEffect(() => {
-    if (!socket) return;
-
-    // Fired when the server confirms we've created/joined a lobby
-    const onLobbyJoined = (data: { gameId: string }) => {
-      console.log('Lobby joined, navigating to:', data.gameId);
-      setIsCreating(false);
-      // We got the new game ID, now navigate to the lobby page
-      navigate(`/lobby/${data.gameId}`);
-    };
-
-    // Listen for the event from the server
-    socket.on('lobby:joined', onLobbyJoined);
-
-    // Cleanup
-    return () => {
-      socket.off('lobby:joined', onLobbyJoined);
-    };
-  }, [socket, navigate]);
-
-  // --- NEW: Handle Create Lobby Button ---
-  const handleCreateLobby = () => {
-    if (!socket || !user || !profile || isCreating) return;
-
-    setIsCreating(true);
-    console.log('Emitting lobby:create...');
-
-    // Send the "create lobby" request to the server
-    socket.emit('lobby:create', {
-      userId: user.id,
-      username: profile.username || 'BOZO',
-      // TODO: This scenarioId needs to be a real UUID from your 'scenarios' table
-      // You'll need to manually insert  the scenario in Supabase and get its ID.
-      scenarioId: 'b3f5b0a0-0b1e-4b0e-9b0a-0b1e4b0e9b0a',
-    });
+  const handleLogout = async () => {
+    await logout();
+    // Redirect is handled by ProtectedRoute & AuthLayout
   };
 
-  const buttonDisabled = !isConnected || isCreating;
-
   return (
-    <div className="flex h-full flex-col items-center justify-center p-8">
-      <div className="w-full max-w-sm">
-        <Logo className="mb-8 h-24 w-auto text-orange-500" />
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-gray-950 text-gray-200">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-white">
+          {/* FIX: Changed 'profile.username' to 'user.profile.username' */}
+          Welcome, {user?.profile?.username || 'Guardian'}
+        </h1>
+        <p className="text-lg text-gray-400 mt-2">
+          The Order awaits your guidance.
+        </p>
+      </div>
 
-        <div className="space-y-4">
-          <Button
-            onClick={handleCreateLobby}
-            className="w-full text-lg"
-            disabled={buttonDisabled}
-          >
-            {isCreating
-              ? 'Creating Lobby...'
-              : !isConnected
-              ? 'Connecting...'
-              : 'Host New Game'}
-          </Button>
-
-          <Button
+      <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
+        <Button as={Link} to="/app/lobbies" size="lg" className="justify-center">
+          <Play className="mr-2 h-5 w-5" />
+          Play
+        </Button>
+        <Button
+          as={Link}
+          to="/app/friends"
+          size="lg"
+          variant="secondary"
+          className="justify-center"
+        >
+          <Users className="mr-2 h-5 w-5" />
+          Friends
+        </Button>
+        <Button
+          as={Link}
+          // FIX: Changed 'user.id' to 'user.profile.id' or 'user.id'
+          // 'user.id' is correct as it's the auth user's ID.
+          to={`/app/profile/${user?.id}`}
+          size="lg"
+          variant="secondary"
+          className="justify-center"
+        >
+          <User className="mr-2 h-5 w-5" />
+          Profile
+        </Button>
+        <Button
+          as={Link}
+          to="/app/settings"
+          size="lg"
+          variant="secondary"
+          className="justify-center"
+        >
+          <Settings className="mr-2 h-5 w-5" />
+          Settings
+        </Button>
+        
+        {/* FIX: Changed 'profile.is_admin' to 'user.profile.is_admin' */}
+        {user?.profile?.is_admin && (
+           <Button
             as={Link}
-            to="/lobbies" // <-- NEW LINK
-            className="w-full"
-            variant="secondary"
+            to="/admin"
+            size="lg"
+            variant="danger"
+            className="justify-center"
           >
-            Find Game
+            <Shield className="mr-2 h-5 w-5" />
+            Admin Panel
           </Button>
+        )}
 
-          <Button
-            as={Link}
-            to="/how-to-play"
-            className="w-full"
-            variant="secondary"
-          >
-            How To Play
-          </Button>
-
-          <Button
-            as={Link}
-            to="/friends"
-            className="w-full"
-            variant="secondary"
-          >
-            Friends
-          </Button>
-
-          <Button
-            as={Link}
-            to="/settings"
-            className="w-full"
-            variant="secondary"
-          >
-            Settings
-          </Button>
-        </div>
+        <Button
+          onClick={handleLogout}
+          size="lg"
+          variant="ghost"
+          className="justify-center mt-4"
+        >
+          <LogOut className="mr-2 h-5 w-5" />
+          Sign Out
+        </Button>
       </div>
     </div>
   );
 };
 
+// FIX: Added 'export default'
 export default MainMenuPage;

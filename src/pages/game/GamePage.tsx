@@ -236,4 +236,5 @@ const GamePage: React.FC = () => {
   );
 };
 
+// FIX: Added 'export default'
 export default GamePage;

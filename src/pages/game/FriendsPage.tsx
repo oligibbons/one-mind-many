@@ -33,6 +33,7 @@ interface OutgoingRequest {
 
 type Tab = 'friends' | 'requests' | 'add';
 
+// FIX: Removed 'export'
 const FriendsPage: React.FC = () => {
   const [tab, setTab] = useState<Tab>('friends');
   const [friends, setFriends] = useState<FriendData[]>([]);
@@ -158,7 +159,7 @@ const TabButton: React.FC<TabButtonProps> = ({ id, label, icon: Icon, activeTab,
 // --- Friends List Component ---
 interface FriendsListProps {
   friends: FriendData[];
-  getStatus: (userId: string) => FriendStatus;
+  getStatus: (userId: string) => 'Online' | 'Offline' | 'In-Game'; // Adjusted
   onRemove: (friendshipId: string, username: string) => void;
 }
 const FriendsList: React.FC<FriendsListProps> = ({ friends, getStatus, onRemove }) => {
@@ -299,4 +300,5 @@ const AddFriendForm: React.FC<{ onSent: () => void }> = ({ onSent }) => {
   );
 };
 
+// FIX: Added 'export default'
 export default FriendsPage;

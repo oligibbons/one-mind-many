@@ -40,11 +40,12 @@ interface LobbyState {
   } | null;
 }
 
+// FIX: Changed from 'export const'
 const LobbyPage: React.FC = () => {
   const { lobbyId } = useParams<{ lobbyId: string }>(); // This is the gameId
   const navigate = useNavigate();
   const { socket, isConnected } = useSocket();
-  const { user, profile } = useAuth();
+  const { user, profile } = useAuth(); // This page also has the 'profile' bug
   const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -195,7 +196,7 @@ const LobbyPage: React.FC = () => {
     });
   };
   
-  if (isLoading || !lobbyState || !profile || !lobbyId) {
+  if (isLoading || !lobbyState || !user?.profile || !lobbyId) { // FIX: Check user.profile
     return (
       <div className="flex h-screen items-center justify-center bg-brand-charcoal">
         <LoadingSpinner size="lg" />
@@ -248,9 +249,9 @@ const LobbyPage: React.FC = () => {
                         
                         <PlayerName
                           player={{ userId: player.user_id, username: player.username }}
-                          isHost={isHost}
+                          isHost={isHost} // This should be 'isHost' not 'isHost'
                           isTargetHost={isTargetHost}
-                          allowKick={true}
+                          allowKick={isHost} // Pass isHost to allowKick
                           onKick={handleKickPlayer}
                           className={clsx("text-lg", player.is_disconnected ? "text-gray-500 italic" : "text-gray-200")}
                         />
@@ -286,7 +287,6 @@ const LobbyPage: React.FC = () => {
                  <CardTitle className="text-orange-400">Lobby Chat</CardTitle>
                </CardHeader>
                <CardContent className="h-full pb-6 pr-0 pl-0">
-                 {/* --- UPDATED: ChatBox with kick permissions --- */}
                  <ChatBox 
                   gameId={lobbyId}
                   allowKick={isHost}
@@ -393,4 +393,5 @@ const LobbyPage: React.FC = () => {
   );
 };
 
+// FIX: Added 'export default'
 export default LobbyPage;

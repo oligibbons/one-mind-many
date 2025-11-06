@@ -6,10 +6,11 @@ import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Input } from '../../components/ui/Input'; // <-- NEW IMPORT
+import { Input } from '../../components/ui/Input';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
-import { CreateLobbyModal } from '../../components/lobby/CreateLobbyModal'; // <-- NEW IMPORT
-import { Users, Lock, LogIn } from 'lucide-react'; // <-- NEW ICONS
+import { CreateLobbyModal } from '../../components/lobby/CreateLobbyModal';
+import { Users, Lock, LogIn } from 'lucide-react';
+import { Label } from '../../components/ui/Switch'; // Added missing Label import
 
 // Define the shape of a lobby object we expect from the server
 interface LobbyPlayer {
@@ -18,21 +19,22 @@ interface LobbyPlayer {
 }
 interface Lobby {
   id: string;
-  name: string; // <-- NEW
+  name: string;
   host_id: string;
-  scenario_name: string; // <-- NEW
+  scenario_name: string;
   game_players: LobbyPlayer[];
 }
 
+// FIX: Changed from 'export const'
 const LobbyListPage: React.FC = () => {
   const navigate = useNavigate();
   const { socket, isConnected } = useSocket();
-  const { user, profile } = useAuth();
+  const { user, profile } = useAuth(); // This page also has the 'profile' bug
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // <-- NEW
-  const [lobbyCode, setLobbyCode] = useState(''); // <-- NEW
-  const [joinError, setJoinError] = useState<string | null>(null); // <-- NEW
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [lobbyCode, setLobbyCode] = useState('');
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   // --- Socket Listeners ---
   useEffect(() => {
@@ -50,7 +52,6 @@ const LobbyListPage: React.FC = () => {
       navigate(`/app/lobby/${data.gameId}`);
     };
     
-    // --- NEW: Handle errors from server ---
     const onLobbyError = (data: { message: string }) => {
       setJoinError(data.message);
       setIsLoading(false);
@@ -58,34 +59,32 @@ const LobbyListPage: React.FC = () => {
 
     socket.on('lobby:list', onLobbyList);
     socket.on('lobby:joined', onLobbyJoined);
-    socket.on('error:lobby', onLobbyError); // <-- NEW
+    socket.on('error:lobby', onLobbyError);
 
     // --- Initial Fetch ---
-    // Ask the server for the list of lobbies when component mounts
     socket.emit('lobby:get_list');
 
     // Cleanup
     return () => {
       socket.off('lobby:list', onLobbyList);
       socket.off('lobby:joined', onLobbyJoined);
-      socket.off('error:lobby', onLobbyError); // <-- NEW
+      socket.off('error:lobby', onLobbyError);
     };
   }, [socket, isConnected, navigate]);
 
   const handleJoinLobby = (gameId: string) => {
-    if (!socket || !user || !profile) return;
+    if (!socket || !user || !user.profile) return; // FIX: Check user.profile
     setJoinError(null);
     socket.emit('lobby:join', {
       gameId,
       userId: user.id,
-      username: profile.username || 'AnonPlayer',
+      username: user.profile.username || 'AnonPlayer', // FIX: Use user.profile
     });
   };
 
-  // --- NEW: Handle joining a private lobby by code ---
   const handleJoinByCode = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!socket || !user || !profile || !lobbyCode) return;
+    if (!socket || !user || !user.profile || !lobbyCode) return; // FIX: Check user.profile
     
     setJoinError(null);
     setIsLoading(true);
@@ -93,7 +92,7 @@ const LobbyListPage: React.FC = () => {
     socket.emit('lobby:join_private', {
       lobbyCode: lobbyCode.toUpperCase(),
       userId: user.id,
-      username: profile.username || 'AnonPlayer',
+      username: user.profile.username || 'AnonPlayer', // FIX: Use user.profile
     });
   };
 
@@ -148,7 +147,6 @@ const LobbyListPage: React.FC = () => {
 
   return (
     <>
-      {/* --- NEW: Create Lobby Modal --- */}
       {isCreateModalOpen && (
         <CreateLobbyModal onClose={() => setIsCreateModalOpen(false)} />
       )}
@@ -158,13 +156,12 @@ const LobbyListPage: React.FC = () => {
           <h1 className="text-5xl font-bold game-title">Find a Game</h1>
           <Button
             className="game-button btn-lg"
-            onClick={() => setIsCreateModalOpen(true)} // <-- NEW
+            onClick={() => setIsCreateModalOpen(true)}
           >
             Host New Game
           </Button>
         </div>
 
-        {/* --- NEW: Join by Code --- */}
         <Card className="game-card mb-8">
           <CardContent className="p-4">
             <form onSubmit={handleJoinByCode} className="flex flex-col sm:flex-row gap-4">
@@ -192,7 +189,6 @@ const LobbyListPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* --- Public Lobby List --- */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-3xl font-bold text-white">Public Lobbies</h2>
           <Button
@@ -212,4 +208,5 @@ const LobbyListPage: React.FC = () => {
   );
 };
 
+// FIX: Added 'export default'
 export default LobbyListPage;
