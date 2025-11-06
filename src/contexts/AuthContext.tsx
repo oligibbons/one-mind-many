@@ -27,39 +27,37 @@ export interface UserProfile extends User {
   profile: Profile | null;
 }
 
-// --- NEW: Define what our context will provide ---
+// Define what our context will provide
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   session: Session | null;
-  // --- FIX 1: Add the auth functions we need ---
   login: (email: string, password: string) => Promise<{ success: boolean; error: string | null }>;
   logout: () => Promise<{ success: boolean; error: string | null }>;
-  // Add register if you have a register page
-  // register: (/*...args*/) => ...
 }
 
-// FIX 1: Added 'export' so src/hooks/useAuth.ts can import this context.
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  // FIX 2: Removed extra '=' sign from 'useState'
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Start as true
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     // 1. Get initial session
-    setLoading(true); // Start loading
+    // We set loading to true *before* this effect, so it's already loading
     supabase.auth
       .getSession()
       .then(({ data: { session } }) => {
         setSession(session);
         if (session?.user) {
+          // If we have a session, fetch the profile.
+          // fetchUserProfile will set loading to false in its 'finally' block.
           fetchUserProfile(session.user);
         } else {
+          // No session, we are done loading.
           setLoading(false);
         }
       })
@@ -69,11 +67,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       });
 
     // 2. Listen for auth changes
-
-    // FIX 3: ADDED DIAGNOSTIC LOGGING
     console.log('AuthContext Debug: supabase.auth object:', supabase.auth);
 
-    // FIX 4: Corrected typo from 'onAuthStateChanged' (v1) to 'onAuthStateChange' (v2+)
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('AuthContext: Auth state changed', event, session);
@@ -81,12 +76,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const currentUser = session?.user ?? null;
 
         if (currentUser) {
-          // Don't set loading(true) here, causes flicker
+          // User signed in or session was refreshed
+          // fetchUserProfile will handle setting the user and setting loading to false.
           await fetchUserProfile(currentUser);
         } else {
+          // User signed out
           setUser(null);
-          // Only set loading false if it's not an initial load
-          if (loading) setLoading(false);
+          setLoading(false); // We are done loading
         }
       },
     );
@@ -94,11 +90,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [loading]); // Added 'loading' dependency
+  
+  // --- THIS IS THE FIX ---
+  // The dependency array MUST be empty [].
+  // We only want this effect to run ONCE when the app first mounts.
+  // My previous inclusion of `[loading]` caused an infinite loop.
+  }, []); 
 
   // Helper function to fetch profile and set user state
   const fetchUserProfile = async (authUser: User) => {
-    // setLoading(true); // This is now handled in the useEffect/login
+    // Do not set loading(true) here, it causes flicker on refresh
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -119,49 +120,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       console.error('Failed to fetch profile:', error);
       setUser(null);
     } finally {
-      // This is crucial: always stop loading
-      if (loading) setLoading(false);
+      // This is crucial: always stop loading *after* we are done.
+      setLoading(false);
     }
   };
 
-  // --- FIX 2: Define the actual login function ---
+  // Define the actual login function
   const login = async (email: string, password: string) => {
-    setLoading(true);
+    setLoading(true); // Start loading
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
     if (error) {
-      setLoading(false);
+      setLoading(false); // Stop loading if login fails
       return { success: false, error: error.message };
     }
     
-    // Auth state change listener will handle fetching the profile and setting the user
-    // We keep loading=true until the listener is done
+    // If login is successful, the `onAuthStateChange` listener will fire,
+    // which then calls `fetchUserProfile`, which will set loading to false
+    // when it finishes.
     return { success: true, error: null };
   };
 
-  // --- FIX 3: Define the logout function ---
+  // Define the logout function
   const logout = async () => {
-    setLoading(true);
+    setLoading(true); // Start loading
     const { error } = await supabase.auth.signOut();
     
     if (error) {
-      setLoading(false);
+      setLoading(false); // Stop loading if logout fails
       return { success: false, error: error.message };
     }
     
-    // Auth state listener will set user to null
-    // We can manually set user to null here to speed it up
-    setUser(null);
-    setSession(null);
-    setLoading(false);
+    // `onAuthStateChange` will fire, set user to null, and set loading to false
     return { success: true, error: null };
   };
 
-
-  // --- FIX 4: Pass the new functions in the provider value ---
   const value = {
     user,
     loading,
