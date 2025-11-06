@@ -31,10 +31,11 @@ export const LoginPage = () => {
     
     if (!result.success) {
       setError(result.error || 'Login failed');
+      setIsLoading(false); // <-- FIX: Only stop local loading state on failure
     }
-    // Note: Redirect is handled by App.tsx useEffect based on user role
-    
-    setIsLoading(false);
+    // Note: If successful, we rely on the global AuthContext state change 
+    // to trigger the redirect and unmount this component, automatically
+    // resolving the loading state.
   };
 
   return (
