@@ -1,4 +1,3 @@
-// src/pages/game/MainMenuPage.tsx
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
@@ -11,63 +10,69 @@ const MainMenuPage = () => {
   const navigate = useNavigate();
 
   // Determine user name for welcome message
-  const username = user?.profile?.username || user?.email?.split('@')[0] || 'Seeker';
+  const username =
+    user?.profile?.username || user?.email?.split('@')[0] || 'Seeker';
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
+  // --- FIX: Corrected all paths to match App.tsx routes ---
   const menuItems = [
-    { 
-      name: "New Prophecy", 
-      icon: <Target className="w-6 h-6 text-orange-400" />, 
-      path: "/app/lobbies", // FIX: Was '/lobbies/create', now points to list
-      description: "Begin a new game, either public or private." 
+    {
+      name: 'New Prophecy',
+      icon: <Target className="w-6 h-6 text-orange-400" />,
+      path: '/lobby-list',
+      description: 'Begin a new game, either public or private.',
     },
-    { 
-      name: "Find Other Seekers", 
-      icon: <Play className="w-6 h-6 text-orange-400" />, 
-      path: "/app/lobbies", // FIX: Added /app prefix
-      description: "Join a game already in progress or view public lobbies." 
+    {
+      name: 'Find Other Seekers',
+      icon: <Play className="w-6 h-6 text-orange-400" />,
+      path: '/lobby-list',
+      description: 'Join a game already in progress or view public lobbies.',
     },
-    { 
-      name: "Your G.I.M.P cohorts", 
-      icon: <Users className="w-6 h-6 text-orange-400" />, 
-      path: "/app/friends", // FIX: Added /app prefix
-      description: "Manage your friends list and send invitations." 
+    {
+      name: 'Your G.I.M.P Cohorts',
+      icon: <Users className="w-6 h-6 text-orange-400" />,
+      path: '/friends',
+      description: 'Manage your friends list and send invitations.',
     },
   ];
 
   const secondaryActions = [
-    { name: "Profile", path: `/app/profile/${user?.profile?.id}` }, // FIX: Corrected path
-    { name: "Settings", path: "/app/settings" }, // FIX: Added /app prefix
-    { name: "How to Play", path: "/how-to-play" },
+    { name: 'Profile', path: '/profile' },
+    { name: 'Settings', path: '/settings' },
+    { name: 'How to Play', path: '/how-to-play' },
   ];
+  // --- END OF FIX ---
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4"
-         style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}>
-      
+    <div
+      className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4"
+      style={{ fontFamily: "'Quicksand', system-ui, sans-serif" }}
+    >
       {/* Header and Welcome */}
       <div className="text-center mb-12">
-        {/* --- FIX: Changed size from "large" to "lg" --- */}
         <Logo size="lg" />
-        
-        <h1 className="text-4xl sm:text-5xl font-extrabold mt-4 tracking-wider text-orange-500"
-            style={{ fontFamily: "'CustomHeading', system-ui, sans-serif" }}>
-          The G.I.M.P Awaits
+
+        <h1
+          className="text-4xl sm:text-5xl font-extrabold mt-4 tracking-wider text-orange-500"
+          style={{ fontFamily: "'CustomHeading', system-ui, sans-serif" }}
+        >
+          THE ORACLE AWAITS
         </h1>
         <p className="text-lg text-slate-300 mt-2">
-          Welcome, <span className="font-bold text-orange-400">{username}</span>. Your journey begins now.
+          Welcome, <span className="font-bold text-orange-400">{username}</span>
+          . Your journey begins now.
         </p>
       </div>
 
       {/* Main Menu Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full mb-10">
         {menuItems.map((item) => (
-          <Card 
-            key={item.name} 
+          <Card
+            key={item.name}
             className="p-6 bg-slate-800 hover:bg-slate-700/80 transition-all duration-200 cursor-pointer border border-transparent hover:border-orange-500 group"
             onClick={() => navigate(item.path)}
           >
@@ -85,7 +90,7 @@ const MainMenuPage = () => {
       {/* Secondary Actions and Logout */}
       <div className="flex flex-wrap justify-center gap-4 max-w-4xl w-full">
         {secondaryActions.map((action) => (
-          <Button 
+          <Button
             key={action.name}
             variant="ghost"
             className="text-slate-300 hover:text-white hover:bg-slate-800 px-4 py-2"

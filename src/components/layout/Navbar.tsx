@@ -32,7 +32,7 @@ export const Navbar = () => {
         ? 'text-primary-400 drop-shadow-[0_0_6px_theme(colors.primary.400)]'
         : 'text-gray-200 hover:text-primary-400 hover:drop-shadow-[0_0_6px_theme(colors.primary.400)]'
     }`;
-  
+
   // --- END STYLE INJECTIONS ---
 
   const handleLogout = async () => {
@@ -77,8 +77,17 @@ export const Navbar = () => {
             Profile
           </NavLink>
           
-          {/* --- THIS IS THE FIX --- */}
-          {/* We now check user.profile?.is_admin */}
+          {/* --- FIX: Added Settings link --- */}
+          <NavLink
+            to="/settings"
+            className={linkClass}
+            style={linkFont}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Settings
+          </NavLink>
+          {/* --- END OF FIX --- */}
+          
           {user.profile?.is_admin && (
             <NavLink
               to="/admin"
@@ -89,7 +98,6 @@ export const Navbar = () => {
               Admin
             </NavLink>
           )}
-          {/* --- END OF FIX --- */}
 
           <Button
             onClick={handleLogout}
