@@ -77,8 +77,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         if (currentUser) {
           // User signed in or session was refreshed
-          // fetchUserProfile will handle setting the user and setting loading to false.
-          await fetchUserProfile(currentUser);
+          // FIX: Do not await fetchUserProfile to prevent hanging the listener
+          // The login function sets loading to true, so we must set it to false now
+          // to unblock the UI.
+          fetchUserProfile(currentUser); 
+          setLoading(false); // <--- THIS IS THE FIX
         } else {
           // User signed out
           setUser(null);
@@ -121,7 +124,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setUser(null);
     } finally {
       // This is crucial: always stop loading *after* we are done.
-      setLoading(false);
+      // NOTE: This is primarily for the initial `getSession` logic.
+      // The `onAuthStateChange` listener is now responsible for clearing loading
+      // in all other cases to prevent the UI from hanging.
+      setLoading(false); 
     }
   };
 
@@ -139,8 +145,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
     
     // If login is successful, the `onAuthStateChange` listener will fire,
-    // which then calls `fetchUserProfile`, which will set loading to false
-    // when it finishes.
+    // which then calls `fetchUserProfile` and sets loading to false.
     return { success: true, error: null };
   };
 
