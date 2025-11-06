@@ -6,7 +6,6 @@ import { Card } from '../../components/ui/Card';
 import { LogOut, Users, Settings, Play, Target } from 'lucide-react';
 import { Logo } from '../../components/ui/Logo';
 
-// FIX: Removed 'export' from here
 const MainMenuPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -52,7 +51,9 @@ const MainMenuPage = () => {
       
       {/* Header and Welcome */}
       <div className="text-center mb-12">
-        <Logo size="large" />
+        {/* --- FIX: Changed size from "large" to "lg" --- */}
+        <Logo size="lg" />
+        
         <h1 className="text-4xl sm:text-5xl font-extrabold mt-4 tracking-wider text-orange-500"
             style={{ fontFamily: "'CustomHeading', system-ui, sans-serif" }}>
           The Oracle Awaits
@@ -112,5 +113,4 @@ const MainMenuPage = () => {
   );
 };
 
-// FIX: Added 'export default' at the end
 export default MainMenuPage;
