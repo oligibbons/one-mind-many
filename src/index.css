@@ -443,17 +443,4 @@
   grid-template-rows: repeat(12, 1fr);
 }
 
-} /* <-- THIS IS THE FIX (added on line 270) */
-
-/* DELETED DUPLICATE BLOCKS FROM HERE:
-
-  @layer components {
-    .game-board {
-      ...
-    }
-  }
-
-  @keyframes floating {
-    ...
-  }
-*/
+}
