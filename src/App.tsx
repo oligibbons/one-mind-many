@@ -1,3 +1,4 @@
+import React from 'react'; // <-- Restored React import
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
@@ -22,8 +23,6 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 
-// --- CORRECTED IMPORTS (Removed curly braces) ---
-
 // Protected Pages
 import MainMenuPage from './pages/game/MainMenuPage';
 import LobbyListPage from './pages/game/LobbyListPage';
@@ -42,9 +41,10 @@ import ScenarioEditorPage from './pages/admin/ScenarioEditorPage';
 import ContentManagementPage from './pages/admin/ContentManagementPage';
 import RulesManagementPage from './pages/admin/RulesManagementPage';
 import TestGameViewPage from './pages/admin/TestGameViewPage';
-// --- End of corrections ---
 
-function App() {
+// --- CORRECTED EXPORT ---
+// Reverted from 'function App()' and 'export default'
+export const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
@@ -135,6 +135,6 @@ function App() {
       </AuthProvider>
     </Router>
   );
-}
+};
 
-export default App;
+// No default export needed
