@@ -9,7 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { Card } from '../../components/ui/Card';
 
-// Import all the game components
+// --- FIX: Re-importing all components ---
 import { GameBoard } from '../../components/game/GameBoard';
 import { PriorityTrack } from '../../components/game/PriorityTrack';
 import { ComplicationTrack } from '../../components/game/ComplicationTrack';
@@ -18,8 +18,15 @@ import { PrivateDashboard } from '../../components/game/PrivateDashboard';
 import { ChatBox } from '../../components/game/ChatBox';
 import { InGameMenuModal } from '../../components/game/InGameMenuModal';
 import { RulesReferenceModal } from '../../components/game/RulesReferenceModal';
+// --- END FIX ---
+
 import { toast } from 'react-toastify';
 import { ArrowLeft } from 'lucide-react';
+
+// --- FIX: Import the *real* SocketContext to provide a fake value ---
+import { SocketContext } from '../../contexts/SocketContext';
+import { Socket } from 'socket.io-client';
+// --- END FIX ---
 
 /**
  * Generates a complete dummy game state for the sandbox.
@@ -121,6 +128,12 @@ const generateDummyState = (
         message: `Scenario "${scenario.name}" loaded.`,
         timestamp: new Date().toISOString(),
       },
+      {
+        type: 'chat',
+        sender: 'Dummy-Harbinger',
+        message: 'This is a test chat message.',
+        timestamp: new Date().toISOString(),
+      },
     ],
     game_objects: scenario.locations || [], // Use real locations from scenario
     npcs: [],
@@ -149,6 +162,7 @@ const TestGameSandbox: React.FC<{
   onExit: () => void;
 }> = ({ scenario, onExit }) => {
   const { user } = useAuth();
+  // --- FIX: Added state for modals back ---
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
 
@@ -165,83 +179,102 @@ const TestGameSandbox: React.FC<{
     };
   }, [scenario, user]);
 
+  // --- FIX: Create a dummy socket that does nothing ---
+  const dummySocket = {
+    on: () => {},
+    off: () => {},
+    emit: (event: string) => {
+      toast.info(`SANDBOX: Socket event "${event}" emitted (ignored).`);
+    },
+    // Add any other properties your hook might expect
+    id: 'dummy-socket',
+  } as unknown as Socket; // Cast to Socket to satisfy the context
+
   if (!user?.profile) {
     return <LoadingSpinner />;
   }
 
   // This layout is copied from GamePage.tsx to ensure an identical view
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Top Bar (with exit button) */}
-      <div className="bg-gray-800 p-2 flex justify-between items-center shadow-md z-10">
-        <Button onClick={onExit} variant="secondary" size="sm">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Exit Sandbox
-        </Button>
-        <div className="text-center">
-          <h1 className="text-lg font-bold text-white">
-            {scenario.name} (Sandbox Mode)
-          </h1>
-          <p className="text-sm text-gray-400">Round 1</p>
-        </div>
-        <div>
-          <Button
-            onClick={() => setIsRulesOpen(true)}
-            variant="secondary"
-            size="sm"
-            className="mr-2"
-          >
-            Rules
+    // --- FIX: Wrap the entire UI in the SocketContext.Provider ---
+    <SocketContext.Provider value={{ socket: dummySocket }}>
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Top Bar (with exit button) */}
+        <div className="bg-gray-800 p-2 flex justify-between items-center shadow-md z-10">
+          <Button onClick={onExit} variant="secondary" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Exit Sandbox
           </Button>
-          <Button
-            onClick={() => setIsMenuOpen(true)}
-            variant="secondary"
-            size="sm"
-          >
-            Menu
-          </Button>
+          <div className="text-center">
+            <h1 className="text-lg font-bold text-white">
+              {scenario.name} (Sandbox Mode)
+            </h1>
+            <p className="text-sm text-gray-400">Round 1</p>
+          </div>
+          {/* --- FIX: Added buttons back --- */}
+          <div>
+            <Button
+              onClick={() => setIsRulesOpen(true)}
+              variant="secondary"
+              size="sm"
+              className="mr-2"
+            >
+              Rules
+            </Button>
+            <Button
+              onClick={() => setIsMenuOpen(true)}
+              variant="secondary"
+              size="sm"
+            >
+              Menu
+            </Button>
+          </div>
+          {/* --- END FIX --- */}
         </div>
+
+        {/* Main Game Area */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Panel */}
+          <div className="w-1/4 flex-shrink-0 bg-gray-900 overflow-y-auto p-2 space-y-2">
+            <PriorityTrack />
+            <ComplicationTrack />
+            {/* --- FIX: Added ChatBox back --- */}
+            <ChatBox gameId="test-game" />
+          </div>
+
+          {/* Center Panel (Board) */}
+          <div className="flex-1 flex items-center justify-center overflow-hidden bg-gray-800 p-2">
+            <GameBoard />
+          </div>
+
+          {/* Right Panel */}
+          <div className="w-1/4 flex-shrink-0 bg-gray-900 overflow-y-auto p-2">
+            <PrivateDashboard />
+          </div>
+        </div>
+
+        {/* Bottom Panel (Hand) */}
+        <div className="flex-shrink-0 bg-gray-950 p-2 shadow-inner">
+          <PlayerHand />
+        </div>
+
+        {/* --- FIX: Added Modals back --- */}
+        <InGameMenuModal
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          onViewRules={() => {
+            setIsMenuOpen(false);
+            setIsRulesOpen(true);
+          }}
+          // The modal will call our dummy socket.emit for leaving, which is safe.
+        />
+        <RulesReferenceModal
+          isOpen={isRulesOpen}
+          onClose={() => setIsRulesOpen(false)}
+        />
+        {/* --- END FIX --- */}
       </div>
-
-      {/* Main Game Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel */}
-        <div className="w-1/4 flex-shrink-0 bg-gray-900 overflow-y-auto p-2 space-y-2">
-          <PriorityTrack />
-          <ComplicationTrack />
-          <ChatBox gameId="test-game" />
-        </div>
-
-        {/* Center Panel (Board) */}
-        <div className="flex-1 flex items-center justify-center overflow-hidden bg-gray-800 p-2">
-          <GameBoard />
-        </div>
-
-        {/* Right Panel */}
-        <div className="w-1/4 flex-shrink-0 bg-gray-900 overflow-y-auto p-2">
-          <PrivateDashboard />
-        </div>
-      </div>
-
-      {/* Bottom Panel (Hand) */}
-      <div className="flex-shrink-0 bg-gray-950 p-2 shadow-inner">
-        <PlayerHand />
-      </div>
-
-      {/* Modals (Read-only, no real function) */}
-      <InGameMenuModal
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        onViewRules={() => {
-          setIsMenuOpen(false);
-          setIsRulesOpen(true);
-        }}
-      />
-      <RulesReferenceModal
-        isOpen={isRulesOpen}
-        onClose={() => setIsRulesOpen(false)}
-      />
-    </div>
+    </SocketContext.Provider>
   );
 };
 
