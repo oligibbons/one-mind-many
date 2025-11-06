@@ -180,7 +180,7 @@ export const InviteFriendModal: React.FC<InviteFriendModalProps> = ({
           <CardTitle className="text-3xl game-title">Invite Friends</CardTitle>
           <CardDescription className="text-gray-300">
             Invite friends from your list to this lobby.
-          </ReadDescription>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
