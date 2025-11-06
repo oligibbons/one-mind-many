@@ -1,37 +1,34 @@
 // src/layouts/AuthLayout.tsx
 
-import React from 'react';
-import { Outlet, Navigate, Link } from 'react-router-dom';
-import { Logo } from '../components/ui/Logo';
+import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { Navbar } from '../components/layout/Navbar'; // <-- NEW: Import Navbar
+import { Footer } from '../components/layout/Footer'; // <-- NEW: Import Footer
 
-export const AuthLayout: React.FC = () => {
+export const AuthLayout = () => {
   const { user, loading } = useAuth();
 
-  // 1. While the AuthContext is loading, show a full-screen spinner
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-gray-200">
-        <LoadingSpinner size="lg" />
+      <div className="flex min-h-screen items-center justify-center bg-gray-950">
+        <LoadingSpinner size={48} />
       </div>
     );
   }
 
-  // 2. After loading, if a user IS logged in, redirect to the main app
   if (user) {
     return <Navigate to="/app/main-menu" replace />;
   }
 
-  // 3. If no user is logged in, show the public pages (Login, Register, Home)
+  // --- FIX: Wrap the <Outlet> with the Navbar and Footer ---
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-gray-200">
-      <Link to="/" className="mb-8">
-        <Logo className="h-20 w-auto text-orange-500" />
-      </Link>
-      
-      {/* Outlet for Login and Register pages */}
-      <Outlet />
+    <div className="flex min-h-screen flex-col bg-gray-950 text-gray-200">
+      <Navbar />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
     </div>
   );
 };

@@ -14,13 +14,12 @@ import { AdminRoute } from './components/auth/AdminRoute';
 
 // --- Eagerly Loaded Pages ---
 import { HomePage } from './pages/HomePage';
-import { HowToPlayPage } from './pages/HowToPlayPage';
+import { HowToPlayPage } from './pages/HowToPlayPage'; // <-- FIX: Eager load this
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 
-// --- FIX: Simplified lazy() imports ---
-// This syntax now expects all these pages to use 'export default'
+// --- Lazy Loaded App Pages ---
 const MainMenuPage = lazy(() => import('./pages/game/MainMenuPage'));
 const LobbyListPage = lazy(() => import('./pages/game/LobbyListPage'));
 const LobbyPage = lazy(() => import('./pages/game/LobbyPage'));
@@ -29,7 +28,7 @@ const FriendsPage = lazy(() => import('./pages/game/FriendsPage'));
 const ProfilePage = lazy(() => import('./pages/game/ProfilePage'));
 const SettingsPage = lazy(() => import('./pages/game/SettingsPage'));
 
-// --- Lazy Loaded Admin Pages (FIXED) ---
+// --- Lazy Loaded Admin Pages ---
 const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
 const ScenarioManagementPage = lazy(() => import('./pages/admin/ScenarioManagementPage'));
 const ScenarioEditorPage = lazy(() => import('./pages/admin/ScenarioEditorPage'));
@@ -37,7 +36,6 @@ const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage')
 const GameManagementPage = lazy(() => import('./pages/admin/GameManagementPage'));
 const ContentManagementPage = lazy(() => import('./pages/admin/ContentManagementPage'));
 
-// --- End of Fix ---
 
 const AppSuspense: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <Suspense fallback={
@@ -99,15 +97,14 @@ export const App: React.FC = () => {
             <Route path="content" element={<ContentManagementPage />} />
           </Route>
 
-          {/* --- Auth (Logged Out) --- */}
+          {/* --- Auth & Public Pages (Logged Out) --- */}
+          {/* FIX: All public-facing pages are now children of AuthLayout */}
           <Route path="/" element={<AuthLayout />}>
             <Route index element={<HomePage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
+            <Route path="how-to-play" element={<HowToPlayPage />} /> {/* <-- FIX: Moved here */}
           </Route>
-
-          {/* --- Public Pages --- */}
-          <Route path="/how-to-play" element={<HowToPlayPage />} />
 
           {/* --- Redirects & 404 --- */}
           <Route path="/menu" element={<Navigate to="/app/main-menu" replace />} />
