@@ -1,122 +1,125 @@
+// src/contexts/AuthContext.tsx
 import React, {
   createContext,
   useContext,
   useEffect,
   useState,
-  useCallback,
+  ReactNode,
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Session, User } from '@supabase/supabase-js';
-import { api } from '../lib/api';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { Profile } from '../types/game';
+import { User, Session } from '@supabase/supabase-js';
 
-interface AuthUser extends User {
-  profile: Profile;
+// Define the shape of our Profile
+export interface Profile {
+  id: string;
+  username: string;
+  is_admin: boolean;
+  avatar_url?: string;
+  status: 'Online' | 'Offline' | 'In-Game';
+  // Add other profile fields as needed
+  total_vp: number;
+  total_wins: number;
+  total_games_played: number;
+}
+
+// Combine Supabase User and our custom Profile
+export interface UserProfile extends User {
+  profile: Profile | null;
 }
 
 interface AuthContextType {
-  user: AuthUser | null;
-  session: Session | null;
+  user: UserProfile | null;
   loading: boolean;
-  updateUser: (updatedProfile: Profile) => void;
+  session: Session | null;
 }
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true); // Start as true
-
-  const fetchProfile = useCallback(async (authedUser: User) => {
-    try {
-      // This is the new API route from server/routes/auth.js
-      // It correctly fetches the user and their profile data
-      const { data, error } = await api.get('/auth/user');
-      if (error) throw error;
-      setUser(data);
-      return data;
-    } catch (error: any) {
-      console.error('Error fetching full user profile:', error.message);
-      // If profile fetch fails, the user is in a bad state. Log them out.
-      await supabase.auth.signOut();
-      setUser(null);
-      return null;
-    }
-  }, []);
 
   useEffect(() => {
-    setLoading(true); // Ensure loading is true on mount
-    
-    // This flag ensures we only set loading to false ONCE,
-    // on the very first auth event.
-    let initialAuthProcessed = false;
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-
-      if (session?.user) {
-        // If the user exists but isn't in our state, fetch their profile.
-        // This handles the initial sign-in.
-        if (!user) {
-            await fetchProfile(session.user);
-        } else if (_event === 'USER_UPDATED') {
-            // This handles re-fetching data if the user changes their email/pass
-            await fetchProfile(session.user);
+    // 1. Get initial session
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        if (session?.user) {
+          fetchUserProfile(session.user);
+        } else {
+          setLoading(false);
         }
-      } else {
-        // This handles sign-out
-        setUser(null);
-      }
-      
-      // Only set loading to false on the *first* auth event (initial load)
-      if (!initialAuthProcessed) {
+      })
+      .catch((error) => {
+        console.error('Error getting session:', error);
         setLoading(false);
-        initialAuthProcessed = true;
-      }
-    });
+      });
+
+    // 2. Listen for auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChanged(
+      async (event, session) => {
+        setSession(session);
+        const currentUser = session?.user ?? null;
+
+        if (currentUser) {
+          await fetchUserProfile(currentUser);
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      },
+    );
 
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
-  }, [fetchProfile, user]); // Add 'user' to dependency array
+  }, []);
 
-  // Function to allow components to update the user context
-  // (e.g., after updating profile settings)
-  const updateUser = (updatedProfile: Profile) => {
-    setUser((prevUser) => {
-      if (!prevUser) return null;
-      return {
-        ...prevUser,
-        profile: updatedProfile,
-      };
-    });
+  // Helper function to fetch profile and set user state
+  const fetchUserProfile = async (authUser: User) => {
+    setLoading(true);
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (error) {
+        // This can happen if the user is created but the profile trigger hasn't run yet.
+        // We log the error but treat the user as logged out for now.
+        console.warn('Error fetching profile:', error.message);
+        setUser(null);
+      } else if (profile) {
+        setUser({
+          ...authUser,
+          profile: profile,
+        });
+      }
+    } catch (error) {
+      // Catch any other synchronous error
+      console.error('Failed to fetch profile:', error);
+      setUser(null);
+    } finally {
+      // This is crucial: always stop loading
+      setLoading(false);
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-brand-charcoal">
-        {/* This will now use your new thematic spinner */}
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
   return (
-    <AuthContext.Provider value={{ user, session, loading, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, session }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
+export const useAuth = ()_ => {
   const context = useContext(AuthContext);
-  if (context === null) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
