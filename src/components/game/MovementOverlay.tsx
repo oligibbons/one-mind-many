@@ -5,32 +5,31 @@ import { useGameStore } from '../../stores/useGameStore';
 import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
 import { BoardSpace } from '../../types/game';
-import clsx from 'clsx';
+import clsx from 'clsx'; // <-- THIS IS THE MISSING IMPORT
 import { motion } from 'framer-motion'; // Import motion
 
 export const MovementOverlay: React.FC = () => {
   const { socket } = useSocket();
   const { user } = useAuth();
   
-  // --- FIX: Get new state variables ---
+  // Get new state variables
   const {
     isAwaitingMove,
     actingPlayerId,
-    actingUsername, // <-- NEW
+    actingUsername,
     validMoves,
     gameId,
-    boardSize, // <-- NEW
+    boardSize, 
     clearAwaitingMove,
   } = useGameStore((state) => ({
     isAwaitingMove: state.isAwaitingMove,
     actingPlayerId: state.actingPlayerId,
-    actingUsername: state.actingUsername, // <-- NEW
+    actingUsername: state.actingUsername,
     validMoves: state.validMoves,
     gameId: state.publicState?.id,
-    boardSize: state.publicState?.scenario.boardSize || { x: 12, y: 12 }, // <-- NEW
+    boardSize: state.publicState?.scenario.boardSize || { x: 12, y: 12 },
     clearAwaitingMove: state.clearAwaitingMove,
   }));
-  // --- END FIX ---
 
   // Create a fast lookup map for valid move positions
   const validMoveMap = React.useMemo(() => {
@@ -62,15 +61,15 @@ export const MovementOverlay: React.FC = () => {
   }
 
   const cells = [];
-  for (let y = 1; y <= boardSize.y; y++) { // <-- FIX: Use dynamic board size
-    for (let x = 1; x <= boardSize.x; x++) { // <-- FIX: Use dynamic board size
+  for (let y = 1; y <= boardSize.y; y++) {
+    for (let x = 1; x <= boardSize.x; x++) {
       const isMe = isMyTurnToMove;
       const isValid = validMoveMap.has(`${x},${y}`);
 
       cells.push(
         <div
           key={`${x}-${y}`}
-          className={clsx(
+          className={clsx( // <-- This is where 'clsx' is used
             'flex h-full w-full items-center justify-center',
             isMe && isValid &&
               'cursor-pointer bg-orange-500/50 transition-all hover:bg-orange-400/70',
@@ -94,12 +93,12 @@ export const MovementOverlay: React.FC = () => {
 
   return (
     <div
-      className={clsx(
+      className={clsx( // <-- This is where 'clsx' is used
         'game-board absolute inset-0 z-10', // Sits on top of GameBoard
         !isMyTurnToMove && 'pointer-events-none' // Non-actors can't click
       )}
     >
-      {/* --- NEW: Feedback Text --- */}
+      {/* Feedback Text */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -114,7 +113,6 @@ export const MovementOverlay: React.FC = () => {
             : `${actingUsername} is choosing where to move.`}
         </p>
       </motion.div>
-      {/* --- END NEW --- */}
       
       {cells}
     </div>
