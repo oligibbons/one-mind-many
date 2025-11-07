@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { Card } from '../../components/ui/Card';
 import { User, CheckCircle, BarChart, Trophy, Shield } from 'lucide-react';
 import { Profile } from '../../types/game'; // Assuming you have this type from game.d.ts
+import clsx from 'clsx'; // <-- THIS IS THE FIX
 
 // Define a more complete Profile type for this page
 type UserProfile = Profile & {
@@ -20,11 +21,9 @@ export const ProfilePage: React.FC = () => {
   const { userId: paramUserId } = useParams<{ userId: string }>();
   const { user } = useAuth();
   
-  // --- THIS IS THE FIX ---
   // If a user ID is in the URL, use that.
   // Otherwise, fall back to the currently logged-in user's ID.
   const userIdToFetch = paramUserId || user?.id;
-  // --- END FIX ---
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,13 +31,12 @@ export const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      // --- FIX: Check if we have an ID to fetch ---
+      // Check if we have an ID to fetch
       if (!userIdToFetch) {
         setError('No user ID provided.');
         setLoading(false);
         return;
       }
-      // --- END FIX ---
 
       setLoading(true);
       setError(null);
@@ -118,7 +116,7 @@ export const ProfilePage: React.FC = () => {
               className="w-32 h-32 rounded-full border-4 border-orange-500 object-cover"
             />
             <span 
-              className={clsx(
+              className={clsx( // <-- This is where 'clsx' is used
                 'absolute bottom-2 right-2 w-5 h-5 rounded-full border-2 border-slate-800',
                 profile.status === 'Online' ? 'bg-green-500' : 'bg-gray-500'
               )}
