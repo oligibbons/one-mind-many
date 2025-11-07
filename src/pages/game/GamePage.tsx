@@ -87,13 +87,19 @@ const GamePage: React.FC = () => {
         updatePlayerDisconnect(data.userId, true);
       }
     };
+    
+    // --- THIS IS THE FIX ---
+    // Updated the data shape to include actingUsername
     const onAwaitingMove = (data: {
       playerId: string;
+      actingUsername: string; // <-- Now receiving this
       validMoves: BoardSpace[];
     }) => {
-      console.log('Received game:await_move');
-      setAwaitingMove(data);
+      console.log(`Received game:await_move for ${data.actingUsername}`);
+      setAwaitingMove(data); // <-- Pass the full object to the store
     };
+    // --- END FIX ---
+    
     const onGameError = (data: { message: string }) => {
       console.error('Received error:game', data.message);
       setError(data.message);
@@ -236,5 +242,4 @@ const GamePage: React.FC = () => {
   );
 };
 
-// FIX: Added 'export default'
 export default GamePage;

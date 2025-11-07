@@ -6,27 +6,31 @@ import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
 import { BoardSpace } from '../../types/game';
 import clsx from 'clsx';
-
-const BOARD_SIZE = 12;
+import { motion } from 'framer-motion'; // Import motion
 
 export const MovementOverlay: React.FC = () => {
   const { socket } = useSocket();
   const { user } = useAuth();
   
-  // Get the movement state from our store
+  // --- FIX: Get new state variables ---
   const {
     isAwaitingMove,
     actingPlayerId,
+    actingUsername, // <-- NEW
     validMoves,
     gameId,
+    boardSize, // <-- NEW
     clearAwaitingMove,
   } = useGameStore((state) => ({
     isAwaitingMove: state.isAwaitingMove,
     actingPlayerId: state.actingPlayerId,
+    actingUsername: state.actingUsername, // <-- NEW
     validMoves: state.validMoves,
     gameId: state.publicState?.id,
+    boardSize: state.publicState?.scenario.boardSize || { x: 12, y: 12 }, // <-- NEW
     clearAwaitingMove: state.clearAwaitingMove,
   }));
+  // --- END FIX ---
 
   // Create a fast lookup map for valid move positions
   const validMoveMap = React.useMemo(() => {
@@ -58,8 +62,8 @@ export const MovementOverlay: React.FC = () => {
   }
 
   const cells = [];
-  for (let y = 1; y <= BOARD_SIZE; y++) {
-    for (let x = 1; x <= BOARD_SIZE; x++) {
+  for (let y = 1; y <= boardSize.y; y++) { // <-- FIX: Use dynamic board size
+    for (let x = 1; x <= boardSize.x; x++) { // <-- FIX: Use dynamic board size
       const isMe = isMyTurnToMove;
       const isValid = validMoveMap.has(`${x},${y}`);
 
@@ -76,7 +80,12 @@ export const MovementOverlay: React.FC = () => {
           onClick={() => handleCellClick({ x, y })}
         >
           {isMe && isValid && (
-            <div className="h-4 w-4 rounded-full bg-orange-200 shadow-lg" />
+            <motion.div 
+              className="h-4 w-4 rounded-full bg-orange-200 shadow-lg"
+              initial={{ scale: 0.5 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.1 }}
+            />
           )}
         </div>
       );
@@ -90,6 +99,23 @@ export const MovementOverlay: React.FC = () => {
         !isMyTurnToMove && 'pointer-events-none' // Non-actors can't click
       )}
     >
+      {/* --- NEW: Feedback Text --- */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute top-4 left-1/2 -translate-x-1/2 bg-gray-900 border-2 border-orange-500 shadow-lg text-white p-4 rounded-lg z-30"
+      >
+        <h3 className="text-xl font-bold text-orange-400 text-center">
+          {isMyTurnToMove ? "Your Move" : `Awaiting Move...`}
+        </h3>
+        <p className="text-center text-gray-300">
+          {isMyTurnToMove
+            ? "Select one of the highlighted spaces."
+            : `${actingUsername} is choosing where to move.`}
+        </p>
+      </motion.div>
+      {/* --- END NEW --- */}
+      
       {cells}
     </div>
   );

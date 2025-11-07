@@ -6,18 +6,19 @@ import {
   PrivatePlayerState,
   PublicPlayerState,
   BoardSpace,
-  GameResults, // <-- NEW IMPORT
+  GameResults,
 } from '../types/game';
 
 // Define the shape of the store's state
 interface GameStoreState {
   publicState: GameState | null;
   privateState: PrivatePlayerState | null;
-  gameResults: GameResults | null; // <-- NEW: To store end-game results
+  gameResults: GameResults | null;
   error: string | null;
 
   isAwaitingMove: boolean;
-  actingPlayerId: string | null; // The player who needs to move
+  actingPlayerId: string | null;
+  actingUsername: string | null; // <-- NEW: To store who is moving
   validMoves: BoardSpace[];
 }
 
@@ -31,14 +32,18 @@ interface GameStoreActions {
   updatePrivateState: (newState: PrivatePlayerState) => void;
   updatePlayerSubmitted: (userId: string) => void;
   updatePlayerDisconnect: (userId: string, isDisconnected: boolean) => void;
-  setGameResults: (results: GameResults) => void; // <-- NEW: Action to set results
+  setGameResults: (results: GameResults) => void;
   setError: (message: string) => void;
   clearGame: () => void;
 
+  // --- FIX: Updated data shape ---
   setAwaitingMove: (data: {
     playerId: string;
+    actingUsername: string; // <-- NEW
     validMoves: BoardSpace[];
   }) => void;
+  // --- END FIX ---
+  
   clearAwaitingMove: () => void;
 }
 
@@ -47,10 +52,11 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
   // --- Initial State ---
   publicState: null,
   privateState: null,
-  gameResults: null, // <-- NEW: Initial state
+  gameResults: null,
   error: null,
   isAwaitingMove: false,
   actingPlayerId: null,
+  actingUsername: null, // <-- NEW
   validMoves: [],
 
   // --- Actions ---
@@ -63,7 +69,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       isAwaitingMove: false,
       validMoves: [],
       actingPlayerId: null,
-      gameResults: null, // <-- NEW: Ensure results are cleared on new data
+      actingUsername: null, // <-- NEW
+      gameResults: null,
     }),
 
   updatePublicState: (newState) =>
@@ -72,6 +79,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       publicState: newState,
       isAwaitingMove: state.isAwaitingMove,
       actingPlayerId: state.actingPlayerId,
+      actingUsername: state.actingUsername, // <-- NEW
       validMoves: state.validMoves,
     })),
 
@@ -92,7 +100,6 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       };
     }),
 
-  // --- NEW: Handle disconnects/reconnects in UI ---
   updatePlayerDisconnect: (userId, isDisconnected) =>
     set((state) => {
       if (!state.publicState) return state;
@@ -105,12 +112,12 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       };
     }),
 
-  // --- NEW: Action to set game results ---
   setGameResults: (results) =>
     set({
       gameResults: results,
-      isAwaitingMove: false, // Game is over, no more moves
+      isAwaitingMove: false, 
       actingPlayerId: null,
+      actingUsername: null, // <-- NEW
       validMoves: [],
     }),
 
@@ -124,20 +131,25 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       isAwaitingMove: false,
       validMoves: [],
       actingPlayerId: null,
-      gameResults: null, // <-- NEW: Clear results on exit
+      actingUsername: null, // <-- NEW
+      gameResults: null,
     }),
 
+  // --- FIX: Updated function to store username ---
   setAwaitingMove: (data) =>
     set({
       isAwaitingMove: true,
       actingPlayerId: data.playerId,
+      actingUsername: data.actingUsername, // <-- NEW
       validMoves: data.validMoves,
     }),
+  // --- END FIX ---
 
   clearAwaitingMove: () =>
     set({
       isAwaitingMove: false,
       actingPlayerId: null,
+      actingUsername: null, // <-- NEW
       validMoves: [],
     }),
 }));
