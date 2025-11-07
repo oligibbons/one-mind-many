@@ -58,6 +58,10 @@ import {
     'Gamble': { effect: 'All remaining actions are now randomly assigned from each players’ hand.' },
     'Hail Mary': { effect: 'All players’ hands are now redrawn.' },
     'Reload': { effect: 'Redraw your hand and play an action at random.' },
+    
+    // --- FIX: Added Stockpile ---
+    'Stockpile': { effect: 'Do not resolve an action this round. Next round, resolve your chosen action a second time at the end of the round.' },
+    // --- END FIX ---
   };
   
   export const DECK_TEMPLATE: CardName[] = [
@@ -68,13 +72,23 @@ import {
     'Deny', 'Deny', 'Rethink', 'Rethink', 'Homage', 'Foresight',
     'Interact', 'Interact', 'Interact', 'Inhibit',
     'Buffer', 'Buffer', 'Impulse', 'Gamble', 'Hail Mary', 'Reload',
+    
+    // --- FIX: Added Stockpile ---
+    'Stockpile', 'Stockpile',
+    // --- END FIX ---
   ];
   
   export const createNewDeck = (): CommandCard[] => {
-    const deck = DECK_TEMPLATE.map(name =>
+    // Filter out any card names from the template that aren't defined in COMMAND_CARDS
+    const validDeckTemplate = DECK_TEMPLATE.filter(name => COMMAND_CARDS[name]);
+    
+    // Warn if any cards were filtered
+    if (validDeckTemplate.length !== DECK_TEMPLATE.length) {
+      console.warn('GameData: Some cards in DECK_TEMPLATE are not defined in COMMAND_CARDS and were filtered out.');
+    }
+
+    const deck = validDeckTemplate.map(name =>
       createCard(name, COMMAND_CARDS[name].effect)
     );
     return deck;
   };
-  
-  // --- ALL SCENARIO DATA HAS BEEN MOVED TO THE DATABASE ---

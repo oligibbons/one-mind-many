@@ -48,6 +48,8 @@ export interface BoardSpace {
     | 'The Waster'
     | 'The Data Broker'
     | 'The Mimic';
+    
+  // --- FIX: Added 'Stockpile' ---
   export type CardName =
     | 'Move 1'
     | 'Move 2'
@@ -66,7 +68,10 @@ export interface BoardSpace {
     | 'Buffer'
     | 'Gamble'
     | 'Hail Mary'
-    | 'Reload';
+    | 'Reload'
+    | 'Stockpile'; // <-- ADDED
+  // --- END FIX ---
+    
   export interface CommandCard {
     id: string;
     name: CardName;
@@ -162,6 +167,11 @@ export interface BoardSpace {
     secretIdentity: SecretIdentity;
     personalGoal?: any;
     vp: number;
+    
+    // --- FIX: Added fields for Stockpile ---
+    isStockpiling?: boolean;
+    hasStockpiledAction?: boolean;
+    // --- END FIX ---
   }
   
   export interface PublicPlayerState {

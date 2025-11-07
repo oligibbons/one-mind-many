@@ -5,12 +5,14 @@ import {
   Brain, EyeOff, Target, Users, AlertTriangle, HelpCircle, Clock,
   Move, Hand, Zap, Award, ShieldCheck, ShieldAlert, ShieldQuestion,
   Hourglass, Check, User, Move3d, Waypoints, Redo, Undo, Ban,
-  Plus, Minus, RefreshCw, Shuffle, Bot, XSquare, Copy, CopyCheck
+  Plus, Minus, RefreshCw, Shuffle, Bot, XSquare, Copy, CopyCheck,
+  Package, // <-- NEW: Added icon for Stockpile
+  Lightbulb // <-- NEW: Added icon for Tips
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import clsx from 'clsx';
-import { motion } from 'framer-motion'; // <-- NEW: Imported motion
+import { motion } from 'framer-motion';
 
 // --- Reusable Helper Components for this Page ---
 
@@ -109,7 +111,7 @@ const FakePriorityTracker: React.FC<{
   </div>
 );
 
-// --- NEW: Command Card data ---
+// --- Command Card data ---
 const COMMAND_CARDS = [
   { name: 'Move 1/2/3', effect: 'Move 1, 2, or 3 spaces.', icon: Move3d },
   { name: 'Hesitate', effect: 'The next Move card has its value reduced by 1.', icon: Minus },
@@ -127,9 +129,17 @@ const COMMAND_CARDS = [
   { name: 'Gamble', effect: 'All remaining actions this round are randomly assigned from players\' hands.', icon: Shuffle },
   { name: 'Hail Mary', effect: 'All players discard their hands and draw new ones.', icon: RefreshCw },
   { name: 'Reload', effect: 'Discard your hand, draw new cards, and play one at random.', icon: RefreshCw },
+  
+  // --- FIX: Added Stockpile Card ---
+  { 
+    name: 'Stockpile', 
+    effect: 'Do not resolve an action this round. Next round, resolve your chosen action a second time at the end of the round.', 
+    icon: Package 
+  },
+  // --- END FIX ---
 ];
 
-// --- NEW: Animation variants for Framer Motion ---
+// Animation variants for Framer Motion
 const sectionVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
@@ -447,6 +457,83 @@ export const HowToPlayPage: React.FC = () => {
           </Card>
         </motion.div>
         
+        {/* --- FIX: NEW TIPS & TRICKS SECTION --- */}
+        <motion.div
+          className="mt-16"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={sectionVariants}
+        >
+          <Card className="border-gray-700 bg-gray-900">
+            <CardHeader>
+              <IconHeader icon={Lightbulb} title="Tips & Tricks" />
+            </CardHeader>
+            <CardContent className="space-y-6 text-gray-300">
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-3">General Tips</h3>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>
+                    <strong>Watch the Priority Track:</strong> Knowing if you act before or after someone is crucial. Use 'Buffer' or 'Stockpile' to give up a weak turn for a better priority position next round.
+                  </li>
+                  <li>
+                    <strong>Blame is a Weapon:</strong> Since roles are secret, use your actions (and the chat) to cast suspicion. A Heretic's best tool is convincing the True Believers to turn on each other.
+                  </li>
+                  <li>
+                    <strong>Master the "Action Chain":</strong> Cards like 'Deny', 'Rethink', 'Homage', and 'Foresight' are the most complex but powerful. Denying a 'Move 3' or 'Interact' at a critical moment can win the game.
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-3">Tips for True Believers</h3>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>
+                    <strong>Communicate (Carefully):</strong> You must work together, but you don't know who to trust. Talk in hypotheticals. "It would be *very* helpful if *someone* could Interact with The Nexus..."
+                  </li>
+                  <li>
+                    <strong>Be Efficient:</strong> You are on a clock. Don't waste actions. Every round, ask: "Is this action directly helping the Main Prophecy?"
+                  </li>
+                  <li>
+                    <strong>Find the Heretic:</strong> A player who seems to be "helping" but never quite makes progress (or who plays 'Impulse' at a "bad" time) is highly suspicious.
+                  </li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-3">Tips for the Heretic</h3>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>
+                    <strong>Subtle Sabotage:</strong> Your best move is rarely obvious. "Accidentally" playing 'Deny' on a helpful 'Interact' or using 'Charge' to make someone overshoot their target is key.
+                  </li>
+                  <li>
+                    <strong>Plausible Deniability:</strong> Always have a good "True Believer" reason for your actions. "I had to play 'Deny' to stop The Eye from doing something suspicious!"
+                  </li>
+                  <li>
+                    <strong>Use the Clock:</strong> Every round you waste is a victory. Playing 'Buffer' or 'Stockpile' can seem harmless, but they are great ways to do nothing while appearing strategic.
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-3">Tips for the Opportunist</h3>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>
+                    <strong>Be a Ghost:</strong> Your goal is your secret. Don't let anyone figure it out. If your goal is to visit locations, try to do so while "helping" the other players.
+                  </li>
+                  <li>
+                    <strong>Piggyback:</strong> Help the True Believers if it also helps you. Help the Heretic if it helps you. You have no loyalty.
+                  </li>
+                  <li>
+                    <strong>Timing is Everything:</strong> Many Opportunist goals require you to be in a specific place or have a specific item *at the end of the game*. Don't reveal your hand until the final round.
+                  </li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        {/* --- END NEW SECTION --- */}
+
         {/* === SECTION 5: MODIFIERS === */}
         <motion.div
           className="mt-16"

@@ -178,6 +178,10 @@ import {
           secretIdentity: identities[i],
           vp: 0,
           personalGoal: goal || null,
+          // --- FIX: Initialize Stockpile fields ---
+          isStockpiling: false,
+          hasStockpiledAction: false,
+          // --- END FIX ---
         };
         privatePlayerStates.push(privateState);
         publicPlayerStates.push({
@@ -214,7 +218,7 @@ import {
       return { gameState, privatePlayerStates };
     }
   
-    // --- (startRoundResolution is unchanged) ---
+    // --- (startRoundResolution is MODIFIED) ---
     static startRoundResolution(
       currentState: GameState,
       allPlayerStates: PrivatePlayerState[],
@@ -231,13 +235,28 @@ import {
           );
           return priorityA - priorityB;
         });
+        
+        // --- FIX: Handle Stockpile ---
+        const stockpileQueue: SubmittedAction[] = [];
+        allPlayerStates.forEach(p => {
+          if (p.hasStockpiledAction) {
+            const playerAction = sortedActions.find(a => a.playerId === p.userId);
+            // Can't stockpile a Stockpile
+            if (playerAction && playerAction.card.name !== 'Stockpile') {
+              // Add a clone of their action to the *end* of the queue
+              stockpileQueue.push(cloneDeep(playerAction));
+            }
+            p.hasStockpiledAction = false; // Consume the charge
+          }
+        });
+        // --- END FIX ---
     
         return {
           scenario: scenario,
           state: cloneDeep(currentState),
           privateStates: cloneDeep(allPlayerStates),
           playerStates: cloneDeep(allPublicStates),
-          actionQueue: sortedActions,
+          actionQueue: [...sortedActions, ...stockpileQueue], // <-- FIX: Add stockpile actions to the end
           processedActions: [],
           modifiers: {
             moveValue: 0,
@@ -255,7 +274,7 @@ import {
         };
     }
   
-    // --- (processSingleAction is unchanged) ---
+    // --- (processSingleAction is MODIFIED) ---
     static processSingleAction(
       turnState: TurnState,
       action: SubmittedAction
@@ -284,9 +303,19 @@ import {
             state.gameLog.push(`Priority ${actingToken} (${actingPlayerPrivate.username}) is disconnected. Playing 'Buffer'.`);
             action.card = { id: uuid(), name: 'Buffer', effect: 'Do Nothing.' };
         } else {
-            state.gameLog.push(
-              `Priority ${actingToken} (${actingPlayerPrivate.username}) plays ${action.card.name}.`
-            );
+            // Check if this is a stockpiled action (it will be a deep clone)
+            const isStockpiled = !actionQueue.some(a => a.id === action.id) && 
+                                 !processedActions.some(a => a.id === action.id);
+            
+            if (isStockpiled) {
+              state.gameLog.push(
+                `(Stockpile) Priority ${actingToken} (${actingPlayerPrivate.username}) resolves extra action: ${action.card.name}.`
+              );
+            } else {
+              state.gameLog.push(
+                `Priority ${actingToken} (${actingPlayerPrivate.username}) plays ${action.card.name}.`
+              );
+            }
         }
     
         for (const comp of state.activeComplications) {
@@ -484,6 +513,14 @@ import {
             const randomCard = sample(actingPlayerPrivate.hand)!;
             actionQueue.unshift({ ...action, card: randomCard });
             break;
+            
+          // --- FIX: Add Stockpile case ---
+          case 'Stockpile':
+            actingPlayerPrivate.isStockpiling = true; // Flag for next round
+            state.gameLog.push(`${actingPlayerPrivate.username} plays Stockpile and skips their action.`);
+            break;
+          // --- END FIX ---
+            
           case 'Buffer':
             state.gameLog.push(`...does nothing.`);
             break;
@@ -681,7 +718,7 @@ import {
       }
     }
   
-    // --- (applyEndOfRoundEffects is unchanged) ---
+    // --- (applyEndOfRoundEffects is MODIFIED) ---
     static applyEndOfRoundEffects(
       turnState: TurnState
     ): { 
@@ -696,6 +733,18 @@ import {
           state.stalkerPosition = cloneDeep(previousHarbingerPosition);
           state.gameLog.push(`The Stalker moves to ${state.stalkerPosition.x}, ${state.stalkerPosition.y}...`);
       }
+      
+      // --- FIX: Handle Stockpile flag transition ---
+      // This happens *before* sub-role VP checks, in case a sub-role
+      // keys off of the 'Stockpile' action itself.
+      privateStates.forEach((p) => {
+        if (p.isStockpiling) {
+          p.isStockpiling = false;
+          p.hasStockpiledAction = true;
+          state.gameLog.push(`${p.username} gains a Stockpiled action for next round.`);
+        }
+      });
+      // --- END FIX ---
   
       privateStates.forEach((p) => {
         const subRoleData = scenario.sub_role_definitions[p.subRole];
@@ -868,7 +917,7 @@ import {
       return { nextState: currentState, gameResults: null };
     }
   
-    // --- *** UPDATED FUNCTION: endGame *** ---
+    // --- (endGame function is unchanged) ---
     static endGame(
       state: GameState,
       privateStates: PrivatePlayerState[],
