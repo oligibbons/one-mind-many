@@ -16,12 +16,12 @@ import { HomePage } from './pages/HomePage';
 import HowToPlayPage from './pages/HowToPlayPage'; // Using default import
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
-import { MainMenuPage } from './pages/game/MainMenuPage';
-import { LobbyListPage } from './pages/game/LobbyListPage';
-import { LobbyPage } from './pages/game/LobbyPage';
-import { GamePage } from './pages/game/GamePage';
-import { ProfilePage } from './pages/game/ProfilePage';
-import { FriendsPage } from './pages/game/FriendsPage';
+import MainMenuPage from './pages/game/MainMenuPage'; // <-- FIX: Use default
+import LobbyListPage from './pages/game/LobbyListPage'; // <-- FIX: Use default
+import LobbyPage from './pages/game/LobbyPage'; // <-- FIX: Use default
+import GamePage from './pages/game/GamePage'; // <-- FIX: Use default
+import ProfilePage from './pages/game/ProfilePage'; // <-- FIX: Use default
+import FriendsPage from './pages/game/FriendsPage'; // <-- FIX: Use default
 import { SettingsPage } from './pages/game/SettingsPage';
 import { AdminPage } from './pages/admin/AdminPage';
 import { UserManagementPage } from './pages/admin/UserManagementPage';
@@ -37,7 +37,7 @@ import AdminRoute from './components/auth/AdminRoute';
 import { Toaster } from './components/ui/Toaster';
 import { InviteToast } from './components/ui/InviteToast';
 import { useSocket } from './hooks/useSocket';
-import ScrollToTop from './components/layout/ScrollToTop'; // <-- NEW: Import ScrollToTop
+import ScrollToTop from './components/layout/ScrollToTop';
 
 // Types
 interface GameInvite {
@@ -53,7 +53,6 @@ function AppContent() {
   const [inviteData, setInviteData] = useState<GameInvite | null>(null);
 
   useEffect(() => {
-    // --- FIX: GIMP -> MOP ---
     document.title = 'M.O.P.';
   }, []);
 
@@ -84,7 +83,7 @@ function AppContent() {
 
   return (
     <>
-      <ScrollToTop /> {/* <-- NEW: Added component here */}
+      <ScrollToTop />
       <Routes>
         {/* Public Routes */}
         <Route element={<PublicLayout />}>
@@ -131,7 +130,7 @@ function AppContent() {
           <Route
             path="scenario-editor/:scenarioId"
             element={<ScenarioEditorPage />}
-          }
+          /> {/* <-- FIX: Changed '}' to '/>' */}
           <Route path="test-game" element={<TestGameViewPage />} />
         </Route>
 
