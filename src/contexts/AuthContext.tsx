@@ -33,7 +33,8 @@ interface AuthContextType {
   loading: boolean;
   session: Session | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error: string | null }>;
-  logout: () => Promise<{ success: boolean; error: string | null }>;
+  handleSignOut: () => Promise<{ success: boolean; error: string | null }>; // <-- FIX: Renamed from logout
+  updateUser: (newProfileData: Profile) => void; // <-- FIX: Added updateUser
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,7 +57,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         .single();
 
       if (error) {
-        // FIX: On any Supabase API error (like the 500 RLS error), 
+        // FIX: On any Supabase API error (like the 500 RLS error),
         // keep the user authenticated but explicitly set the profile to null.
         console.warn('Error fetching profile, setting user.profile to null:', error.message);
         setUser({
@@ -81,6 +82,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       // This is crucial: always stop loading *after* we are done.
       setLoading(false);
     }
+  };
+
+  // --- FIX: Added updateUser function ---
+  // Helper function to update just the profile part of the user
+  const updateUser = (newProfileData: Profile) => {
+    setUser(currentUser => {
+      if (!currentUser) return null;
+      return {
+        ...currentUser,
+        profile: newProfileData,
+      };
+    });
   };
 
   useEffect(() => {
@@ -112,8 +125,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         if (currentUser) {
           // User signed in or session was refreshed
           // We run the fetch in the background and unblock the UI immediately
-          fetchUserProfile(currentUser); 
-          setLoading(false); 
+          fetchUserProfile(currentUser);
+          setLoading(false);
         } else {
           // User signed out
           setUser(null);
@@ -125,9 +138,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     return () => {
       authListener.subscription.unsubscribe();
     };
-  
+
   // The dependency array MUST be empty [].
-  }, []); 
+  }, []);
 
   // Define the actual login function
   const login = async (email: string, password: string) => {
@@ -147,8 +160,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     return { success: true, error: null };
   };
 
-  // Define the logout function
-  const logout = async () => {
+  // --- FIX: Renamed 'logout' to 'handleSignOut' ---
+  const handleSignOut = async () => {
     setLoading(true); // Start loading
     const { error } = await supabase.auth.signOut();
     
@@ -166,7 +179,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     loading,
     session,
     login,
-    logout,
+    handleSignOut, // <-- FIX: Use new function name
+    updateUser,     // <-- FIX: Add new function
   };
 
   return (
