@@ -24,13 +24,13 @@ import GamePage from './pages/game/GamePage';
 import ProfilePage from './pages/game/ProfilePage';
 import FriendsPage from './pages/game/FriendsPage';
 import SettingsPage from './pages/game/SettingsPage';
-import { AdminPage } from './pages/admin/AdminPage';
-import { UserManagementPage } from './pages/admin/UserManagementPage';
-import { GameManagementPage } from './pages/admin/GameManagementPage';
-import { ScenarioManagementPage } from './pages/admin/ScenarioManagementPage';
+import AdminPage from './pages/admin/AdminPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
+import GameManagementPage from './pages/admin/GameManagementPage';
+import ScenarioManagementPage from './pages/admin/ScenarioManagementPage';
 import ScenarioEditorPage from './pages/admin/ScenarioEditorPage'; // <-- CORRECTED (was named)
 import TestGameViewPage from './pages/admin/TestGameViewPage'; // <-- CORRECTED (was named)
-import { NotFoundPage } from './pages/NotFoundPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 // Components
 import { ProtectedRoute } from './components/auth/ProtectedRoute'; // <-- CORRECTED (was default)
