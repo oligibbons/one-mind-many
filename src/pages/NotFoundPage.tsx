@@ -1,7 +1,7 @@
 // src/pages/NotFoundPage.tsx
 
 import React, { useState, useEffect } from 'react'; // <-- NEW: Added useState, useEffect
-import { Link }_from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Home, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
