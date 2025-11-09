@@ -69,9 +69,9 @@ export const HomePage: React.FC = () => {
           </p>
           <p className="mt-4 text-xl text-gray-300">
             You and your fellow "Guardians" must collectively guide a single,
-            unwitting mortal—The Harbinger—to complete these sacred chores.
+            unwitting mortal; The Harbinger; to complete these sacred chores.
             Guiding this pawn to file his taxes or buy milk isn't just a goal...
-            it's the *only* thing preventing total annihilation.
+            it's the <b>only</b> thing preventing total annihilation.
           </p>
           <Button
             as={Link}
@@ -101,12 +101,12 @@ export const HomePage: React.FC = () => {
             <FeatureCard
               icon={<EyeOff className="h-10 w-10 text-orange-400" />}
               title="Play Secret Actions"
-              description="Each round, secretly play an action. Will you help the group, hinder them, or pursue your own bizarre goals?"
+              description="Each round, secretly play an action. Will you help the group, hinder them, or pursue your own selfish goals?"
             />
             <FeatureCard
               icon={<Brain className="h-10 w-10 text-orange-400" />}
               title="Deduce Their Motives"
-              description="Actions resolve in a hidden, rotating order. You know *what* just happened, but not *who* did it. Watch the tokens, trust no one."
+              description="Actions resolve in a hidden, rotating order. You know <b>what</b> just happened, but not *who* did it. Watch the tokens, trust no one."
             />
           </div>
         </div>
@@ -122,12 +122,12 @@ export const HomePage: React.FC = () => {
             <FeatureCard
               icon={<HelpCircle className="h-10 w-10 text-blue-400" />}
               title="The True Believer"
-              description="You must fulfill the Prophecy. Guide the Harbinger to its destination against all odds. They think you're helping, but you know the truth."
+              description="You must fulfill the Prophecy. Guide the Harbinger to its destination against all odds. They think its meaningless, but you know the truth."
             />
             <FeatureCard
               icon={<AlertTriangle className="h-10 w-10 text-red-400" />}
               title="The Heretic"
-              description="The Prophecy is a lie. You must ensure the Harbinger meets the Doomsday Condition. Cause chaos, misdirect, and sabotage the mission."
+              description="The Prophecy is a lie. You must ensure the Harbinger brings around Doomsday. Cause chaos, misdirect, and sabotage the mission."
             />
             <FeatureCard
               icon={<Target className="h-10 w-10 text-green-400" />}
