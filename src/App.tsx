@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext'; // <-- CORRECTED
+import { useAuth } from './hooks/useAuth'; // <-- ADDED
 import { SocketProvider } from './contexts/SocketContext';
 import { Session } from '@supabase/supabase-js';
 
@@ -16,12 +17,12 @@ import { HomePage } from './pages/HomePage';
 import HowToPlayPage from './pages/HowToPlayPage'; // Using default import
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
-import MainMenuPage from './pages/game/MainMenuPage'; // <-- FIX: Use default
-import LobbyListPage from './pages/game/LobbyListPage'; // <-- FIX: Use default
-import LobbyPage from './pages/game/LobbyPage'; // <-- FIX: Use default
-import GamePage from './pages/game/GamePage'; // <-- FIX: Use default
-import ProfilePage from './pages/game/ProfilePage'; // <-- FIX: Use default
-import FriendsPage from './pages/game/FriendsPage'; // <-- FIX: Use default
+import MainMenuPage from './pages/game/MainMenuPage';
+import LobbyListPage from './pages/game/LobbyListPage';
+import LobbyPage from './pages/game/LobbyPage';
+import GamePage from './pages/game/GamePage';
+import ProfilePage from './pages/game/ProfilePage';
+import FriendsPage from './pages/game/FriendsPage';
 import { SettingsPage } from './pages/game/SettingsPage';
 import { AdminPage } from './pages/admin/AdminPage';
 import { UserManagementPage } from './pages/admin/UserManagementPage';
@@ -130,7 +131,7 @@ function AppContent() {
           <Route
             path="scenario-editor/:scenarioId"
             element={<ScenarioEditorPage />}
-          /> {/* <-- FIX: Changed '}' to '/>' */}
+          />
           <Route path="test-game" element={<TestGameViewPage />} />
         </Route>
 
