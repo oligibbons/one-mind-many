@@ -113,18 +113,18 @@ const FakePriorityTracker: React.FC<{
 
 // --- Command Card data ---
 const COMMAND_CARDS = [
-  { name: 'Move 1/2/3', effect: 'Move 1, 2, or 3 spaces.', icon: Move3d },
+  { name: 'Move 1/2/3', effect: 'Gain 1, 2 or 3 Movement Points (MP)', icon: Move3d },
   { name: 'Hesitate', effect: 'The next Move card has its value reduced by 1.', icon: Minus },
   { name: 'Charge', effect: 'The next Move card has its value increased by 1.', icon: Plus },
   { name: 'Impulse', effect: 'Move to a random adjacent space.', icon: Waypoints },
   { name: 'Interact', effect: 'Interact with an Object or NPC on the current space.', icon: Hand },
   { name: 'Buffer', effect: 'Do nothing. A safe way to pass priority.', icon: XSquare },
-  { name: 'Rethink', effect: 'Cancel the effects of the previously resolved action.', icon: Undo },
-  { name: 'Homage', effect: 'Repeat the effects of the previously resolved action.', icon: Redo },
+  { name: 'Rethink', effect: 'Cancel the effects of the most recently resolved action.', icon: Undo },
+  { name: 'Homage', effect: 'Repeat the effects of the most recently resolved action.', icon: Redo },
   { name: 'Foresight', effect: 'Preemptively copy the next action that resolves.', icon: Copy },
   { name: 'Deny', effect: 'Prevent the next action from having any effect.', icon: Ban },
-  { name: 'Empower', effect: 'If the next action is a Move, increase its value by +2.', icon: CopyCheck },
-  { name: 'Degrade', effect: 'If the next action is a Move, decrease its value by -1.', icon: Bot },
+  { name: 'Empower', effect: 'If the next action is a Move, increase its value by +2 MP.', icon: CopyCheck },
+  { name: 'Degrade', effect: 'If the next action is a Move, decrease its value by -1 MP.', icon: Bot },
   { name: 'Inhibit', effect: 'The next Interact action will have no effect.', icon: Ban },
   { name: 'Gamble', effect: 'All remaining actions this round are randomly assigned from players\' hands.', icon: Shuffle },
   { name: 'Hail Mary', effect: 'All players discard their hands and draw new ones.', icon: RefreshCw },
@@ -133,7 +133,7 @@ const COMMAND_CARDS = [
   // --- FIX: Added Stockpile Card ---
   { 
     name: 'Stockpile', 
-    effect: 'Do not resolve an action this round. Next round, resolve your chosen action a second time at the end of the round.', 
+    effect: 'Do not resolve an action this round. Next round, your action resolves as normal, however, your action is repeated as the final action in the round.', 
     icon: Package 
   },
   // --- END FIX ---
@@ -181,7 +181,7 @@ export const HowToPlayPage: React.FC = () => {
           </p>
 
           <div className="relative">
-            <StepCard number="1" title="The Role (Your Agenda)">
+            <StepCard number="1" title="Roles (Your Agenda)">
               <p>
                 Your Role is your main objective. It determines which game-ending
                 condition you are trying to achieve. There are three possibilities:
@@ -208,7 +208,7 @@ export const HowToPlayPage: React.FC = () => {
               </div>
             </StepCard>
 
-            <StepCard number="2" title="The Sub-Role (Your Bonus)">
+            <StepCard number="2" title="Sub-Roles (Your Bonus)">
               <p>
                 Your Sub-Role provides a unique way to score bonus VP during the
                 game.
@@ -223,7 +223,7 @@ export const HowToPlayPage: React.FC = () => {
               <p>Pay attention to your Sub-Role to maximize your score.</p>
             </StepCard>
 
-            <StepCard number="3" title="The Identity (Your Token)">
+            <StepCard number="3" title="Identities (Your Token)">
               <p>
                 Your Identity (e.g.,{' '}
                 <strong className="text-white">"The Eye"</strong>,{' '}
@@ -277,7 +277,7 @@ export const HowToPlayPage: React.FC = () => {
               </div>
             </StepCard>
 
-            <StepCard number="3" title="The Resolution (The Core!)">
+            <StepCard number="3" title="The Resolution">
               <p>
                 This is the heart of the game. The{' '}
                 <strong className="text-white">Priority Track</strong> at the top
@@ -332,7 +332,7 @@ export const HowToPlayPage: React.FC = () => {
 
             <StepCard number="4" title="The Deduction">
               <p>
-                This is the *real* game. You just saw{' '}
+                This is the <b>real</b> game. You just saw{' '}
                 <strong className="text-white">"The Eye"</strong> play a{' '}
                 <strong className="text-white">`Move 3`</strong> card that sent
                 the Harbinger right into a hazard.
@@ -439,7 +439,7 @@ export const HowToPlayPage: React.FC = () => {
             <CardContent className="space-y-4 text-gray-300">
               <p>
                 These are your core actions. You have a hand of 4 cards, which is
-                refilled every 3 rounds.
+                redrawn every 3 rounds.
               </p>
               {/* --- NEW: Single-column card list --- */}
               <div className="space-y-3">
