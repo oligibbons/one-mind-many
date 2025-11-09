@@ -30,7 +30,7 @@ import GameManagementPage from './pages/admin/GameManagementPage';
 import ScenarioManagementPage from './pages/admin/ScenarioManagementPage';
 import ScenarioEditorPage from './pages/admin/ScenarioEditorPage'; // <-- CORRECTED (was named)
 import TestGameViewPage from './pages/admin/TestGameViewPage'; // <-- CORRECTED (was named)
-import NotFoundPage from './pages/NotFoundPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 // Components
 import { ProtectedRoute } from './components/auth/ProtectedRoute'; // <-- CORRECTED (was default)
