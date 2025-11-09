@@ -4,12 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import { Select } from '../ui/Select'; // Assuming you have a Select component
+// --- FIX: Import your Radix-based Select components ---
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/Select';
+// --- END FIX ---
 import { Switch } from '../ui/Switch';
-import { Label } from '../ui/Label'; // Assuming you have a Label component
+import { Label } from '../ui/Label';
 import { api } from '../../lib/api';
 import { X, Plus, AlertTriangle, Lock, Globe } from 'lucide-react';
-import { Scenario } from '../../types/game'; // Import Scenario type
+import { Scenario } from '../../types/game';
 import { useToast } from '../../hooks/useToast';
 
 interface CreateLobbyModalProps {
@@ -31,7 +39,6 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // --- NEW: Fetch published scenarios when modal opens ---
   useEffect(() => {
     if (isOpen) {
       setIsLoadingScenarios(true);
@@ -39,10 +46,8 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
       
       const fetchScenarios = async () => {
         try {
-          // This endpoint should return published scenarios
           const response = await api.get('/scenarios/published');
           setScenarios(response.data);
-          // Default to the first scenario in the list
           if (response.data.length > 0) {
             setSelectedScenario(response.data[0].id);
           } else {
@@ -59,7 +64,6 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
     }
   }, [isOpen]);
 
-  // --- NEW: Handle form submission ---
   const handleSubmit = async () => {
     if (!selectedScenario) {
       setError('You must select a scenario.');
@@ -75,7 +79,6 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
         isPublic: isPublic,
       });
       
-      // Pass the new lobby ID back to the LobbyListPage
       onLobbyCreated(response.data.lobbyId);
       
     } catch (err: any) {
@@ -110,31 +113,37 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Scenario Selection */}
+              
+              {/* --- FIX: Use Radix Select component --- */}
               <div className="space-y-2">
                 <Label htmlFor="scenario" className="text-lg font-semibold text-white">
                   Scenario
                 </Label>
                 <Select
-                  id="scenario"
                   value={selectedScenario}
                   onValueChange={setSelectedScenario}
                   disabled={isCreating}
                 >
-                  {scenarios.map((scenario) => (
-                    <option key={scenario.id} value={scenario.id}>
-                      {scenario.name}
-                    </option>
-                  ))}
+                  <SelectTrigger id="scenario" className="w-full text-lg h-12">
+                    <SelectValue placeholder="Select a scenario..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {scenarios.map((scenario) => (
+                      <SelectItem key={scenario.id} value={scenario.id} className="text-lg">
+                        {scenario.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-400 pt-1">
                   {scenarios.find(s => s.id === selectedScenario)?.description}
                 </p>
               </div>
+              {/* --- END FIX --- */}
 
               {/* Public/Private Toggle */}
               <div className="flex items-center justify-between rounded-lg bg-gray-800/60 p-4">
-                <Label htmlFor="is-public" className="space-y-1">
+                <Label htmlFor="is-public" className="space-y-1 pr-4">
                   <div className="flex items-center gap-2">
                     {isPublic ? <Globe className="h-5 w-5 text-green-400" /> : <Lock className="h-5 w-5 text-red-400" />}
                     <span className="text-lg font-semibold text-white">

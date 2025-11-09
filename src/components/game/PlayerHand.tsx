@@ -1,7 +1,7 @@
 // src/components/game/PlayerHand.tsx
 
 import React, { useState, useMemo } from 'react';
-import { usePlayerContextStore } from '../../stores/usePlayerContextStore';
+import { useCurrentPlayerStore } from '../../stores/useCurrentPlayerStore'; // <-- FIX: Use the new store
 import { useGameStore } from '../../stores/useGameStore';
 import { useSocket } from '../../hooks/useSocket';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
@@ -32,7 +32,7 @@ const CARD_ICONS: Record<CardName, React.ElementType> = {
   'Inhibit': Ban,
   'Gamble': Shuffle,
   'Hail Mary': RefreshCw,
-  'Scramble': RefreshCw, // <-- FIX: Renamed 'Reload' to 'Scramble'
+  'Scramble': RefreshCw, // <-- FIX: Renamed 'Reload'
   'Stockpile': Package,
 };
 
@@ -44,19 +44,19 @@ const BASE_MP: Record<string, number> = {
 
 export const PlayerHand: React.FC = () => {
   const { socket } = useSocket();
-  const player = usePlayerContextStore((state) => state.player);
-  
+  const player = useCurrentPlayerStore((state) => state.player); // <-- FIX: Use the new store
+
   const { 
     submittedAction, 
     gameId, 
     activeComplications, 
     scenario 
   } = useGameStore((state) => ({
-    submittedAction: state.publicState.players.find(
-      (p) => p.user_id === player?.user_id // <-- FIX: Mapped to correct ID
-    )?.submitted_action, // <-- FIX: Use 'submitted_action'
-    gameId: state.publicState.id,
-    activeComplications: state.publicState.active_complications, // <-- FIX: Use 'active_complications'
+    submittedAction: state.publicState?.players.find(
+      (p) => p.user_id === player?.user_id
+    )?.submitted_action,
+    gameId: state.publicState?.id,
+    activeComplications: state.publicState?.active_complications || [],
     scenario: state.scenario,
   }));
 
@@ -66,10 +66,7 @@ export const PlayerHand: React.FC = () => {
     if (!scenario?.complication_effects) return 0;
 
     let modifier = 0;
-    // --- FIX: Use correct property name ---
     for (const complication of activeComplications) {
-      // This logic is complex and dependent on server data structure.
-      // Kept your existing logic structure.
       const effectData = (scenario.complication_effects as any)[complication.name];
       if (effectData?.effect?.type === 'MODIFY_TURN' && effectData.effect.moveValue) {
         modifier += effectData.effect.moveValue;
@@ -104,7 +101,6 @@ export const PlayerHand: React.FC = () => {
   return (
     <div className="flex flex-col items-center w-full">
       {/* Player Hand Cards */}
-      {/* --- FIX: Made hand container horizontally scrollable on mobile --- */}
       <div className="flex w-full justify-center items-end h-48 md:h-52 overflow-x-auto overflow-y-hidden no-scrollbar px-4">
         <div className="flex min-w-max space-x-2">
           {player.hand.map((card) => {
@@ -127,7 +123,6 @@ export const PlayerHand: React.FC = () => {
                 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
-                {/* --- FIX: Made cards responsive --- */}
                 <Card
                   className={clsx(
                     'game-card w-32 h-40 md:w-36 md:h-44 cursor-pointer border-2 shadow-lg',
@@ -156,7 +151,6 @@ export const PlayerHand: React.FC = () => {
       </div>
 
       {/* Action Bar */}
-      {/* --- FIX: Made action bar responsive (stacks on mobile) --- */}
       <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-lg md:max-w-2xl h-auto md:h-16 mt-4 space-y-2 md:space-y-0 md:space-x-4">
         {/* MP Tracker */}
         <div className="w-full md:w-48 h-full">
@@ -195,9 +189,9 @@ export const PlayerHand: React.FC = () => {
         {/* Lock In Button */}
         <Button
           onClick={handleSubmitAction}
-          disabled={!selectedCard || !!submittedAction} // <-- FIX: Use !! for boolean check
+          disabled={!selectedCard || !!submittedAction}
           className="w-full md:w-64 h-14 md:h-full text-lg font-bold game-button"
-          size="lg" // <-- NEW: Ensure large size
+          size="lg"
         >
           {submittedAction
             ? 'Action Submitted'

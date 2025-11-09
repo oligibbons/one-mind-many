@@ -254,7 +254,8 @@ const AddFriendForm: React.FC<{ onSent: () => void }> = ({ onSent }) => {
   const [username, setUsername] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] =TA[string | null>(null);
+  // --- FIX: Corrected typo 'TA[' to 'useState<' ---
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
