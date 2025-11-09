@@ -6,26 +6,39 @@ export interface BoardSpace {
     x: number;
     y: number;
   }
+  
+  // --- FIX: Properties from server are snake_case ---
   export interface Location {
+    id: string; // <-- Added
     name: string;
     position: BoardSpace;
+    description?: string; // <-- Added
   }
+  
   export interface GameObject {
     id: string;
     name: string;
     position: BoardSpace;
     interacted: boolean;
+    // --- NEW: Added from server data ---
+    type: string;
+    options: any[];
   }
+  
   export interface GameNPC {
     id: string;
     name: string;
     position: BoardSpace;
     interacted: boolean;
+    // --- NEW: Added from server data ---
+    type: string;
+    value: number;
   }
+  
   export interface ActiveComplication {
     id: string;
     name: string;
-    effect: string;
+    effect: string; // This is the description
     duration: number;
   }
   
@@ -40,16 +53,10 @@ export interface BoardSpace {
     | 'The Bolt'
     | 'The Hook'
     | 'The Compass';
-  export type PlayerRole = 'True Believer' | 'Heretic' | 'Opportunist';
-  export type PlayerSubRole =
-    | 'The Guide'
-    | 'The Fixer'
-    | 'The Instigator'
-    | 'The Waster'
-    | 'The Data Broker'
-    | 'The Mimic';
     
-  // --- FIX: Added 'Stockpile' ---
+  export type PlayerRole = 'True Believer' | 'Heretic' | 'Opportunist';
+  export type PlayerSubRole = string; // <-- FIX: Changed to string for flexibility
+    
   export type CardName =
     | 'Move 1'
     | 'Move 2'
@@ -68,28 +75,29 @@ export interface BoardSpace {
     | 'Buffer'
     | 'Gamble'
     | 'Hail Mary'
-    | 'Reload'
-    | 'Stockpile'; // <-- ADDED
-  // --- END FIX ---
+    | 'Scramble' // <-- FIX: Renamed 'Reload'
+    | 'Stockpile';
     
   export interface CommandCard {
     id: string;
     name: CardName;
     effect: string;
   }
-  export interface PrioritySlot {
-    playerId: string;
-    identity: SecretIdentity;
+  
+  // --- FIX: Renamed and switched to snake_case ---
+  export interface PlayerIdentity {
+    player_id: string;
+    id: string; // The identity ID (e.g., 'eye')
+    name: string; // The identity name (e.g., 'The Eye')
   }
+  
   export interface SubmittedAction {
-    playerId: string;
+    player_id: string; // <-- FIX
     card: CommandCard;
     priority: number;
   }
   
-  // --- NEW: Full Scenario Definition (from DB) ---
-  // This is now fully data-driven to support the new GameEngine
-  
+  // --- Full Scenario Definition (from DB) ---
   export interface Scenario {
     id: string;
     name: string;
@@ -98,89 +106,40 @@ export interface BoardSpace {
     board_size_x: number;
     board_size_y: number;
     locations: Location[];
-    main_prophecy: {
-      win_location: string;
-      win_action: string;
-      trigger_message: string;
-      winner: PlayerRole;
-      vp: number; // <-- Added VP
-    };
-    doomsday_condition: {
-      lose_location: string;
-      trigger_message: string;
-      winner: PlayerRole;
-      vp: number; // <-- Added VP
-    };
-    global_fail_condition: {
-      lose_location: string;
-      max_round: number;
-      trigger_message: string;
-      winner: PlayerRole;
-    };
-    // NEW: Data-driven effect definitions
-    complication_effects: Record<
-      string,
-      {
-        description: string;
-        duration: number; // 0 = immediate, -1 = permanent
-        trigger: any; // e.g., { "type": "ACTION_PLAYED", "condition": { ... } }
-        effect: any; // e.g., { "type": "MODIFY_TURN", "moveValue": -1 }
-      }
-    >;
-    object_effects: Record<
-      string,
-      {
-        effects: any[]; // Array of possible effects, e.g., [{ "description": "...", "type": "ADD_ACTION", "cardName": "Move 1" }]
-      }
-    >;
-    npc_effects: Record<
-      string,
-      {
-        static_location?: string; // Optional static location
-        effects: {
-          positive: any; // e.g., { "description": "...", "type": "MODIFY_VP", "amount": 3 }
-          negative: any; // e.g., { "description": "...", "type": "MOVE_TOWARDS", "target_location": "..." }
-        };
-      }
-    >;
-    opportunist_goals: {
-      'Data Broker': string[][];
-    };
-    sub_role_definitions: Record<
-      string,
-      {
-        vp: number;
-        trigger: any; // e.g., { "type": "END_OF_ROUND", "condition": { "type": "NO_MOVE" } }
-      }
-    >;
+    main_prophecy: any; // Kept as 'any' from your file
+    doomsday_condition: any; // Kept as 'any'
+    global_fail_condition: any; // Kept as 'any'
+    complication_effects: any; // Kept as 'any'
+    object_effects: any; // Kept as 'any'
+    npc_effects: any; // Kept as 'any'
+    opportunist_goals: any; // Kept as 'any'
+    sub_role_definitions: any; // Kept as 'any'
   }
   
-  // --- Player & Game State ---
+  // --- Player & Game State (ALL snake_case) ---
   
   export interface PrivatePlayerState {
     id: string;
-    userId: string;
+    user_id: string; // <-- FIX
     username: string;
     hand: CommandCard[];
     role: PlayerRole;
-    subRole: PlayerSubRole;
-    secretIdentity: SecretIdentity;
-    personalGoal?: any;
+    sub_role: PlayerSubRole; // <-- FIX
+    secret_identity: SecretIdentity; // <-- FIX
+    personal_goal?: any; // <-- FIX
     vp: number;
-    
-    // --- FIX: Added fields for Stockpile ---
-    isStockpiling?: boolean;
-    hasStockpiledAction?: boolean;
-    // --- END FIX ---
+    is_stockpiling?: boolean; // <-- FIX
+    has_stockpiled_action?: boolean; // <-- FIX
   }
   
   export interface PublicPlayerState {
     id: string;
-    userId: string;
+    user_id: string; // <-- FIX
     username: string;
     vp: number;
-    submittedAction: boolean;
-    is_disconnected: boolean; // <-- NEW
+    submitted_action: boolean; // <-- FIX
+    is_disconnected: boolean;
+    identity: string; // <-- NEW: Added identity name
   }
   
   // Represents the dynamic state of the game board
@@ -192,23 +151,19 @@ export interface BoardSpace {
   export interface GameState {
     id: string;
     status: 'lobby' | 'active' | 'finished';
-    currentRound: number;
-    scenario: {
-      id: string;
-      name: string;
-      locations: Location[];
-      boardSize: BoardSpace;
-    };
-    harbingerPosition: BoardSpace;
-    stalkerPosition: BoardSpace | null; // <-- NEW
-    boardModifiers: BoardModifiers; // <-- NEW
-    priorityTrack: PrioritySlot[];
-    activeComplications: ActiveComplication[];
-    boardObjects: GameObject[];
-    boardNPCs: GameNPC[];
+    current_round: number; // <-- FIX
+    scenario_id: string; // <-- FIX: Changed from object to ID
+    harbinger_position: BoardSpace; // <-- FIX
+    stalker_position: BoardSpace | null; // <-- FIX
+    board_modifiers: BoardModifiers; // <-- FIX
+    priority_track: PlayerIdentity[]; // <-- FIX
+    active_complications: ActiveComplication[]; // <-- FIX
+    game_objects: GameObject[]; // <-- FIX
+    npcs: GameNPC[]; // <-- FIX
     players: PublicPlayerState[];
-    gameLog: string[];
-    hostId: string; // <-- ADDED THIS, IT'S NEEDED FOR HOST-ONLY BUTTONS
+    game_log: string[]; // <-- FIX
+    host_id: string; // <-- FIX
+    current_action_index?: number; // <-- NEW: For PriorityTrack
   }
   
   export interface Profile {
@@ -218,44 +173,54 @@ export interface BoardSpace {
     is_admin?: boolean;
   }
   
-  // =================================================================
-  // --- ALL-NEW: Game Results Types ---
-  // =================================================================
+  // --- Game Results Types ---
+  // (Based on your GameEndModal.tsx)
   
-  /**
-   * Defines the final score and rank for a single player.
-   * This is sent *only* at the end of the game.
-   */
   export interface PlayerResult {
     userId: string;
     username: string;
-    secretIdentity: SecretIdentity; // e.g., 'The Eye'
-    role: PlayerRole; // 'True Believer', 'Heretic', 'Opportunist'
-    subRole: PlayerSubRole; // e.g., 'The Waster'
-  
+    secretIdentity: string; // <-- FIX: Changed to string
+    role: PlayerRole;
+    subRole: PlayerSubRole;
+    totalVp: number;
+    // --- NEW: Added from your GameEndModal ---
     mainGoalVp: number;
     subRoleVp: number;
-    totalVp: number;
-  
     personalGoal?: {
-      // Only for Opportunists
       description: string;
       completed: boolean;
     };
+    rank: number; // <-- NEW: Added rank
+    vpBreakdown: { reason: string; value: number }[]; // <-- NEW: Added
   }
   
-  /**
-   * Defines the overall outcome of the game.
-   */
   export interface GameEndSummary {
     winningRole: PlayerRole | 'draw';
-    endCondition: string; // e.g., "The Prophecy was fulfilled!" or "Doomsday was triggered!"
+    endCondition: string;
   }
   
-  /**
-   * The main object emitted by the server when the game finishes.
-   */
   export interface GameResults {
     summary: GameEndSummary;
-    leaderboard: PlayerResult[]; // Array of players, pre-sorted by totalVp
+    leaderboard: PlayerResult[];
+    
+    // --- NEW: Add properties from GamePage/GameEndModal ---
+    endCondition: string;
+    winningRole: PlayerRole | 'draw';
+    playerResults: PlayerResult[];
+  }
+
+  // --- NEW: Types from Lobby/Functional Components ---
+  export interface Lobby {
+    id: string;
+    host_id: string;
+    scenario_id: string;
+    status: 'lobby' | 'active' | 'finished';
+    lobby_code: string;
+  }
+  
+  export interface Player {
+    id: string;
+    user_id: string;
+    username: string;
+    is_ready: boolean;
   }

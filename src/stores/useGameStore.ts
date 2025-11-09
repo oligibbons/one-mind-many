@@ -7,18 +7,20 @@ import {
   PublicPlayerState,
   BoardSpace,
   GameResults,
+  Scenario, // <-- NEW: Import Scenario
 } from '../types/game';
 
 // Define the shape of the store's state
 interface GameStoreState {
   publicState: GameState | null;
   privateState: PrivatePlayerState | null;
+  scenario: Scenario | null; // <-- NEW: Store scenario separately
   gameResults: GameResults | null;
   error: string | null;
 
   isAwaitingMove: boolean;
   actingPlayerId: string | null;
-  actingUsername: string | null; // <-- NEW: To store who is moving
+  actingUsername: string | null;
   validMoves: BoardSpace[];
 }
 
@@ -27,6 +29,7 @@ interface GameStoreActions {
   setFullGameData: (data: {
     publicState: GameState;
     privateState: PrivatePlayerState;
+    scenario: Scenario; // <-- NEW: Add scenario to setup
   }) => void;
   updatePublicState: (newState: GameState) => void;
   updatePrivateState: (newState: PrivatePlayerState) => void;
@@ -35,15 +38,11 @@ interface GameStoreActions {
   setGameResults: (results: GameResults) => void;
   setError: (message: string) => void;
   clearGame: () => void;
-
-  // --- FIX: Updated data shape ---
   setAwaitingMove: (data: {
     playerId: string;
-    actingUsername: string; // <-- NEW
+    actingUsername: string;
     validMoves: BoardSpace[];
   }) => void;
-  // --- END FIX ---
-  
   clearAwaitingMove: () => void;
 }
 
@@ -52,11 +51,12 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
   // --- Initial State ---
   publicState: null,
   privateState: null,
+  scenario: null, // <-- NEW
   gameResults: null,
   error: null,
   isAwaitingMove: false,
   actingPlayerId: null,
-  actingUsername: null, // <-- NEW
+  actingUsername: null,
   validMoves: [],
 
   // --- Actions ---
@@ -65,11 +65,12 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
     set({
       publicState: data.publicState,
       privateState: data.privateState,
+      scenario: data.scenario, // <-- NEW
       error: null,
       isAwaitingMove: false,
       validMoves: [],
       actingPlayerId: null,
-      actingUsername: null, // <-- NEW
+      actingUsername: null,
       gameResults: null,
     }),
 
@@ -79,7 +80,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       publicState: newState,
       isAwaitingMove: state.isAwaitingMove,
       actingPlayerId: state.actingPlayerId,
-      actingUsername: state.actingUsername, // <-- NEW
+      actingUsername: state.actingUsername,
       validMoves: state.validMoves,
     })),
 
@@ -93,7 +94,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       if (!state.publicState) return state;
       const newPlayers = state.publicState.players.map(
         (p: PublicPlayerState) =>
-          p.userId === userId ? { ...p, submittedAction: true } : p,
+          // --- FIX: Use snake_case ---
+          p.user_id === userId ? { ...p, submitted_action: true } : p,
       );
       return {
         publicState: { ...state.publicState, players: newPlayers },
@@ -105,7 +107,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       if (!state.publicState) return state;
       const newPlayers = state.publicState.players.map(
         (p: PublicPlayerState) =>
-          p.userId === userId ? { ...p, is_disconnected: isDisconnected } : p,
+          // --- FIX: Use snake_case ---
+          p.user_id === userId ? { ...p, is_disconnected: isDisconnected } : p,
       );
       return {
         publicState: { ...state.publicState, players: newPlayers },
@@ -117,7 +120,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       gameResults: results,
       isAwaitingMove: false, 
       actingPlayerId: null,
-      actingUsername: null, // <-- NEW
+      actingUsername: null,
       validMoves: [],
     }),
 
@@ -127,29 +130,28 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
     set({
       publicState: null,
       privateState: null,
+      scenario: null, // <-- NEW
       error: null,
       isAwaitingMove: false,
       validMoves: [],
       actingPlayerId: null,
-      actingUsername: null, // <-- NEW
+      actingUsername: null,
       gameResults: null,
     }),
 
-  // --- FIX: Updated function to store username ---
   setAwaitingMove: (data) =>
     set({
       isAwaitingMove: true,
       actingPlayerId: data.playerId,
-      actingUsername: data.actingUsername, // <-- NEW
+      actingUsername: data.actingUsername,
       validMoves: data.validMoves,
     }),
-  // --- END FIX ---
 
   clearAwaitingMove: () =>
     set({
       isAwaitingMove: false,
       actingPlayerId: null,
-      actingUsername: null, // <-- NEW
+      actingUsername: null,
       validMoves: [],
     }),
 }));
