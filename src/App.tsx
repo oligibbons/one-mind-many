@@ -23,7 +23,7 @@ import LobbyPage from './pages/game/LobbyPage';
 import GamePage from './pages/game/GamePage';
 import ProfilePage from './pages/game/ProfilePage';
 import FriendsPage from './pages/game/FriendsPage';
-import { SettingsPage } from './pages/game/SettingsPage';
+import SettingsPage from './pages/game/SettingsPage';
 import { AdminPage } from './pages/admin/AdminPage';
 import { UserManagementPage } from './pages/admin/UserManagementPage';
 import { GameManagementPage } from './pages/admin/GameManagementPage';
