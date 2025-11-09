@@ -8,13 +8,13 @@ import { SocketProvider } from './contexts/SocketContext';
 import { Session } from '@supabase/supabase-js';
 
 // Layouts
-import { MainLayout } from './layouts/MainLayout'; // <-- CORRECTED
-import { AuthLayout } from './layouts/AuthLayout'; // <-- CORRECTED
+import { MainLayout } from './layouts/MainLayout';
+import { AuthLayout } from './layouts/AuthLayout';
 import PublicLayout from './layouts/PublicLayout';
 
 // Pages
 import { HomePage } from './pages/HomePage';
-import HowToPlayPage from './pages/HowToPlayPage'; // Using default import
+import HowToPlayPage from './pages/HowToPlayPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import MainMenuPage from './pages/game/MainMenuPage';
@@ -28,13 +28,13 @@ import { AdminPage } from './pages/admin/AdminPage';
 import { UserManagementPage } from './pages/admin/UserManagementPage';
 import { GameManagementPage } from './pages/admin/GameManagementPage';
 import { ScenarioManagementPage } from './pages/admin/ScenarioManagementPage';
-import { ScenarioEditorPage } from './pages/admin/ScenarioEditorPage';
-import { TestGameViewPage } from './pages/admin/TestGameViewPage';
+import ScenarioEditorPage from './pages/admin/ScenarioEditorPage'; // <-- CORRECTED (was named)
+import TestGameViewPage from './pages/admin/TestGameViewPage'; // <-- CORRECTED (was named)
 import { NotFoundPage } from './pages/NotFoundPage';
 
 // Components
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import AdminRoute from './components/auth/AdminRoute';
+import { ProtectedRoute } from './components/auth/ProtectedRoute'; // <-- CORRECTED (was default)
+import { AdminRoute } from './components/auth/AdminRoute'; // <-- CORRECTED (was default)
 import { Toaster } from './components/ui/Toaster';
 import { InviteToast } from './components/ui/InviteToast';
 import { useSocket } from './hooks/useSocket';
