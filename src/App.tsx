@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext'; // <-- CORRECTED
-import { useAuth } from './hooks/useAuth'; // <-- ADDED
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import { SocketProvider } from './contexts/SocketContext';
 import { Session } from '@supabase/supabase-js';
 
 // Layouts
-import MainLayout from './layouts/MainLayout';
-import AuthLayout from './layouts/AuthLayout';
+import { MainLayout } from './layouts/MainLayout'; // <-- CORRECTED
+import { AuthLayout } from './layouts/AuthLayout'; // <-- CORRECTED
 import PublicLayout from './layouts/PublicLayout';
 
 // Pages
