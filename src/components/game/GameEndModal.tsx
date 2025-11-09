@@ -41,20 +41,23 @@ export const GameEndModal: React.FC<GameEndModalProps> = ({ results }) => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
 
-  const hostId = useGameStore((state) => state.publicState?.hostId);
-  const isHost = user?.id === hostId;
+  // --- FIX: Use snake_case 'host_id' to match db schema ---
+  const host_id = useGameStore((state) => state.publicState?.host_id);
+  const isHost = user?.id === host_id;
 
   const { summary, leaderboard } = results;
 
   const handleLeaveLobby = () => {
     // We should clear the game state when leaving
     useGameStore.getState().clearGame();
-    navigate('/app/lobbies');
+    // --- FIX: Removed '/app' prefix ---
+    navigate('/lobbies');
   };
 
   const handleMainMenu = () => {
     useGameStore.getState().clearGame();
-    navigate('/app/main-menu');
+    // --- FIX: Removed '/app' prefix ---
+    navigate('/main-menu');
   };
 
   const handlePlayAgain = () => {

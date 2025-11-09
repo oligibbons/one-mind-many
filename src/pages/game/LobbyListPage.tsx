@@ -1,209 +1,168 @@
 // src/pages/game/LobbyListPage.tsx
 
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSocket } from '../../contexts/SocketContext';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Input } from '../../components/ui/Input';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { CreateLobbyModal } from '../../components/lobby/CreateLobbyModal';
-import { Users, Lock, LogIn } from 'lucide-react';
-import { Label } from '../../components/ui/Switch'; // Added missing Label import
+import { Plus, RefreshCw, AlertTriangle, Users, ArrowRight } from 'lucide-react';
+import { Lobby } from '../../types/game'; // Assuming this type is defined
 
-// Define the shape of a lobby object we expect from the server
-interface LobbyPlayer {
-  user_id: string;
-  username: string;
-}
-interface Lobby {
-  id: string;
-  name: string;
-  host_id: string;
+// --- NEW: Define Lobby type based on schema/API ---
+interface PublicLobby {
+  id: string; // lobbyId
+  host_username: string;
   scenario_name: string;
-  game_players: LobbyPlayer[];
+  player_count: number;
+  max_players: number;
+  lobby_code: string;
 }
 
-const LobbyListPage: React.FC = () => {
+export const LobbyListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { socket, isConnected } = useSocket();
-  const { user } = useAuth(); // FIX: Removed 'profile' from here
-  const [lobbies, setLobbies] = useState<Lobby[]>([]);
+  const { user } = useAuth();
+  const [lobbies, setLobbies] = useState<PublicLobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [lobbyCode, setLobbyCode] = useState('');
-  const [joinError, setJoinError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- Socket Listeners ---
-  useEffect(() => {
-    if (!socket || !isConnected) return;
-
-    // Fired when the server sends us the list of lobbies
-    const onLobbyList = (lobbyList: Lobby[]) => {
-      setLobbies(lobbyList);
-      setIsLoading(false);
-    };
-
-    // Fired when we successfully join ANY lobby
-    const onLobbyJoined = (data: { gameId: string }) => {
-      // Navigate to the lobby page
-      navigate(`/app/lobby/${data.gameId}`);
-    };
-    
-    const onLobbyError = (data: { message: string }) => {
-      setJoinError(data.message);
-      setIsLoading(false);
-    };
-
-    socket.on('lobby:list', onLobbyList);
-    socket.on('lobby:joined', onLobbyJoined);
-    socket.on('error:lobby', onLobbyError);
-
-    // --- Initial Fetch ---
-    socket.emit('lobby:get_list');
-
-    // Cleanup
-    return () => {
-      socket.off('lobby:list', onLobbyList);
-      socket.off('lobby:joined', onLobbyJoined);
-      socket.off('error:lobby', onLobbyError);
-    };
-  }, [socket, isConnected, navigate]);
-
-  const handleJoinLobby = (gameId: string) => {
-    if (!socket || !user || !user.profile) return; // FIX: Check user.profile
-    setJoinError(null);
-    socket.emit('lobby:join', {
-      gameId,
-      userId: user.id,
-      username: user.profile.username || 'AnonPlayer', // FIX: Use user.profile
-    });
-  };
-
-  const handleJoinByCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!socket || !user || !user.profile || !lobbyCode) return; // FIX: Check user.profile
-    
-    setJoinError(null);
+  // --- NEW: Function to fetch lobbies ---
+  const fetchLobbies = async () => {
     setIsLoading(true);
-    
-    socket.emit('lobby:join_private', {
-      lobbyCode: lobbyCode.toUpperCase(),
-      userId: user.id,
-      username: user.profile.username || 'AnonPlayer', // FIX: Use user.profile
-    });
+    setError(null);
+    try {
+      // This endpoint 'lobbies/public' needs to exist on your server
+      // It should return an array of public lobbies with player counts.
+      const response = await api.get('/lobbies/public');
+      setLobbies(response.data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to fetch lobbies.');
+      console.error('Failed to fetch lobbies:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="flex flex-col items-center justify-center p-12 text-gray-400">
-          <LoadingSpinner />
-          <p className="mt-2">Searching for open games...</p>
-        </div>
-      );
-    }
+  // --- NEW: Fetch lobbies on component mount ---
+  useEffect(() => {
+    fetchLobbies();
+  }, []);
 
-    if (lobbies.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center p-12 text-gray-400">
-          <p>No open lobbies found.</p>
-          <p className="text-sm">Why not host your own?</p>
-        </div>
-      );
-    }
+  const handleLobbyCreated = (lobbyId: string) => {
+    setIsModalOpen(false);
+    navigate(`/lobby/${lobbyId}`);
+  };
 
-    return (
-      <div className="space-y-4">
-        {lobbies.map((lobby) => (
-          <Card key={lobby.id} className="game-card flex flex-row items-center justify-between p-4">
-            <div className="flex-1">
-              <CardTitle className="text-xl text-orange-400">
-                {lobby.name}
+  const handleJoinLobby = (lobbyId: string) => {
+    // In a real scenario, you might need to check if the lobby is full
+    // or if a code is needed, but for public lobbies this is fine.
+    navigate(`/lobby/${lobbyId}`);
+  };
+
+  // --- NEW: Render loading state ---
+  const renderLoading = () => (
+    <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+      <LoadingSpinner size="lg" />
+      <p className="mt-4 text-lg">Fetching active lobbies...</p>
+    </div>
+  );
+
+  // --- NEW: Render error state ---
+  const renderError = () => (
+    <Card className="game-card bg-red-900/30 border-red-700 text-red-300 p-6 text-center">
+      <AlertTriangle className="mx-auto h-12 w-12 text-red-400" />
+      <h3 className="mt-4 text-2xl font-bold">Error Fetching Lobbies</h3>
+      <p className="mt-2">{error}</p>
+      <Button variant="outline" onClick={fetchLobbies} className="mt-4 btn-outline">
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Try Again
+      </Button>
+    </Card>
+  );
+
+  // --- NEW: Render empty state ---
+  const renderEmptyState = () => (
+    <div className="text-center h-64 flex flex-col items-center justify-center">
+      <Users className="h-16 w-16 text-gray-600" />
+      <h3 className="mt-4 text-2xl font-bold text-white">No Public Lobbies</h3>
+      <p className="mt-2 text-gray-400">
+        There are no public lobbies currently active.
+      </p>
+      <p className="text-gray-400">
+        Why not create one?
+      </p>
+    </div>
+  );
+
+  // --- NEW: Render lobby list ---
+  const renderLobbyList = () => (
+    <div className="space-y-4">
+      {lobbies.length === 0 ? renderEmptyState() : (
+        lobbies.map((lobby) => (
+          <Card 
+            key={lobby.id} 
+            className="game-card flex flex-col sm:flex-row items-center justify-between p-4 transition-all hover:border-orange-400"
+          >
+            <div className="mb-4 sm:mb-0">
+              <CardTitle className="text-xl text-white">
+                {lobby.host_username}'s Game
               </CardTitle>
-              <div className="text-sm text-gray-300">
-                Host: {lobby.game_players.find(p => p.user_id === lobby.host_id)?.username || 'Unknown'}
-              </div>
-              <div className="text-sm text-gray-400">
+              <p className="text-sm text-gray-400">
                 Scenario: {lobby.scenario_name}
-              </div>
+              </p>
             </div>
-            <div className="flex flex-shrink-0 flex-col items-end gap-2 pl-4">
-               <div className="flex items-center text-lg text-gray-300">
-                  <Users size={18} className="mr-2" />
-                  {lobby.game_players.length} / 6
-                </div>
-              <Button className="game-button" onClick={() => handleJoinLobby(lobby.id)}>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center text-gray-300">
+                <Users className="mr-2 h-5 w-5" />
+                <span className="font-bold">{lobby.player_count}</span>
+                <span className="text-gray-400">/{lobby.max_players}</span>
+              </div>
+              <Button 
+                variant="game" 
+                onClick={() => handleJoinLobby(lobby.id)}
+                className="game-button"
+              >
                 Join
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </Card>
-        ))}
-      </div>
-    );
-  };
+        ))
+      )}
+    </div>
+  );
 
   return (
-    <>
-      {isCreateModalOpen && (
-        <CreateLobbyModal onClose={() => setIsCreateModalOpen(false)} />
-      )}
-
-      <div className="mx-auto w-full max-w-4xl p-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-5xl font-bold game-title">Find a Game</h1>
-          <Button
-            className="game-button btn-lg"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            Host New Game
+    <div className="mx-auto w-full max-w-4xl p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 className="text-5xl font-bold game-title mb-4 sm:mb-0">
+          Public Lobbies
+        </h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchLobbies} className="btn-outline">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Button onClick={() => setIsModalOpen(true)} className="game-button">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Lobby
           </Button>
         </div>
-
-        <Card className="game-card mb-8">
-          <CardContent className="p-4">
-            <form onSubmit={handleJoinByCode} className="flex flex-col sm:flex-row gap-4">
-              <Label htmlFor="lobby-code" className="sr-only">Lobby Code</Label>
-              <Input
-                id="lobby-code"
-                value={lobbyCode}
-                onChange={(e) => {
-                  setLobbyCode(e.target.value);
-                  setJoinError(null);
-                }}
-                placeholder="Enter 6-digit lobby code..."
-                maxLength={6}
-                className="flex-1 text-lg tracking-widest"
-                style={{ textTransform: 'uppercase' }}
-              />
-              <Button type="submit" className="btn-secondary min-w-[150px]">
-                <LogIn size={18} className="mr-2" />
-                Join by Code
-              </Button>
-            </form>
-            {joinError && (
-              <p className="mt-3 text-red-400">{joinError}</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-3xl font-bold text-white">Public Lobbies</h2>
-          <Button
-            onClick={() => {
-              setIsLoading(true);
-              socket?.emit('lobby:get_list');
-            }}
-            variant="outline"
-            className="btn-outline"
-          >
-            Refresh List
-          </Button>
-        </div>
-        {renderContent()}
       </div>
-    </>
+
+      <Card className="game-card bg-gray-900/50 p-6">
+        {isLoading ? renderLoading() : error ? renderError() : renderLobbyList()}
+      </Card>
+
+      <CreateLobbyModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onLobbyCreated={handleLobbyCreated}
+      />
+    </div>
   );
 };
 

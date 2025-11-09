@@ -1,17 +1,24 @@
+// src/layouts/AuthLayout.tsx
+
 import { Outlet } from 'react-router-dom';
-import { Navbar } from '../components/layout/Navbar'; // <-- IMPORT THIS
-import { Footer } from '../components/layout/Footer'; // <-- IMPORT THIS
+import { Navbar } from '../components/layout/Navbar';
+import { Footer } from '../components/layout/Footer';
+import { Card } from '../components/ui/Card'; // <-- NEW: Using Card for consistent styling
 
 export const AuthLayout = () => {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-800 text-white">
-      <Navbar /> {/* <-- ADD THIS */}
+    // --- FIX: Removed 'bg-gray-800' to allow global body style to show ---
+    <div className="flex flex-col min-h-screen text-white">
+      <Navbar />
       <main className="flex-grow flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-gray-900 p-8 rounded-lg shadow-xl">
+        {/* --- FIX: Using 'game-card' for consistent app-wide styling --- */}
+        <Card className="game-card w-full max-w-md p-8">
           <Outlet />
-        </div>
+        </Card>
       </main>
-      <Footer /> {/* <-- ADD THIS FOR CONSISTENCY */}
+      <Footer />
     </div>
   );
 };
+
+// --- Removed 'export default AuthLayout' ---

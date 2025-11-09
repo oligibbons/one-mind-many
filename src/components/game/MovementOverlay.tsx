@@ -5,21 +5,22 @@ import { useGameStore } from '../../stores/useGameStore';
 import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
 import { BoardSpace } from '../../types/game';
-import clsx from 'clsx'; // <-- THIS IS THE MISSING IMPORT
-import { motion } from 'framer-motion'; // Import motion
+import clsx from 'clsx'; // <-- Corrected import
+import { motion } from 'framer-motion';
 
 export const MovementOverlay: React.FC = () => {
   const { socket } = useSocket();
   const { user } = useAuth();
   
-  // Get new state variables
+  // --- FIX: Corrected the state selector ---
   const {
     isAwaitingMove,
     actingPlayerId,
     actingUsername,
     validMoves,
     gameId,
-    boardSize, 
+    boardSizeX, // <-- Use correct state properties
+    boardSizeY, // <-- Use correct state properties
     clearAwaitingMove,
   } = useGameStore((state) => ({
     isAwaitingMove: state.isAwaitingMove,
@@ -27,9 +28,11 @@ export const MovementOverlay: React.FC = () => {
     actingUsername: state.actingUsername,
     validMoves: state.validMoves,
     gameId: state.publicState?.id,
-    boardSize: state.publicState?.scenario.boardSize || { x: 12, y: 12 },
+    boardSizeX: state.scenario.board_size_x || 12, // <-- Correct path
+    boardSizeY: state.scenario.board_size_y || 12, // <-- Correct path
     clearAwaitingMove: state.clearAwaitingMove,
   }));
+  // --- END FIX ---
 
   // Create a fast lookup map for valid move positions
   const validMoveMap = React.useMemo(() => {
@@ -46,11 +49,14 @@ export const MovementOverlay: React.FC = () => {
 
     if (validMoveMap.has(`${pos.x},${pos.y}`)) {
       console.log(`Submitting move to: ${pos.x}, ${pos.y}`);
-      // Send the chosen move back to the server
-      socket?.emit('action:submit_move', {
+      
+      // --- FIX: Use correct socket event and payload ---
+      socket?.emit('game:submit_move', {
         gameId,
-        position: pos,
+        target: pos, // <-- Use 'target'
       });
+      // --- END FIX ---
+      
       // Clear the overlay immediately (optimistic update)
       clearAwaitingMove();
     }
@@ -61,21 +67,24 @@ export const MovementOverlay: React.FC = () => {
   }
 
   const cells = [];
-  for (let y = 1; y <= boardSize.y; y++) {
-    for (let x = 1; x <= boardSize.x; x++) {
+  // --- FIX: Use correct board size variables ---
+  for (let y = 0; y < boardSizeY; y++) {
+    for (let x = 0; x < boardSizeX; x++) {
       const isMe = isMyTurnToMove;
+      // --- FIX: Use 0-based index for map check ---
       const isValid = validMoveMap.has(`${x},${y}`);
 
       cells.push(
         <div
           key={`${x}-${y}`}
-          className={clsx( // <-- This is where 'clsx' is used
+          className={clsx(
             'flex h-full w-full items-center justify-center',
             isMe && isValid &&
               'cursor-pointer bg-orange-500/50 transition-all hover:bg-orange-400/70',
             isMe && isValid && 'z-20',
             !isMe && 'z-10 bg-black/50 backdrop-blur-sm' // Overlay for other players
           )}
+          // --- FIX: Pass 0-based index position ---
           onClick={() => handleCellClick({ x, y })}
         >
           {isMe && isValid && (
@@ -90,19 +99,25 @@ export const MovementOverlay: React.FC = () => {
       );
     }
   }
+  // --- END FIX ---
 
   return (
     <div
-      className={clsx( // <-- This is where 'clsx' is used
-        'game-board absolute inset-0 z-10', // Sits on top of GameBoard
+      className={clsx(
+        'game-board absolute inset-0 z-30', // Sits on top of GameBoard (z-30)
         !isMyTurnToMove && 'pointer-events-none' // Non-actors can't click
       )}
+      // --- FIX: Apply grid styles directly ---
+      style={{
+        gridTemplateColumns: `repeat(${boardSizeX}, 1fr)`,
+        gridTemplateRows: `repeat(${boardSizeY}, 1fr)`,
+      }}
     >
       {/* Feedback Text */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="absolute top-4 left-1/2 -translate-x-1/2 bg-gray-900 border-2 border-orange-500 shadow-lg text-white p-4 rounded-lg z-30"
+        className="absolute top-4 left-1/2 -translate-x-1/2 bg-gray-900 border-2 border-orange-500 shadow-lg text-white p-4 rounded-lg z-40"
       >
         <h3 className="text-xl font-bold text-orange-400 text-center">
           {isMyTurnToMove ? "Your Move" : `Awaiting Move...`}

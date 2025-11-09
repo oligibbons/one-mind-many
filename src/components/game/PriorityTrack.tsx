@@ -1,73 +1,83 @@
 // src/components/game/PriorityTrack.tsx
 
 import React from 'react';
-import { PublicPlayerState, PrioritySlot } from '../../types/game';
+import { Player, PlayerIdentity } from '../../types/game';
+import { ShieldCheck, ShieldAlert, ShieldQuestion, User, Check, Hourglass } from 'lucide-react';
+import { useGameStore } from '../../stores/useGameStore';
 import clsx from 'clsx';
-import { Check, Hourglass, X } from 'lucide-react'; // <-- NEW: Added X icon
 
 interface PriorityTrackProps {
-  track: PrioritySlot[];
-  players: PublicPlayerState[];
+  players: Player[];
+  track: PlayerIdentity[];
 }
 
-export const PriorityTrack: React.FC<PriorityTrackProps> = ({
-  track,
-  players,
-}) => {
-  // Create a quick lookup map for player status
-  const playerStatus = new Map<string, { submitted: boolean, disconnected: boolean }>();
-  players.forEach((p) => {
-    playerStatus.set(p.userId, { submitted: p.submittedAction, disconnected: p.is_disconnected });
-  });
+const getRoleIcon = (role: string) => {
+  switch (role) {
+    case 'True Believer': return ShieldCheck;
+    case 'Heretic': return ShieldAlert;
+    case 'Opportunist': return ShieldQuestion;
+    default: return User;
+  }
+};
 
+const getRoleColor = (role: string) => {
+  switch (role) {
+    case 'True Believer': return 'text-green-400';
+    case 'Heretic': return 'text-red-400';
+    case 'Opportunist': return 'text-blue-400';
+    default: return 'text-gray-400';
+  }
+};
+
+export const PriorityTrack: React.FC<PriorityTrackProps> = ({ players, track }) => {
+  const { publicState } = useGameStore();
+  const currentActionIndex = publicState?.currentActionIndex ?? 0;
+
+  // --- FIX: Added scrolling container ---
+  // This allows the track to shrink on mobile without breaking the layout.
+  // The 'no-scrollbar' classes hide the visual scrollbar but keep functionality.
   return (
-    <div className="flex items-center space-x-2 rounded-lg bg-gray-900/50 p-2">
-      <h4 className="mr-2 text-sm font-bold text-gray-400">PRIORITY:</h4>
-      {track.map((slot, index) => {
-        const status = playerStatus.get(slot.playerId);
-        const hasSubmitted = status?.submitted || false;
-        const isDisconnected = status?.disconnected || false; // <-- NEW
-        const isFirst = index === 0;
+    <div className="w-full overflow-x-auto no-scrollbar">
+      <div className="flex w-full min-w-max items-center justify-center space-x-2">
+        {track.map((identity, index) => {
+          const player = players.find(p => p.identity === identity.id);
+          const isSubmitted = player?.submitted_action;
+          const isActive = index === currentActionIndex;
+          
+          let status: 'pending' | 'submitted' | 'active' = 'pending';
+          if (isActive) {
+            status = 'active';
+          } else if (isSubmitted) {
+            status = 'submitted';
+          }
 
-        return (
-          <div
-            key={slot.identity}
-            className={clsx(
-              'flex h-10 w-24 items-center justify-between rounded-md border-2 p-2 shadow-inner transition-all',
-              isFirst && !isDisconnected && 'border-orange-500 bg-orange-900/30',
-              !isFirst && !isDisconnected && 'border-gray-700 bg-gray-800',
-              isDisconnected && 'border-gray-800 bg-gray-900 opacity-50' // <-- NEW: Disconnected style
-            )}
-            title={
-              isDisconnected ? `${slot.identity} (Disconnected)` :
-              isFirst ? `Current Acting Priority: ${slot.identity}` : `Priority: ${slot.identity}`
-            }
-          >
-            <span className="text-xs font-bold text-gray-300">
-              {slot.identity}
-            </span>
+          return (
             <div
+              key={identity.id}
               className={clsx(
-                'flex h-5 w-5 items-center justify-center rounded-full',
-                isDisconnected ? 'bg-red-800 text-red-300' :
-                hasSubmitted ? 'bg-green-500 text-gray-900' : 'bg-gray-700 text-gray-400'
+                'flex h-10 w-28 flex-shrink-0 items-center justify-between rounded-md border-2 p-3 shadow-inner',
+                status === 'active' && 'border-orange-500 bg-orange-900/30',
+                status !== 'active' && 'border-gray-700 bg-gray-800',
+                status === 'pending' && 'opacity-60'
               )}
-              title={
-                isDisconnected ? 'Disconnected' :
-                hasSubmitted ? 'Action Submitted' : 'Waiting for Action'
-              }
             >
-              {isDisconnected ? (
-                <X size={14} /> // <-- NEW
-              ) : hasSubmitted ? (
-                <Check size={14} />
-              ) : (
-                <Hourglass size={12} />
-              )}
+              <span className="text-sm font-bold text-gray-300">{identity.name}</span>
+              <div
+                className={clsx(
+                  'flex h-6 w-6 items-center justify-center rounded-full',
+                  status === 'submitted' && 'bg-green-500 text-gray-900',
+                  status === 'pending' && 'bg-gray-700 text-gray-400',
+                  status === 'active' && 'bg-orange-400 text-gray-900'
+                )}
+              >
+                {status === 'submitted' && <Check size={16} />}
+                {status === 'pending' && <Hourglass size={14} />}
+                {status === 'active' && <User size={16} />}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };

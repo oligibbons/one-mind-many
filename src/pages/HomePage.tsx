@@ -13,7 +13,7 @@ import {
   Target,
   ArrowRight,
   Key,
-  BookOpen, // <-- NEW: Imported BookOpen icon
+  BookOpen,
 } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
@@ -23,10 +23,11 @@ export const HomePage: React.FC = () => {
     <div className="w-full bg-gray-900 text-gray-200">
       {/* Hero Section */}
       <section className="flex min-h-[calc(100vh-80px)] w-full flex-col items-center justify-center bg-gray-950 px-6 text-center">
-        <div className="mb-8">
+        {/* --- FIX: Added relative z-0 to make logo sit "deeper" --- */}
+        <div className="mb-8 relative z-0">
           <img
             src="/OneMindMany Icon PNG Orange.png"
-            alt="G.I.M.P. Sigil"
+            alt="M.O.P. Sigil" // <-- FIX: G.I.M.P. -> M.O.P.
             width="250"
             height="250"
             className="animate-[floating_6s_ease-in-out_infinite]"
@@ -41,10 +42,10 @@ export const HomePage: React.FC = () => {
           Control a single shared pawn, but trust no one.
         </p>
         
-        {/* --- MODIFICATION: Added "How to Play" button --- */}
         <div className="mt-10 flex flex-col sm:flex-row gap-4">
-          <Button as={Link} to={user ? '/app/main-menu' : '/login'} size="lg" className="text-lg">
-            {user ? 'Enter the Order' : 'Play Now'}
+          {/* --- FIX: Corrected link from '/app/main-menu' to '/main-menu' --- */}
+          <Button as={Link} to={user ? '/main-menu' : '/login'} size="lg" className="text-lg">
+            {user ? 'Enter the Ministry' : 'Play Now'}
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
           <Button as={Link} to="/how-to-play" size="lg" variant="outline" className="text-lg btn-outline">
@@ -52,30 +53,31 @@ export const HomePage: React.FC = () => {
             How to Play
           </Button>
         </div>
-        {/* --- END MODIFICATION --- */}
         
       </section>
 
-      {/* --- NEW: Thematic Concept Section --- */}
+      {/* --- Thematic Concept Section --- */}
       <section className="bg-gray-900 py-20 px-6">
         <div className="mx-auto max-w-3xl text-center">
           <Key className="mx-auto h-16 w-16 text-orange-400" />
           <h2 className="mt-6 text-4xl font-bold text-white">
             The Apocalypse is a Trivial Matter
           </h2>
+          {/* --- FIX: G.I.M.P. -> M.O.P. --- */}
           <p className="mt-6 text-xl text-gray-300">
-            As a Guardian of Ineffable Manifest Power (G.I.M.P.), you know the
+            As an agent of the Ministry of Ordained Providence (M.O.P.), you know the
             truth: the fabric of reality is held together by mundane tasks.
           </p>
           <p className="mt-4 text-xl text-gray-300">
-            You and your fellow "Guardians" must collectively guide a single,
-            unwitting mortal; The Harbinger; to complete these sacred chores.
+            You and your fellow "agents" must collectively guide a single,
+            unwitting mortal—The Harbinger—to complete these sacred chores.
             Guiding this pawn to file his taxes or buy milk isn't just a goal...
             it's the <b>only</b> thing preventing total annihilation.
           </p>
           <Button
             as={Link}
-            to={user ? '/app/main-menu' : '/login'}
+            // --- FIX: Corrected link from '/app/main-menu' to '/main-menu' ---
+            to={user ? '/main-menu' : '/login'}
             size="lg"
             className="mt-10 text-lg"
           >
@@ -84,10 +86,10 @@ export const HomePage: React.FC = () => {
           </Button>
         </div>
       </section>
-      {/* --- END NEW SECTION --- */}
+      {/* --- END SECTION --- */}
 
       {/* How It Works Section */}
-      <section className="bg-gray-950 py-20 px-6"> {/* Changed color for contrast */}
+      <section className="bg-gray-950 py-20 px-6">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-center text-4xl font-bold text-white">
             How It Works
@@ -95,7 +97,7 @@ export const HomePage: React.FC = () => {
           <div className="mt-12 grid gap-8 md:grid-cols-3">
             <FeatureCard
               icon={<Users className="h-10 w-10 text-orange-400" />}
-              title="Share One Mind"
+              title="Share One Pawn" // <-- FIX: "Mind" -> "Pawn"
               description="You and your fellow players all control a single pawn, The Harbinger. Every move is a collective, chaotic decision."
             />
             <FeatureCard
@@ -113,7 +115,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Key Features Section */}
-      <section className="bg-gray-900 py-20 px-6"> {/* Changed color for contrast */}
+      <section className="bg-gray-900 py-20 px-6">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-center text-4xl font-bold text-white">
             Trust is a Liability
@@ -139,20 +141,22 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Thematic Section --- MODIFIED --- */}
-      <section className="bg-gray-950 py-20 px-6"> {/* Changed color for contrast */}
+      <section className="bg-gray-950 py-20 px-6">
         <div className="mx-auto max-w-3xl text-center">
+          {/* --- FIX: G.I.M.P. -> M.O.P. --- */}
           <h2 className="text-4xl font-bold text-white">
-            Welcome to the G.I.M.P.
+            Welcome to the M.O.P.
           </h2>
           <p className="mt-6 text-xl text-gray-400">
-            Guardians of Ineffable Manifest Power.
+            Ministry of Ordained Providence.
           </p>
           <p className="mt-4 text-lg text-gray-300">
-            "We are the G.I.M.P, bearers of the Ineffable Manifest Power: the
-            sacred force that makes prophecy real through perfect, ordained
+            "We are the M.O.P., agents of the Ordained Providence: the
+            sacred force that makes prophecy real through perfect, mundane
             action. Every chore is a sigil. Every checklist, a covenant. The
             apocalypse trembles before a well-folded sheet.”
           </p>
+          {/* --- END FIX --- */}
           <p className="mt-4 text-lg font-bold text-orange-400">
             It's very, very important.
           </p>
@@ -162,12 +166,17 @@ export const HomePage: React.FC = () => {
 
 
       {/* Final CTA Section */}
-      <section className="bg-gray-900 py-20 px-6 text-center"> {/* Changed color for contrast */}
+      <section className="bg-gray-900 py-20 px-6 text-center">
         <h2 className="text-4xl font-bold text-white">Ready to Join?</h2>
         <p className="mt-4 text-xl text-gray-400">
-          The Order is waiting.
+          The Ministry is waiting.
         </p>
-        <Button as={Link} to={user ? '/app/main-menu' : '/login'} size="lg" className="mt-10 text-lg">
+        <Button as={Link} 
+          // --- FIX: Corrected link from '/app/main-menu' to '/main-menu' ---
+          to={user ? '/main-menu' : '/login'} 
+          size="lg" 
+          className="mt-10 text-lg"
+        >
           {user ? 'View Main Menu' : 'Create Your Account'}
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>

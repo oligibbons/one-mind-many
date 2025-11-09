@@ -24,7 +24,8 @@ import { MovementOverlay } from '../../components/game/MovementOverlay';
 import { GameEndModal } from '../../components/game/GameEndModal';
 import { InGameMenuModal } from '../../components/game/InGameMenuModal';
 import { Button } from '../../components/ui/Button';
-import { Menu } from 'lucide-react';
+import { Menu, MessageSquare, Info, X } from 'lucide-react'; // <-- NEW: Added icons
+import { Card } from '../../components/ui/Card'; // <-- NEW: Added Card
 
 const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -33,6 +34,9 @@ const GamePage: React.FC = () => {
   const navigate = useNavigate();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // --- NEW: State for responsive mobile panel ---
+  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
+  // --- END NEW ---
 
   const {
     publicState,
@@ -88,17 +92,14 @@ const GamePage: React.FC = () => {
       }
     };
     
-    // --- THIS IS THE FIX ---
-    // Updated the data shape to include actingUsername
     const onAwaitingMove = (data: {
       playerId: string;
-      actingUsername: string; // <-- Now receiving this
+      actingUsername: string;
       validMoves: BoardSpace[];
     }) => {
       console.log(`Received game:await_move for ${data.actingUsername}`);
-      setAwaitingMove(data); // <-- Pass the full object to the store
+      setAwaitingMove(data);
     };
-    // --- END FIX ---
     
     const onGameError = (data: { message: string }) => {
       console.error('Received error:game', data.message);
@@ -109,17 +110,19 @@ const GamePage: React.FC = () => {
       setGameResults(results);
     };
     const onLobbyKicked = () => {
-      alert('You have been kicked from the lobby.');
+      // --- FIX: Removed alert() ---
+      console.error('You have been kicked from the lobby.');
       clearGame();
-      navigate('/app/lobbies');
+      navigate('/lobbies'); // <-- FIX: Removed /app
     };
     const onLobbyClosed = () => {
-      alert('The lobby has been closed by the host.');
+      // --- FIX: Removed alert() ---
+      console.error('The lobby has been closed by the host.');
       clearGame();
-      navigate('/app/lobbies');
+      navigate('/lobbies'); // <-- FIX: Removed /app
     };
     const onLobbyRedirect = (data: { lobbyId: string }) => {
-      navigate(`/app/lobby/${data.lobbyId}`);
+      navigate(`/lobby/${data.lobbyId}`); // <-- FIX: Removed /app
     };
 
     socket.on('game:full_state', onFullState);
@@ -162,7 +165,7 @@ const GamePage: React.FC = () => {
 
   useEffect(() => {
     if (publicState?.status === 'lobby') {
-      navigate(`/app/lobby/${gameId}`);
+      navigate(`/lobby/${gameId}`); // <-- FIX: Removed /app
     }
   }, [publicState?.status, gameId, navigate]);
 
@@ -170,7 +173,7 @@ const GamePage: React.FC = () => {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-900 text-white">
         <LoadingSpinner />
-        <p className="ml-4 text-xl">Joining game: {gameId}...</p>
+        <p className="ml-4 text-xl">Joining Mission: {gameId}...</p>
       </div>
     );
   }
@@ -184,33 +187,79 @@ const GamePage: React.FC = () => {
           onClose={() => setIsMenuOpen(false)}
           onLeave={() => {
             clearGame();
-            navigate('/app/main-menu');
+            navigate('/main-menu'); // <-- FIX: Removed /app
           }}
         />
       )}
+      {/* --- NEW: Mobile Panel for Info/Chat --- */}
+      {isMobilePanelOpen && (
+        <div className="fixed inset-0 z-[60] flex flex-col bg-gray-900/90 backdrop-blur-md md:hidden">
+          <Card className="game-card m-4 flex-1 flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h2 className="text-xl font-bold text-white">Info & Chat</h2>
+              <Button variant="ghost" size="sm" onClick={() => setIsMobilePanelOpen(false)}>
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+            <div className="flex-1 p-2 overflow-y-auto custom-scrollbar">
+              <PrivateDashboard />
+            </div>
+            <div className="flex-1 p-2 border-t border-gray-700 overflow-hidden">
+              <ChatBox gameId={gameId} allowKick={false} />
+            </div>
+          </Card>
+        </div>
+      )}
+      {/* --- END NEW --- */}
+
 
       {/* Top Bar: Tracks and Info */}
       <header className="flex w-full items-center justify-between border-b border-gray-700 p-2">
-        <div className="font-bold text-lg">
+        <div className="font-bold text-lg text-white">
           Round {publicState.currentRound}
         </div>
-        <div className="flex-1 px-4">
+        {/* --- FIX: Container for Priority Track is now overflow-hidden --- */}
+        <div className="flex-1 px-4 overflow-hidden">
           <PriorityTrack
             players={publicState.players}
             track={publicState.priorityTrack}
           />
         </div>
         <div className="flex items-center gap-4">
-          <ComplicationTrack />
-          <Button
-            variant="outline"
-            size="sm"
-            className="btn-outline"
-            onClick={() => setIsMenuOpen(true)}
-          >
-            <Menu size={18} className="mr-2" />
-            Menu
-          </Button>
+          {/* --- FIX: ComplicationTrack and Menu visible on desktop only --- */}
+          <div className="hidden md:flex items-center gap-4">
+            <ComplicationTrack />
+            <Button
+              variant="outline"
+              size="sm"
+              className="btn-outline"
+              onClick={() => setIsMenuOpen(true)}
+            >
+              <Menu size={18} className="mr-2" />
+              Menu
+            </Button>
+          </div>
+          {/* --- NEW: Mobile buttons --- */}
+          <div className="flex md:hidden items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="btn-outline"
+              onClick={() => setIsMobilePanelOpen(true)}
+            >
+              <Info size={18} className="mr-1" />
+              <MessageSquare size={18} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="btn-outline"
+              onClick={() => setIsMenuOpen(true)}
+            >
+              <Menu size={18} />
+            </Button>
+          </div>
+          {/* --- END NEW --- */}
         </div>
       </header>
 
@@ -223,19 +272,19 @@ const GamePage: React.FC = () => {
         </div>
 
         {/* Side Panel: Chat and Private Info */}
-        <aside className="flex w-80 flex-col border-l border-gray-700 bg-gray-900">
+        {/* --- FIX: Hidden on mobile --- */}
+        <aside className="hidden w-80 flex-col border-l border-gray-700 bg-gray-900 md:flex lg:w-96">
           <div className="p-2">
             <PrivateDashboard />
           </div>
           <div className="flex-1 p-2 overflow-hidden">
-            {/* --- UPDATED: ChatBox with kicking disabled --- */}
             <ChatBox gameId={gameId} allowKick={false} />
           </div>
         </aside>
       </main>
 
       {/* Bottom Bar: Player Hand */}
-      <footer className="w-full border-t border-gray-700 p-4">
+      <footer className="w-full border-t border-gray-700 p-2 md:p-4">
         <PlayerHand gameId={gameId} />
       </footer>
     </div>

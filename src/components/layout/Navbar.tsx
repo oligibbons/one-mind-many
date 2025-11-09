@@ -1,207 +1,162 @@
-import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+// src/components/layout/Navbar.tsx
+
+import { useState } from 'react'; // <-- NEW: Import useState
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Logo } from '../ui/Logo';
 import { Button } from '../ui/Button';
-import { Menu, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Logo } from '../ui/Logo';
+import {
+  LogOut,
+  User,
+  Shield,
+  Home,
+  Menu, // <-- NEW: Hamburger icon
+  X, // <-- NEW: Close icon
+} from 'lucide-react';
+import { usePresenceStore } from '../../stores/usePresenceStore';
 
 export const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, handleSignOut } = useAuth();
   const navigate = useNavigate();
+  const { clearPresence } = usePresenceStore();
+
+  // --- NEW: State for mobile menu ---
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // --- END NEW ---
 
-  // --- STYLE INJECTIONS ---
-
-  // Define the custom font style object to apply to all links
-  const linkFont = {
-    fontFamily: "'CustomHeading', system-ui, sans-serif",
+  const onSignOut = async () => {
+    // Clear presence state *before* signing out
+    clearPresence();
+    await handleSignOut();
+    navigate('/');
   };
 
-  // Common classes for NavLink for active/hover "glow"
-  const getDesktopLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `text-xl tracking-wide transition-all duration-300 ${
-      isActive
-        ? 'text-primary-400 drop-shadow-[0_0_4px_theme(colors.primary.400)]'
-        : 'text-gray-300 hover:text-primary-400 hover:drop-shadow-[0_0_4px_theme(colors.primary.400)]'
-    }`;
-
-  const getMobileLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `block py-4 text-4xl text-center tracking-wider transition-all duration-300 ${
-      isActive
-        ? 'text-primary-400 drop-shadow-[0_0_6px_theme(colors.primary.400)]'
-        : 'text-gray-200 hover:text-primary-400 hover:drop-shadow-[0_0_6px_theme(colors.primary.400)]'
-    }`;
-
-  // --- END STYLE INJECTIONS ---
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setIsMobileMenuOpen(false); // Close menu on logout
-      navigate('/login');
-    } catch (error) {
-      console.error('Failed to log out:', error);
-    }
-  };
-
-  const renderLinks = (isMobile: boolean) => {
-    const linkClass = isMobile ? getMobileLinkClass : getDesktopLinkClass;
-
-    if (user) {
-      // Logged-in user links
-      return (
-        <>
-          <NavLink
-            to="/main-menu"
-            className={linkClass}
-            style={linkFont}
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Main Menu
-          </NavLink>
-          <NavLink
-            to="/friends"
-            className={linkClass}
-            style={linkFont}
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Friends
-          </NavLink>
-          <NavLink
-            to="/profile"
-            className={linkClass}
-            style={linkFont}
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Profile
-          </NavLink>
-          
-          {/* --- FIX: Added Settings link --- */}
-          <NavLink
-            to="/settings"
-            className={linkClass}
-            style={linkFont}
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Settings
-          </NavLink>
-          {/* --- END OF FIX --- */}
-          
-          {user.profile?.is_admin && (
-            <NavLink
-              to="/admin"
-              className={linkClass}
-              style={linkFont}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Admin
-            </NavLink>
-          )}
-
-          <Button
-            onClick={handleLogout}
-            variant="danger"
-            style={linkFont}
-            className={
-              isMobile
-                ? 'w-full py-4 text-4xl tracking-wider'
-                : 'text-xl tracking-wide'
-            }
-          >
-            Logout
-          </Button>
-        </>
-      );
-    }
-
-    // Logged-out user links
-    return (
-      <>
-        <NavLink
-          to="/how-to-play"
-          className={linkClass}
-          style={linkFont}
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          How to Play
-        </NavLink>
-        <NavLink
-          to="/login"
-          className={linkClass}
-          style={linkFont}
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          Login
-        </NavLink>
-        <NavLink
-          to="/register"
-          className={linkClass}
-          style={linkFont}
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          Register
-        </NavLink>
-      </>
-    );
-  };
+  const NavLinkItem: React.FC<{ to: string; children: React.ReactNode }> = ({ to, children }) => (
+    <NavLink
+      to={to}
+      onClick={() => setIsMobileMenuOpen(false)} // <-- NEW: Close menu on click
+      className={({ isActive }) =>
+        `flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+          isActive
+            ? 'bg-orange-600/20 text-orange-400'
+            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+        }`
+      }
+    >
+      {children}
+    </NavLink>
+  );
 
   return (
-    <nav className="sticky top-0 z-50 bg-gray-900 bg-opacity-80 backdrop-blur-md shadow-lg text-white p-4">
-      <div className="container mx-auto flex justify-between items-center">
-        {/* Logo - links to main menu if logged in, homepage if logged out */}
-        <NavLink
-          to={user ? '/main-menu' : '/'}
-          aria-label="Home page"
-          onClick={() => setIsMobileMenuOpen(false)}
-          className="transition-all duration-300 ease-in-out hover:scale-110 hover:drop-shadow-[0_0_8px_theme(colors.primary.500)] focus:outline-none focus:scale-110 focus:drop-shadow-[0_0_8px_theme(colors.primary.500)]"
-        >
-          <Logo />
-        </NavLink>
+    <nav className="sticky top-0 z-50 w-full border-b border-gray-700 bg-gray-950/80 backdrop-blur-md">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          
+          {/* Left Side: Logo */}
+          <div className="flex-shrink-0">
+            <Link to={user ? '/main-menu' : '/'} className="flex items-center gap-2">
+              <Logo width="30" height="30" />
+              <span className="text-lg font-bold text-white">
+                M.O.P.
+              </span>
+            </Link>
+          </div>
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center space-x-8">
-          {renderLinks(false)}
-        </div>
+          {/* Center: Desktop Nav Links */}
+          <div className="hidden md:flex md:items-center md:space-x-4">
+            <NavLinkItem to="/main-menu">
+              <Home className="h-4 w-4" />
+              Main Menu
+            </NavLinkItem>
+            {user && (
+              <NavLinkItem to={`/profile/${user.id}`}>
+                <User className="h-4 w-4" />
+                My Profile
+              </NavLinkItem>
+            )}
+            {profile?.is_admin && (
+              <NavLinkItem to="/admin">
+                <Shield className="h-4 w-4" />
+                Admin
+              </NavLinkItem>
+            )}
+          </div>
 
-        {/* Mobile Menu Button */}
-        <div className="md:hidden">
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            aria-label="Open navigation menu"
-            className="text-white p-2"
-          >
-            <Menu size={32} />
-          </button>
+          {/* Right Side: Auth Button or Mobile Menu Toggle */}
+          <div className="flex items-center">
+            <div className="hidden md:block">
+              {user ? (
+                <Button variant="ghost" size="sm" onClick={onSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </Button>
+              ) : (
+                <Button as={Link} to="/login" variant="ghost" size="sm">
+                  Sign In
+                </Button>
+              )}
+            </div>
+
+            {/* --- NEW: Mobile Menu Toggle Button --- */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-controls="mobile-menu"
+                aria-expanded={isMobileMenuOpen}
+              >
+                <span className="sr-only">Open main menu</span>
+                {isMobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </Button>
+            </div>
+            {/* --- END NEW --- */}
+
+          </div>
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed top-0 left-0 w-full h-dvh bg-gray-950 z-50 p-4"
-          >
-            <div className="flex justify-between items-center mb-10">
-              <Logo />
+      {/* --- NEW: Mobile Menu --- */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden" id="mobile-menu">
+          <div className="space-y-1 px-2 pt-2 pb-3 sm:px-3">
+            <NavLinkItem to="/main-menu">
+              <Home className="h-4 w-4" />
+              Main Menu
+            </NavLinkItem>
+            {user && (
+              <NavLinkItem to={`/profile/${user.id}`}>
+                <User className="h-4 w-4" />
+                My Profile
+              </NavLinkItem>
+            )}
+            {profile?.is_admin && (
+              <NavLinkItem to="/admin">
+                <Shield className="h-4 w-4" />
+                Admin
+              </NavLinkItem>
+            )}
+            {user ? (
               <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                aria-label="Close navigation menu"
-                className="text-white p-2"
+                onClick={onSignOut}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
               >
-                <X size={40} />
+                <LogOut className="h-4 w-4" />
+                Sign Out
               </button>
-            </div>
-            <div className="flex flex-col space-y-8 mt-16">
-              {renderLinks(true)}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            ) : (
+              <NavLinkItem to="/login">
+                Sign In
+              </NavLinkItem>
+            )}
+          </div>
+        </div>
+      )}
+      {/* --- END NEW --- */}
     </nav>
   );
 };

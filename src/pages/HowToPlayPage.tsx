@@ -1,18 +1,28 @@
 // src/pages/HowToPlayPage.tsx
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Brain, EyeOff, Target, Users, AlertTriangle, HelpCircle, Clock,
   Move, Hand, Zap, Award, ShieldCheck, ShieldAlert, ShieldQuestion,
   Hourglass, Check, User, Move3d, Waypoints, Redo, Undo, Ban,
   Plus, Minus, RefreshCw, Shuffle, Bot, XSquare, Copy, CopyCheck,
-  Package, // <-- NEW: Added icon for Stockpile
-  Lightbulb // <-- NEW: Added icon for Tips
+  Package,
+  Lightbulb,
+  ListChecks, // <-- NEW: Icon for nav menu
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import clsx from 'clsx';
 import { motion } from 'framer-motion';
+// --- NEW: Import Tooltip components ---
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../components/ui/Tooltip';
+// --- END NEW ---
 
 // --- Reusable Helper Components for this Page ---
 
@@ -28,13 +38,35 @@ const IconHeader: React.FC<{
   </div>
 );
 
+// --- NEW: Glossary Tooltip Wrapper ---
+const GlossaryTooltip: React.FC<{
+  term: string;
+  definition: React.ReactNode;
+  children?: React.ReactNode;
+}> = ({ term, definition, children }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <strong className="text-white underline decoration-dotted decoration-orange-400/50 cursor-help">
+        {children || term}
+      </strong>
+    </TooltipTrigger>
+    <TooltipContent className="max-w-xs">
+      <h4 className="font-bold text-orange-400 mb-2">{term}</h4>
+      <div className="space-y-2 text-sm">{definition}</div>
+    </TooltipContent>
+  </Tooltip>
+);
+// --- END NEW ---
+
 // A card for a single step
 const StepCard: React.FC<{
   number: string;
   title: string;
   children: React.ReactNode;
-}> = ({ number, title, children }) => (
-  <div className="flex space-x-6">
+  id: string; // <-- NEW: Added id for navigation
+}> = ({ number, title, children, id }) => (
+  <div id={id} className="flex space-x-6 scroll-mt-32">
+    {/* <-- Added scroll-mt-32 to offset sticky nav */}
     <div className="flex flex-col items-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-orange-400 bg-gray-900 text-2xl font-bold text-orange-400">
         {number}
@@ -128,15 +160,17 @@ const COMMAND_CARDS = [
   { name: 'Inhibit', effect: 'The next Interact action will have no effect.', icon: Ban },
   { name: 'Gamble', effect: 'All remaining actions this round are randomly assigned from players\' hands.', icon: Shuffle },
   { name: 'Hail Mary', effect: 'All players discard their hands and draw new ones.', icon: RefreshCw },
-  { name: 'Reload', effect: 'Discard your hand, draw new cards, and play one at random.', icon: RefreshCw },
-  
-  // --- FIX: Added Stockpile Card ---
-  { 
-    name: 'Stockpile', 
-    effect: 'Do not resolve an action this round. Next round, your action resolves as normal, however, your action is repeated as the final action in the round.', 
-    icon: Package 
+  // --- FIX: Renamed "Reload" to "Scramble" ---
+  {
+    name: 'Scramble',
+    effect: 'Discard your hand, draw new cards, and play one at random.',
+    icon: RefreshCw,
   },
-  // --- END FIX ---
+  {
+    name: 'Stockpile',
+    effect: 'Do not resolve an action this round. Next round, your action resolves as normal, however, your action is repeated as the final action in the round.',
+    icon: Package,
+  },
 ];
 
 // Animation variants for Framer Motion
@@ -145,473 +179,628 @@ const sectionVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
+// --- NEW: Nav Menu Data ---
+const navSections = [
+  { id: 'identity', title: 'Secret Identity' },
+  { id: 'round', title: 'Game Round' },
+  { id: 'concepts', title: 'Core Concepts' },
+  { id: 'cards', title: 'Command Cards' },
+  { id: 'modifiers', title: 'Modifiers' },
+  { id: 'win', title: 'How to Win' },
+  { id: 'tips', title: 'Tips & Tricks' },
+];
+
 // --- The Main Page Component ---
 export const HowToPlayPage: React.FC = () => {
+  // --- NEW: Scroll to top on page load ---
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  // --- END NEW ---
+
+  // --- NEW: Scroll to section function ---
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      // Offset for the sticky header
+      const headerOffset = 110;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      });
+    }
+  };
+  // --- END NEW ---
+
   return (
-    <div className="w-full bg-gray-950 text-gray-200">
-      {/* Header */}
-      <motion.section
-        className="bg-gray-900 py-16 px-6 text-center"
-        initial="hidden"
-        animate="visible"
-        variants={sectionVariants}
-      >
-        <h1 className="text-5xl font-bold text-white">How to Play</h1>
-        <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-400">
-          Welcome to the <b>G.I.M.P</b>. Your goal is simple: have the most
-          Victory Points (VP) by the time the game ends. How you get them...
-          is a secret.
-        </p>
-      </motion.section>
-
-      {/* Main Content */}
-      <div className="mx-auto max-w-5xl p-6">
-        {/* === SECTION 1: YOUR SECRET IDENTITY === */}
-        <motion.div
+    // --- NEW: Added TooltipProvider ---
+    <TooltipProvider delayDuration={100}>
+      <div className="w-full bg-gray-950 text-gray-200">
+        {/* Header */}
+        <motion.section
+          className="bg-gray-900 py-16 px-6 text-center"
           initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
+          animate="visible"
           variants={sectionVariants}
         >
-          <IconHeader icon={EyeOff} title="Your Secret Identity" />
-          <p className="mt-4 mb-8 text-lg text-gray-300">
-            At the start of each game, you are secretly given{' '}
-            <strong className="text-white">three</strong> things. These define
-            who you are, what you want, and when you act. Never reveal them.
+          <h1 className="text-5xl font-bold text-white">How to Play</h1>
+          <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-400">
+            {/* --- FIX: GIMP -> MOP --- */}
+            Welcome to the <b>M.O.P</b>. Your goal is simple: have the most
+            Victory Points (VP) by the time the game ends. How you get them...
+            is a secret.
           </p>
+        </motion.section>
 
-          <div className="relative">
-            <StepCard number="1" title="Roles (Your Agenda)">
-              <p>
-                Your Role is your main objective. It determines which game-ending
-                condition you are trying to achieve. There are three possibilities:
-              </p>
-              <div className="mt-6 grid gap-4 md:grid-cols-3">
-                <RoleCard
-                  icon={HelpCircle}
-                  title="True Believer"
-                  color="border-green-500"
-                  description="Your goal is to fulfill the main Prophecy (e.g., land on a specific space and Interact)."
-                />
-                <RoleCard
-                  icon={AlertTriangle}
-                  title="Heretic"
-                  color="border-red-500"
-                  description="Your goal is to trigger the Doomsday Condition (e.g., land on a specific 'hazard' space)."
-                />
-                <RoleCard
-                  icon={ShieldQuestion}
-                  title="Opportunist"
-                  color="border-blue-500"
-                  description="You ignore the main conflict. Your goal is to complete your *own* secret personal goal."
-                />
-              </div>
-            </StepCard>
-
-            <StepCard number="2" title="Sub-Roles (Your Bonus)">
-              <p>
-                Your Sub-Role provides a unique way to score bonus VP during the
-                game.
-              </p>
-              <p>
-                For example,{' '}
-                <strong className="text-white">The Waster</strong> might gain +5 VP
-                every time the Harbinger doesn't move at all in a round.
-                <strong className="text-white"> The Fixer</strong> might gain +5 VP
-                for removing a negative Complication.
-              </p>
-              <p>Pay attention to your Sub-Role to maximize your score.</p>
-            </StepCard>
-
-            <StepCard number="3" title="Identities (Your Token)">
-              <p>
-                Your Identity (e.g.,{' '}
-                <strong className="text-white">"The Eye"</strong>,{' '}
-                <strong className="text-white">"The Hand"</strong>) is a public
-                token in the <strong className="text-white">Priority Track</strong>.
-              </p>
-              <p>
-                Only <strong className="text-white">you</strong> know which token
-                is yours. This token determines <strong className="text-white">
-                  WHEN
-                </strong>{' '}
-                your action resolves.
-              </p>
-            </StepCard>
+        {/* --- NEW: Sticky Nav Menu --- */}
+        <nav className="sticky top-[64px] z-40 w-full border-b border-gray-700 bg-gray-900/80 backdrop-blur-md">
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="flex items-center space-x-2 overflow-x-auto py-4 no-scrollbar">
+              <ListChecks className="h-5 w-5 flex-shrink-0 text-orange-400" />
+              {navSections.map((section) => (
+                <Button
+                  key={section.id}
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0 text-gray-300 hover:bg-gray-800 hover:text-white"
+                  onClick={() => scrollToSection(section.id)}
+                >
+                  {section.title}
+                </Button>
+              ))}
+            </div>
           </div>
-        </motion.div>
+        </nav>
+        {/* --- END NEW --- */}
 
-        {/* === SECTION 2: THE GAME ROUND === */}
-        <motion.div
-          className="mt-16"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
-        >
-          <IconHeader icon={Clock} title="The Game Round" />
-          <p className="mt-4 mb-8 text-lg text-gray-300">
-            The game is played in rounds. Each round has four phases.
-          </p>
+        {/* Main Content */}
+        <div className="mx-auto max-w-5xl p-6">
+          {/* === SECTION 1: YOUR SECRET IDENTITY === */}
+          <motion.div
+            id="identity" // <-- Added id for nav
+            className="scroll-mt-32" // <-- Added scroll offset
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={sectionVariants}
+          >
+            <IconHeader icon={EyeOff} title="Your Secret Identity" />
+            <p className="mt-4 mb-8 text-lg text-gray-300">
+              At the start of each game, you are secretly given{' '}
+              <strong className="text-white">three</strong> things. These define
+              who you are, what you want, and when you act. Never reveal them.
+            </p>
 
-          <div className="relative">
-            <StepCard number="1" title="The Plan">
-              <p>
-                Look at the board, your hand of 4 Command Cards, and your secret
-                goals. Decide what you want to do. Do you move towards your goal?
-                Sabotage another player? Or play a card to gather information?
-              </p>
-            </StepCard>
-
-            <StepCard number="2" title="The Submission">
-              <p>
-                Everyone secretly selects and "locks in" one Command Card from
-                their hand.
-              </p>
-              <div className="flex space-x-4 mt-4">
-                <FakeCommandCard name="Move 3" effect="Move 3 spaces." />
-                <FakeCommandCard
-                  name="Deny"
-                  effect="Prevent the next action from having any effect."
-                />
-              </div>
-            </StepCard>
-
-            <StepCard number="3" title="The Resolution">
-              <p>
-                This is the heart of the game. The{' '}
-                <strong className="text-white">Priority Track</strong> at the top
-                of the screen shows the public Identity Tokens.
-              </p>
-              <p>
-                <strong className="text-orange-400">
-                  Actions resolve one by one, from Priority 1 to the end.
-                </strong>
-              </p>
-              <div className="space-y-3 rounded-lg bg-gray-900 p-4">
-                <p className="text-sm text-gray-400">
-                  EXAMPLE: It's the start of the Resolution phase...
+            <div className="relative">
+              <StepCard number="1" title="Roles (Your Agenda)" id="identity-role">
+                <p>
+                  Your{' '}
+                  <GlossaryTooltip
+                    term="Role"
+                    definition="Your secret win condition. This determines which of the three game-ending scenarios you are trying to achieve."
+                  >
+                    Role
+                  </GlossaryTooltip>{' '}
+                  is your main objective. It determines which game-ending
+                  condition you are trying to achieve. There are three possibilities:
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  <FakePriorityTracker
-                    id="The Eye"
-                    icon={User}
-                    status="active"
+                <div className="mt-6 grid gap-4 md:grid-cols-3">
+                  <RoleCard
+                    icon={HelpCircle}
+                    title="True Believer"
+                    color="border-green-500"
+                    description="Your goal is to fulfill the main Prophecy (e.g., land on a specific space and Interact)."
                   />
-                  <FakePriorityTracker
-                    id="The Hand"
-                    icon={User}
-                    status="submitted"
+                  <RoleCard
+                    icon={AlertTriangle}
+                    title="Heretic"
+                    color="border-red-500"
+                    description="Your goal is to trigger the Doomsday Condition (e.g., land on a specific 'hazard' space)."
                   />
-                  <FakePriorityTracker
-                    id="The Key"
-                    icon={User}
-                    status="pending"
+                  <RoleCard
+                    icon={ShieldQuestion}
+                    title="Opportunist"
+                    color="border-blue-500"
+                    description="You ignore the main conflict. Your goal is to complete your *own* secret personal goal."
                   />
                 </div>
-                <p className="text-gray-300">
-                  1. <strong className="text-white">"The Eye"</strong> is in
-                  Priority 1. Their card is revealed and resolves first.
-                  <br />
-                  2. After it's done,{' '}
-                  <strong className="text-white">"The Hand"</strong> resolves.
-                  <br />
-                  3. Then, <strong className="text-white">"The Key"</strong>{' '}
-                  resolves.
+              </StepCard>
+
+              <StepCard number="2" title="Sub-Roles (Your Bonus)" id="identity-subrole">
+                <p>
+                  Your{' '}
+                  <GlossaryTooltip
+                    term="Sub-Role"
+                    definition="A secret, secondary objective that grants you bonus Victory Points (VP) during the game, regardless of your main Role."
+                  >
+                    Sub-Role
+                  </GlossaryTooltip>{' '}
+                  provides a unique way to score bonus VP during the game.
                 </p>
-                <hr className="border-gray-700" />
-                <p className="text-gray-300">
-                  <strong className="text-orange-400">
-                    At the end of the round, the track rotates.
+                <p>
+                  For example,{' '}
+                  <strong className="text-white">The Waster</strong>{' '}
+                  {/* --- FIX: "might gain" -> "gains" --- */}
+                  <strong className="text-white">gains</strong> +5 VP every time the
+                  Harbinger doesn't move at all in a round.
+                  <strong className="text-white"> The Fixer</strong>{' '}
+                  {/* --- FIX: "might gain" -> "gains" --- */}
+                  <strong className="text-white">gains</strong> +5 VP for removing
+                  a negative Complication.
+                </p>
+                <p>Pay attention to your Sub-Role to maximize your score.</p>
+              </StepCard>
+
+              <StepCard number="3" title="Identities (Your Token)" id="identity-token">
+                <p>
+                  Your Identity (e.g.,{' '}
+                  <strong className="text-white">"The Eye"</strong>,{' '}
+                  <strong className="text-white">"The Hand"</strong>) is a public
+                  token in the{' '}
+                  <GlossaryTooltip
+                    term="Priority Track"
+                    definition="The track that shows the turn order for the round. This track rotates every round."
+                  >
+                    Priority Track
+                  </GlossaryTooltip>
+                  .
+                </p>
+                <p>
+                  Only <strong className="text-white">you</strong> know which token
+                  is yours. This token determines <strong className="text-white">
+                    WHEN
                   </strong>{' '}
-                  Priority 1 ("The Eye") moves to the *end* of the line, and
-                  "The Hand" becomes the new Priority 1 for the next round.
+                  your action resolves.
                 </p>
-              </div>
-            </StepCard>
+              </StepCard>
+            </div>
+          </motion.div>
 
-            <StepCard number="4" title="The Deduction">
-              <p>
-                This is the <b>real</b> game. You just saw{' '}
-                <strong className="text-white">"The Eye"</strong> play a{' '}
-                <strong className="text-white">`Move 3`</strong> card that sent
-                the Harbinger right into a hazard.
-              </p>
-              <p>
-                You know <strong className="text-white">what</strong> happened,
-                but you don't know <strong className="text-white">who</strong>{' '}
-                controls "The Eye". Was it a mistake? Or was it sabotage?
-              </p>
-              <p>
-                Use the chat, watch your suspects, and remember: your token is
-                always changing position.
-              </p>
-            </StepCard>
-          </div>
-        </motion.div>
+          {/* === SECTION 2: THE GAME ROUND === */}
+          <motion.div
+            id="round" // <-- Added id for nav
+            className="mt-16 scroll-mt-32" // <-- Added scroll offset
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={sectionVariants}
+          >
+            <IconHeader icon={Clock} title="The Game Round" />
+            <p className="mt-4 mb-8 text-lg text-gray-300">
+              The game is played in rounds. Each round has four phases.
+            </p>
 
-        {/* === SECTION 3: CORE CONCEPTS === */}
-        <motion.div
-          className="mt-16"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
-        >
-          <IconHeader
-            icon={Brain}
-            title="Core Concepts"
-          />
-
-          <div className="mt-8 grid gap-8 md:grid-cols-2">
-            <Card className="border-gray-700 bg-gray-900">
-              <CardHeader>
-                <IconHeader icon={Move} title="Moving the Harbinger" />
-              </CardHeader>
-              <CardContent className="space-y-4 text-gray-300">
+            <div className="relative">
+              <StepCard number="1" title="The Plan" id="round-plan">
                 <p>
-                  Movement is complex. Move cards give you a total number of
-                  Movement Points (MP), which are spent on a mix of straight
-                  (orthogonal) and diagonal steps.
+                  Look at the board, your hand of 4{' '}
+                  <GlossaryTooltip
+                    term="Command Cards"
+                    definition="The actions you can play. You draw a new hand of 4 cards every 3 rounds."
+                  >
+                    Command Cards
+                  </GlossaryTooltip>
+                  , and your secret goals. Decide what you want to do. Do you
+                  move towards your goal? Sabotage another player? Or play a card
+                  to gather information?
+                </p>
+              </StepCard>
+
+              <StepCard number="2" title="The Submission" id="round-submission">
+                <p>
+                  Everyone secretly selects and "locks in" one Command Card from
+                  their hand.
+                </p>
+                <div className="flex space-x-4 mt-4">
+                  <FakeCommandCard name="Move 3" effect="Move 3 spaces." />
+                  <FakeCommandCard
+                    name="Deny"
+                    effect="Prevent the next action from having any effect."
+                  />
+                </div>
+              </StepCard>
+
+              <StepCard number="3" title="The Resolution" id="round-resolution">
+                <p>
+                  This is the heart of the game. The{' '}
+                  <strong className="text-white">Priority Track</strong> at the top
+                  of the screen shows the public Identity Tokens.
                 </p>
                 <p>
-                  The key rule is:
-                  <strong className="text-white">
-                    {' '}
-                    You must spend at least half of your steps moving straight.
+                  <strong className="text-orange-400">
+                    Actions resolve one by one, from Priority 1 to the end.
                   </strong>
                 </p>
-                <ul className="list-disc space-y-2 pl-5 text-white">
-                  <li>
-                    <strong className="text-orange-400">Move 1</strong> = 1 MP (1
-                    straight, 0 diagonal)
-                  </li>
-                  <li>
-                    <strong className="text-orange-400">Move 2</strong> = 2 MP (1
-                    straight, 1 diagonal)
-                  </li>
-                  <li>
-                    <strong className="text-orange-400">Move 3</strong> = 3 MP (2
-                    straight, 1 diagonal)
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
+                <div className="space-y-3 rounded-lg bg-gray-900 p-4">
+                  <p className="text-sm text-gray-400">
+                    EXAMPLE: It's the start of the Resolution phase...
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <FakePriorityTracker
+                      id="The Eye"
+                      icon={User}
+                      status="active"
+                    />
+                    <FakePriorityTracker
+                      id="The Hand"
+                      icon={User}
+                      status="submitted"
+                    />
+                    <FakePriorityTracker
+                      id="The Key"
+                      icon={User}
+                      status="pending"
+                    />
+                  </div>
+                  <p className="text-gray-300">
+                    1. <strong className="text-white">"The Eye"</strong> is in
+                    Priority 1. Their card is revealed and resolves first.
+                    <br />
+                    2. After it's done,{' '}
+                    <strong className="text-white">"The Hand"</strong> resolves.
+                    <br />
+                    3. Then, <strong className="text-white">"The Key"</strong>{' '}
+                    resolves.
+                  </p>
+                  <hr className="border-gray-700" />
+                  <p className="text-gray-300">
+                    <strong className="text-orange-400">
+                      At the end of the round, the track rotates.
+                    </strong>{' '}
+                    Priority 1 ("The Eye") moves to the *end* of the line, and
+                    "The Hand" becomes the new Priority 1 for the next round.
+                  </p>
+                </div>
+              </StepCard>
 
+              <StepCard number="4" title="The Deduction" id="round-deduction">
+                <p>
+                  This is the <b>real</b> game. You just saw{' '}
+                  <strong className="text-white">"The Eye"</strong> play a{' '}
+                  <strong className="text-white">`Move 3`</strong> card that sent
+                  the{' '}
+                  <GlossaryTooltip
+                    term="Harbinger"
+                    definition="The single game pawn that all players control. Your secret Identity determines *when* you get to control it."
+                  >
+                    Harbinger
+                  </GlossaryTooltip>{' '}
+                  right into a hazard.
+                </p>
+                <p>
+                  You know <strong className="text-white">what</strong> happened,
+                  but you don't know <strong className="text-white">who</strong>{' '}
+                  controls "The Eye". Was it a mistake? Or was it sabotage?
+                </p>
+                <p>
+                  Use the chat, watch your suspects, and remember: your token is
+                  always changing position.
+                </p>
+              </StepCard>
+            </div>
+          </motion.div>
+
+          {/* === SECTION 3: CORE CONCEPTS === */}
+          <motion.div
+            id="concepts" // <-- Added id for nav
+            className="mt-16 scroll-mt-32" // <-- Added scroll offset
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={sectionVariants}
+          >
+            <IconHeader icon={Brain} title="Core Concepts" />
+
+            <div className="mt-8 grid gap-8 md:grid-cols-2">
+              <Card className="border-gray-700 bg-gray-900">
+                <CardHeader>
+                  <IconHeader icon={Move} title="Moving the Harbinger" />
+                </CardHeader>
+                <CardContent className="space-y-4 text-gray-300">
+                  <p>
+                    Movement is complex. Move cards give you a total number of
+                    Movement Points (MP), which are spent on a mix of straight
+                    (orthogonal) and diagonal steps.
+                  </p>
+                  <p>
+                    The key rule is:
+                    <strong className="text-white">
+                      {' '}
+                      You must spend at least half of your steps moving straight.
+                    </strong>
+                  </p>
+                  <ul className="list-disc space-y-2 pl-5 text-white">
+                    <li>
+                      <strong className="text-orange-400">Move 1</strong> = 1 MP (1
+                      straight, 0 diagonal)
+                    </li>
+                    <li>
+                      <strong className="text-orange-400">Move 2</strong> = 2 MP (1
+                      straight, 1 diagonal)
+                    </li>
+                    <li>
+                      <strong className="text-orange-400">Move 3</strong> = 3 MP (2
+                      straight, 1 diagonal)
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card className="border-gray-700 bg-gray-900">
+                <CardHeader>
+                  <IconHeader icon={Hand} title="Interacting" />
+                </CardHeader>
+                <CardContent className="space-y-4 text-gray-300">
+                  <p>
+                    Playing an <strong className="text-white">`Interact`</strong>{' '}
+                    card lets you use things on the Harbinger's current space.
+                  </p>
+                  <ul className="list-disc space-y-2 pl-5 text-white">
+                    <li>
+                      <strong className="text-orange-400">Objects:</strong>{' '}
+                      One-time use items. Their effects are powerful and often
+                      random.
+                    </li>
+                    <li>
+                      <strong className="text-orange-400">NPCs:</strong>{' '}
+                      Characters on the board. Interacting with them is a gamble
+                      with a random positive or negative outcome.
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          </motion.div>
+
+          {/* === SECTION 4: COMMAND CARDS === */}
+          <motion.div
+            id="cards" // <-- Added id for nav
+            className="mt-16 scroll-mt-32" // <-- Added scroll offset
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={sectionVariants}
+          >
             <Card className="border-gray-700 bg-gray-900">
               <CardHeader>
-                <IconHeader icon={Hand} title="Interacting" />
+                <IconHeader icon={Hand} title="The Command Cards" />
               </CardHeader>
               <CardContent className="space-y-4 text-gray-300">
                 <p>
-                  Playing an <strong className="text-white">`Interact`</strong>{' '}
-                  card lets you use things on the Harbinger's current space.
+                  These are your core actions. The game's card deck contains
+                  at least two of every Command Card.
                 </p>
-                <ul className="list-disc space-y-2 pl-5 text-white">
-                  <li>
-                    <strong className="text-orange-400">Objects:</strong>{' '}
-                    One-time use items. Their effects are powerful and often
-                    random.
-                  </li>
-                  <li>
-                    <strong className="text-orange-400">NPCs:</strong>{' '}
-                    Characters on the board. Interacting with them is a gamble
-                    with a random positive or negative outcome.
-                  </li>
-                </ul>
+                {/* --- FIX: Clarified hand mechanics --- */}
+                <p className="text-lg">
+                  You start the game with a hand of 4 cards. You play one card per
+                  round. After 3 rounds (and 3 cards played), you discard your
+                  remaining card and draw a new hand of 4. This 3-round cycle
+                  repeats.
+                </p>
+                {/* --- END FIX --- */}
+                <div className="space-y-3 pt-4">
+                  {COMMAND_CARDS.map((card) => (
+                    <Card
+                      key={card.name}
+                      className="game-card flex items-center space-x-4 p-4"
+                    >
+                      <card.icon className="h-6 w-6 flex-shrink-0 text-orange-400" />
+                      <div>
+                        <h4 className="font-semibold text-white">{card.name}</h4>
+                        <p className="text-sm text-gray-400">{card.effect}</p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* === SECTION 4: COMMAND CARDS (REFACTORED) === */}
-        <motion.div
-          className="mt-16"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
-        >
-          <Card className="border-gray-700 bg-gray-900">
-            <CardHeader>
-              <IconHeader icon={Hand} title="The Command Cards" />
-            </CardHeader>
-            <CardContent className="space-y-4 text-gray-300">
-              <p>
-                These are your core actions. You have a hand of 4 cards, which is
-                redrawn every 3 rounds.
-              </p>
-              {/* --- NEW: Single-column card list --- */}
-              <div className="space-y-3">
-                {COMMAND_CARDS.map((card) => (
-                  <Card key={card.name} className="game-card flex items-center space-x-4 p-4">
-                    <card.icon className="h-6 w-6 flex-shrink-0 text-orange-400" />
-                    <div>
-                      <h4 className="font-semibold text-white">{card.name}</h4>
-                      <p className="text-sm text-gray-400">{card.effect}</p>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        
-        {/* --- FIX: NEW TIPS & TRICKS SECTION --- */}
-        <motion.div
-          className="mt-16"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
-        >
-          <Card className="border-gray-700 bg-gray-900">
-            <CardHeader>
-              <IconHeader icon={Lightbulb} title="Tips & Tricks" />
-            </CardHeader>
-            <CardContent className="space-y-6 text-gray-300">
-              <div>
-                <h3 className="text-xl font-semibold text-white mb-3">General Tips</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>
-                    <strong>Watch the Priority Track:</strong> Knowing if you act before or after someone is crucial. Use 'Buffer' or 'Stockpile' to give up a weak turn for a better priority position next round.
-                  </li>
-                  <li>
-                    <strong>Blame is a Weapon:</strong> Since roles are secret, use your actions (and the chat) to cast suspicion. A Heretic's best tool is convincing the True Believers to turn on each other.
-                  </li>
-                  <li>
-                    <strong>Master the "Action Chain":</strong> Cards like 'Deny', 'Rethink', 'Homage', and 'Foresight' are the most complex but powerful. Denying a 'Move 3' or 'Interact' at a critical moment can win the game.
-                  </li>
-                </ul>
-              </div>
+          {/* === SECTION 5: MODIFIERS === */}
+          <motion.div
+            id="modifiers" // <-- Added id for nav
+            className="mt-16 scroll-mt-32" // <-- Added scroll offset
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={sectionVariants}
+          >
+            <Card className="border-gray-700 bg-gray-900">
+              <CardHeader>
+                <IconHeader icon={Zap} title="Modifiers & Complications" />
+              </CardHeader>
+              <CardContent className="space-y-4 text-gray-300">
+                <p>
+                  Many cards modify other actions.{' '}
+                  <strong className="text-white">`Charge`</strong> makes the next
+                  Move card stronger, while{' '}
+                  <strong className="text-white">`Deny`</strong> cancels the
+                  next action entirely.
+                </p>
+                <p>
+                  <GlossaryTooltip
+                    term="Complications"
+                    definition="Random global events that add new rules to the board, often making things more difficult."
+                  >
+                    Complications
+                  </GlossaryTooltip>{' '}
+                  are random events that add new rules to the board, like "All
+                  Move cards have -1 value" or "A stalker is now following the
+                  Harbinger."
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-              <div>
-                <h3 className="text-xl font-semibold text-white mb-3">Tips for True Believers</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>
-                    <strong>Communicate (Carefully):</strong> You must work together, but you don't know who to trust. Talk in hypotheticals. "It would be *very* helpful if *someone* could Interact with The Nexus..."
-                  </li>
-                  <li>
-                    <strong>Be Efficient:</strong> You are on a clock. Don't waste actions. Every round, ask: "Is this action directly helping the Main Prophecy?"
-                  </li>
-                  <li>
-                    <strong>Find the Heretic:</strong> A player who seems to be "helping" but never quite makes progress (or who plays 'Impulse' at a "bad" time) is highly suspicious.
-                  </li>
-                </ul>
-              </div>
-              
-              <div>
-                <h3 className="text-xl font-semibold text-white mb-3">Tips for the Heretic</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>
-                    <strong>Subtle Sabotage:</strong> Your best move is rarely obvious. "Accidentally" playing 'Deny' on a helpful 'Interact' or using 'Charge' to make someone overshoot their target is key.
-                  </li>
-                  <li>
-                    <strong>Plausible Deniability:</strong> Always have a good "True Believer" reason for your actions. "I had to play 'Deny' to stop The Eye from doing something suspicious!"
-                  </li>
-                  <li>
-                    <strong>Use the Clock:</strong> Every round you waste is a victory. Playing 'Buffer' or 'Stockpile' can seem harmless, but they are great ways to do nothing while appearing strategic.
-                  </li>
-                </ul>
-              </div>
+          {/* === SECTION 6: HOW TO WIN === */}
+          <motion.div
+            id="win" // <-- Added id for nav
+            className="mt-16 scroll-mt-32" // <-- Added scroll offset
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={sectionVariants}
+          >
+            <IconHeader icon={Award} title="How to Win" />
+            <p className="mt-4 mb-8 text-lg text-gray-300">
+              The game ends immediately when one of the main goals is completed:
+            </p>
+            <div className="grid gap-4 md:grid-cols-3">
+              <RoleCard
+                icon={ShieldCheck}
+                title="Prophecy Fulfilled"
+                color="border-green-700"
+                description="A True Believer succeeds. All True Believers get +20 VP."
+              />
+              <RoleCard
+                icon={ShieldAlert}
+                title="Doomsday Triggered"
+                color="border-red-700"
+                description="A Heretic succeeds. All Heretics get +20 VP."
+              />
+              <RoleCard
+                icon={ShieldQuestion}
+                title="Opportunist Goal Met"
+                color="border-blue-700"
+                description="An Opportunist completes their personal goal. They get +30 VP."
+              />
+            </div>
+            <p className="mt-8 text-center text-2xl font-bold text-white">
+              After the game ends, all players reveal their secret Roles and
+              Sub-Roles.
+            </p>
+            <p className="mt-4 text-center text-xl text-gray-300">
+              Final scores are calculated:
+            </p>
+            <p className="mt-2 text-center text-3xl font-bold text-orange-400">
+              Main Goal VP + Sub-Role VP = Total VP
+            </p>
+            <p className="mt-4 text-center text-2xl font-bold text-white">
+              The player with the highest individual VP wins!
+            </p>
+          </motion.div>
 
-              <div>
-                <h3 className="text-xl font-semibold text-white mb-3">Tips for the Opportunist</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>
-                    <strong>Be a Ghost:</strong> Your goal is your secret. Don't let anyone figure it out. If your goal is to visit locations, try to do so while "helping" the other players.
-                  </li>
-                  <li>
-                    <strong>Piggyback:</strong> Help the True Believers if it also helps you. Help the Heretic if it helps you. You have no loyalty.
-                  </li>
-                  <li>
-                    <strong>Timing is Everything:</strong> Many Opportunist goals require you to be in a specific place or have a specific item *at the end of the game*. Don't reveal your hand until the final round.
-                  </li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        {/* --- END NEW SECTION --- */}
+          {/* === SECTION 7: TIPS & TRICKS (MOVED TO END) === */}
+          <motion.div
+            id="tips" // <-- Added id for nav
+            className="mt-16 scroll-mt-32" // <-- Added scroll offset
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={sectionVariants}
+          >
+            <Card className="border-gray-700 bg-gray-900">
+              <CardHeader>
+                <IconHeader icon={Lightbulb} title="Tips & Tricks" />
+              </CardHeader>
+              <CardContent className="space-y-6 text-gray-300">
+                <div>
+                  <h3 className="text-xl font-semibold text-white mb-3">General Tips</h3>
+                  <ul className="list-disc list-inside space-y-2">
+                    <li>
+                      <strong>Watch the Priority Track:</strong> Knowing if you act
+                      before or after someone is crucial. Use 'Buffer' or
+                      'Stockpile' to give up a weak turn for a better priority
+                      position next round.
+                    </li>
+                    <li>
+                      <strong>Blame is a Weapon:</strong> Since roles are secret, use
+                      your actions (and the chat) to cast suspicion. A Heretic's
+                      best tool is convincing the True Believers to turn on each
+                      other.
+                    </li>
+                    <li>
+                      <strong>Master the "Action Chain":</strong> Cards like 'Deny',
+                      'Rethink', 'Homage', and 'Foresight' are the most complex
+                      but powerful. Denying a 'Move 3' or 'Interact' at a
+                      critical moment can win the game.
+                    </li>
+                  </ul>
+                </div>
 
-        {/* === SECTION 5: MODIFIERS === */}
-        <motion.div
-          className="mt-16"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
-        >
-          <Card className="border-gray-700 bg-gray-900">
-            <CardHeader>
-              <IconHeader icon={Zap} title="Modifiers & Complications" />
-            </CardHeader>
-            <CardContent className="space-y-4 text-gray-300">
-              <p>
-                Many cards modify other actions.{' '}
-                <strong className="text-white">`Charge`</strong> makes the next
-                Move card stronger, while{' '}
-                <strong className="text-white">`Deny`</strong> cancels the
-                next action entirely.
-              </p>
-              <p>
-                <strong className="text-red-400">Complications</strong> are
-                random events that add new rules to the board, like "All Move
-                cards have -1 value" or "A stalker is now following the
-                Harbinger."
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
+                <div>
+                  <h3 className="text-xl font-semibold text-white mb-3">
+                    Tips for True Believers
+                  </h3>
+                  <ul className="list-disc list-inside space-y-2">
+                    <li>
+                      <strong>Communicate (Carefully):</strong> You must work
+                      together, but you don't know who to trust. Talk in
+                      hypotheticals. "It would be *very* helpful if *someone*
+                      could Interact with The Nexus..."
+                    </li>
+                    <li>
+                      <strong>Be Efficient:</strong> You are on a clock. Don't waste
+                      actions. Every round, ask: "Is this action directly
+                      helping the Main Prophecy?"
+                    </li>
+                    <li>
+                      <strong>Find the Heretic:</strong> A player who seems to be
+                      "helping" but never quite makes progress (or who plays
+                      'Impulse' at a "bad" time) is highly suspicious.
+                    </li>
+                  </ul>
+                </div>
 
-        {/* === SECTION 6: HOW TO WIN === */}
-        <motion.div
-          className="mt-16"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
-        >
-          <IconHeader icon={Award} title="How to Win" />
-          <p className="mt-4 mb-8 text-lg text-gray-300">
-            The game ends immediately when one of the main goals is completed:
-          </p>
-          <div className="grid gap-4 md:grid-cols-3">
-            <RoleCard
-              icon={ShieldCheck}
-              title="Prophecy Fulfilled"
-              color="border-green-700"
-              description="A True Believer succeeds. All True Believers get +20 VP."
-            />
-            <RoleCard
-              icon={ShieldAlert}
-              title="Doomsday Triggered"
-              color="border-red-700"
-              description="A Heretic succeeds. All Heretics get +20 VP."
-            />
-            <RoleCard
-              icon={ShieldQuestion}
-              title="Opportunist Goal Met"
-              color="border-blue-700"
-              description="An Opportunist completes their personal goal. They get +30 VP."
-            />
-          </div>
-          <p className="mt-8 text-center text-2xl font-bold text-white">
-            After the game ends, all players reveal their secret Roles and
-            Sub-Roles.
-          </p>
-          <p className="mt-4 text-center text-xl text-gray-300">
-            Final scores are calculated:
-          </p>
-          <p className="mt-2 text-center text-3xl font-bold text-orange-400">
-            Main Goal VP + Sub-Role VP = Total VP
-          </p>
-          <p className="mt-4 text-center text-2xl font-bold text-white">
-            The player with the highest individual VP wins!
-          </p>
-        </motion.div>
+                <div>
+                  <h3 className="text-xl font-semibold text-white mb-3">
+                    Tips for the Heretic
+                  </h3>
+                  <ul className="list-disc list-inside space-y-2">
+                    <li>
+                      <strong>Subtle Sabotage:</strong> Your best move is rarely
+                      obvious. "Accidentally" playing 'Deny' on a helpful
+                      'Interact' or using 'Charge' to make someone overshoot their
+                      target is key.
+                    </li>
+                    <li>
+                      <strong>Plausible Deniability:</strong> Always have a good "True
+                      Believer" reason for your actions. "I had to play 'Deny' to
+                      stop The Eye from doing something suspicious!"
+                    </li>
+                    <li>
+                      <strong>Use the Clock:</strong> Every round you waste is a
+                      victory. Playing 'Buffer' or 'Stockpile' can seem
+                      harmless, but they are great ways to do nothing while
+                      appearing strategic.
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-semibold text-white mb-3">
+                    Tips for the Opportunist
+                  </h3>
+                  <ul className="list-disc list-inside space-y-2">
+                    <li>
+                      <strong>Be a Ghost:</strong> Your goal is your secret. Don't let
+                      anyone figure it out. If your goal is to visit locations,
+                      try to do so while "helping" the other players.
+                    </li>
+                    <li>
+                      <strong>Piggyback:</strong> Help the True Believers if it also
+                      helps you. Help the Heretic if it helps you. You have no
+                      loyalty.
+                    </li>
+                    <li>
+                      <strong>Timing is Everything:</strong> Many Opportunist goals
+                      require you to be in a specific place or have a specific
+                      item *at the end of the game*. Don't reveal your hand until
+                      the final round.
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          {/* --- END SECTION --- */}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 

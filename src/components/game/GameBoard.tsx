@@ -2,128 +2,138 @@
 
 import React from 'react';
 import { useGameStore } from '../../stores/useGameStore';
-import { BoardSpace, Location } from '../../types/game';
-import clsx from 'clsx'; 
+import { BoardSpace, Location, GameObject, NPC } from '../../types/game';
+import { motion } from 'framer-motion';
+import clsx from 'clsx';
+import { Home, MapPin, ToyBrick, UserCircle, User } from 'lucide-react'; // <-- Added User
 
-// You'll want to add this to your src/index.css for the grid
-/*
-.game-board {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  grid-template-rows: repeat(12, 1fr);
-}
-*/
+const getGridSpace = (x: number, y: number, boardSize: number): BoardSpace => {
+  return { x, y };
+};
 
-const BOARD_SIZE = 12; // From your GDD
+export const GameBoard: React.FC = () => {
+  const {
+    harbingerLocation,
+    boardSize,
+    locations,
+    objects,
+    npcs,
+    stalkerLocation,
+    boardModifiers,
+  } = useGameStore((state) => ({
+    // --- FIX: Use correct snake_case properties from state ---
+    harbingerLocation: state.publicState.harbinger_position,
+    boardSize: state.scenario.board_size_x, // Assuming x and y are the same
+    locations: state.scenario.locations,
+    objects: state.publicState.game_objects,
+    npcs: state.publicState.npcs,
+    stalkerLocation: state.publicState.stalker_position,
+    boardModifiers: state.publicState.board_modifiers,
+  }));
 
-const HarbingerPawn: React.FC = () => (
-  <div
-    className="relative z-10 h-6 w-6 transform rounded-full bg-orange-500 shadow-lg"
-    title="The Harbinger"
-  >
-    <div className="absolute inset-0.5 z-20 rounded-full bg-orange-300 opacity-80" />
-  </div>
-);
+  const gridSpaces = React.useMemo(() => {
+    const spaces: BoardSpace[] = [];
+    for (let y = 0; y < boardSize; y++) {
+      for (let x = 0; x < boardSize; x++) {
+        spaces.push(getGridSpace(x, y, boardSize));
+      }
+    }
+    return spaces;
+  }, [boardSize]);
 
-// --- NEW: Stalker Pawn ---
-const StalkerPawn: React.FC = () => (
-  <div
-    className="relative z-10 h-5 w-5 transform rounded-full bg-gray-900 shadow-lg ring-2 ring-purple-500"
-    title="The Stalker"
-  >
-    <div className="absolute inset-0.5 z-20 rounded-full bg-purple-300 opacity-60" />
-  </div>
-);
+  const findLocation = (space: BoardSpace) =>
+    locations.find((loc) => loc.position.x === space.x && loc.position.y === space.y);
 
+  const findObject = (space: BoardSpace) =>
+    objects.find((obj) => obj.position.x === space.x && obj.position.y === space.y);
 
-interface BoardCellProps {
-  x: number;
-  y: number;
-  isHarbinger: boolean;
-  isStalker: boolean; // <-- NEW
-  location?: Location;
-}
+  const findNpc = (space: BoardSpace) =>
+    npcs.find((npc) => npc.position.x === space.x && npc.position.y === space.y);
 
-const BoardCell: React.FC<BoardCellProps> = ({
-  x,
-  y,
-  isHarbinger,
-  isStalker, // <-- NEW
-  location,
-}) => {
-  // TODO: Read this from scenario data
-  const isGoal = location?.name === 'Squalid Bench';
-  const isHazard = location?.name === 'Collapsital One Bank';
+  // This check is now safe, as harbingerLocation is guaranteed
+  if (!harbingerLocation) {
+    return null; // or a loading state
+  }
 
   return (
     <div
       className={clsx(
-        'relative flex h-full w-full items-center justify-center border border-gray-700/50',
-        location && 'bg-gray-800',
-        isGoal && 'bg-green-900/50 border-green-500',
-        isHazard && 'bg-red-900/50 border-red-500'
+        'game-board aspect-square w-auto h-auto max-w-full max-h-full', // <-- FIX: Responsive layout
+        'mx-auto bg-gray-800/50 border-2 border-gray-700 rounded-lg overflow-hidden shadow-xl'
       )}
-      title={location ? location.name : `Space (${x}, ${y})`}
+      style={{
+        gridTemplateColumns: `repeat(${boardSize}, 1fr)`,
+        gridTemplateRows: `repeat(${boardSize}, 1fr)`,
+      }}
     >
-      {/* Render Pawns */}
-      {isHarbinger && <HarbingerPawn />}
-      {isStalker && <StalkerPawn />} 
+      {gridSpaces.map((space) => {
+        const location = findLocation(space);
+        const object = findObject(space);
+        const npc = findNpc(space);
+        const isHarbinger = harbingerLocation.x === space.x && harbingerLocation.y === space.y;
+        const isStalker = stalkerLocation && stalkerLocation.x === space.x && stalkerLocation.y === space.y;
 
-      {/* Render location name */}
-      {location && (
-        <span className="absolute bottom-1 left-1 text-[8px] font-bold text-gray-400">
-          {location.name}
-        </span>
-      )}
-    </div>
-  );
-};
+        return (
+          <div
+            key={`${space.x}-${space.y}`}
+            className="relative w-full h-full border border-gray-700/50"
+          >
+            {/* Base Tile */}
+            <div className="absolute inset-0 w-full h-full" />
 
-export const GameBoard: React.FC = () => {
-  // --- NEW: Get stalkerPosition ---
-  const { harbingerPosition, stalkerPosition, locations } = useGameStore((state) => ({
-    harbingerPosition: state.publicState?.harbingerPosition,
-    stalkerPosition: state.publicState?.stalkerPosition, // <-- NEW
-    locations: state.publicState?.scenario.locations,
-  }));
+            {/* Location */}
+            {location && (
+              <div className="absolute inset-0 flex items-center justify-center opacity-30" title={location.name}>
+                <MapPin className="w-1/2 h-1/2 text-blue-400" />
+              </div>
+            )}
 
-  if (!harbingerPosition || !locations) {
-    return <div>Loading board...</div>;
-  }
+            {/* Object */}
+            {object && (
+              <div className="absolute inset-0 flex items-center justify-center opacity-70" title={object.name}>
+                <ToyBrick className="w-1/2 h-1/2 text-green-400" />
+              </div>
+            )}
 
-  const locationMap = new Map<string, Location>();
-  locations.forEach((loc) => {
-    locationMap.set(`${loc.position.x},${loc.position.y}`, loc);
-  });
+            {/* NPC */}
+            {npc && (
+              <div className="absolute inset-0 flex items-center justify-center opacity-70" title={npc.name}>
+                <UserCircle className="w-1/2 h-1/2 text-purple-400" />
+              </div>
+            )}
 
-  const cells = [];
-  for (let y = 1; y <= BOARD_SIZE; y++) {
-    for (let x = 1; x <= BOARD_SIZE; x++) {
-      const isHarbinger =
-        harbingerPosition.x === x && harbingerPosition.y === y;
-      // --- NEW: Check for stalker ---
-      const isStalker =
-        stalkerPosition?.x === x && stalkerPosition?.y === y;
-      const location = locationMap.get(`${x},${y}`);
+            {/* Harbinger */}
+            {isHarbinger && (
+              <motion.div
+                layoutId="harbinger"
+                className="absolute inset-0 z-10 flex items-center justify-center"
+                initial={false}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              >
+                <div className="w-3/4 h-3/4 rounded-full bg-orange-500 shadow-lg flex items-center justify-center">
+                  <Home className="w-1/2 h-1/2 text-white" />
+                </div>
+              </motion.div>
+            )}
 
-      cells.push(
-        <BoardCell
-          key={`${x}-${y}`}
-          x={x}
-          y={y}
-          isHarbinger={isHarbinger}
-          isStalker={isStalker} // <-- NEW
-          location={location}
-        />
-      );
-    }
-  }
-
-  return (
-    <div className="h-full w-full aspect-square max-h-[calc(100vh-200px)]">
-      <div className="game-board h-full w-full rounded-lg bg-gray-900 shadow-inner">
-        {cells}
-      </div>
+            {/* Stalker */}
+            {isStalker && (
+              <motion.div
+                layoutId="stalker"
+                className="absolute inset-0 z-20 flex items-center justify-center"
+                initial={false}
+                animate={{ scale: 1, opacity: 0.8 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              >
+                <div className="w-2/3 h-2/3 rounded-full bg-red-700 shadow-lg flex items-center justify-center ring-2 ring-red-500">
+                  <User className="w-1/2 h-1/2 text-white" />
+                </div>
+              </motion.div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

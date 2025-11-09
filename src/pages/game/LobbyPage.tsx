@@ -1,395 +1,348 @@
 // src/pages/game/LobbyPage.tsx
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useSocket } from '../../contexts/SocketContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSocket } from '../../hooks/useSocket';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabaseClient';
-import { RealtimeChannel } from '@supabase/realtime-js';
+import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/Card';
-import { Check, Loader, User, Crown, X, Clipboard, LogOut, Shield, UserPlus } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
-import { ScenarioSelectionModal } from '../../components/lobby/ScenarioSelectionModal';
 import { InviteFriendModal } from '../../components/lobby/InviteFriendModal';
-import { Input } from '../../components/ui/Input';
-import { Label } from '../../components/ui/Switch';
-import { PlayerName } from '../../components/ui/PlayerName';
-import { ChatBox } from '../../components/game/ChatBox';
+import { ScenarioSelectionModal } from '../../components/lobby/ScenarioSelectionModal';
+import {
+  Users, User, Check, X, LogOut, Send, Settings, CheckSquare,
+  Square, AlertTriangle, Copy, Shield, Crown,
+} from 'lucide-react';
+import { Lobby, Player, Scenario } from '../../types/game';
 import clsx from 'clsx';
+import { useToast } from '../../hooks/useToast';
 
-// Expanded lobby state types
-interface LobbyPlayer {
-  user_id: string;
-  username: string;
-  is_ready: boolean;
-  is_disconnected: boolean;
-}
-interface LobbyState {
-  id: string;
-  name: string;
-  host_id: string;
-  status: string;
-  is_public: boolean;
-  lobby_code: string | null;
-  game_players: LobbyPlayer[];
-  scenarios: {
-    id: string;
-    name: string;
-    description: string;
-  } | null;
-}
+// This page is now fully functional and state-driven
 
-const LobbyPage: React.FC = () => {
-  const { lobbyId } = useParams<{ lobbyId: string }>(); // This is the gameId
+export const LobbyPage: React.FC = () => {
+  const { lobbyId } = useParams<{ lobbyId: string }>();
+  const { socket } = useSocket();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { socket, isConnected } = useSocket();
-  const { user } = useAuth(); // FIX: Removed 'profile' from here
-  const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
+  const { toast } = useToast();
+
+  const [lobby, setLobby] = useState<Lobby | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [scenario, setScenario] = useState<Scenario | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
 
-  const isHost = lobbyState?.host_id === user?.id;
-  const myPlayerState = lobbyState?.game_players.find(
-    (p) => p.user_id === user?.id,
-  );
+  const isHost = lobby?.host_id === user?.id;
+  const canStartGame = isHost && players.every(p => p.is_ready) && players.length >= 3; // Example: min 3 players
 
-  // --- Main Effect for Socket & Realtime ---
+  // --- Socket Event Handlers ---
+
+  const onLobbyState = useCallback((lobbyData: Lobby, playersData: Player[], scenarioData: Scenario) => {
+    setLobby(lobbyData);
+    setPlayers(playersData);
+    setScenario(scenarioData);
+    setLoading(false);
+    setError(null);
+  }, []);
+
+  const onPlayerJoined = useCallback((player: Player) => {
+    setPlayers(prev => [...prev, player]);
+    toast({ title: `${player.username} joined the lobby.` });
+  }, [toast]);
+
+  const onPlayerLeft = useCallback((userId: string, username: string) => {
+    setPlayers(prev => prev.filter(p => p.user_id !== userId));
+    toast({ title: `${username} left the lobby.`, variant: 'destructive' });
+  }, [toast]);
+
+  const onPlayerReady = useCallback((userId: string, isReady: boolean) => {
+    setPlayers(prev => prev.map(p => (p.user_id === userId ? { ...p, is_ready: isReady } : p)));
+  }, []);
+
+  const onLobbyUpdate = useCallback((lobbyData: Lobby) => {
+    setLobby(lobbyData);
+  }, []);
+
+  const onScenarioUpdate = useCallback((scenarioData: Scenario) => {
+    setScenario(scenarioData);
+    toast({ title: 'Scenario Updated', description: `Host changed scenario to "${scenarioData.name}".` });
+  }, [toast]);
+
+  const onHostChanged = useCallback((newHostId: string, newHostUsername: string) => {
+    setLobby(prev => (prev ? { ...prev, host_id: newHostId } : null));
+    toast({ title: 'Host Changed', description: `${newHostUsername} is the new host.` });
+  }, [toast]);
+
+  const onLobbyError = useCallback((errorMessage: string) => {
+    setError(errorMessage);
+    toast({ title: 'Lobby Error', description: errorMessage, variant: 'destructive' });
+  }, [toast]);
+
+  const onGameStarted = useCallback((gameId: string) => {
+    toast({ title: 'Game Starting!', description: 'Strap in, Agent...' });
+    navigate(`/game/${gameId}`);
+  }, [navigate, toast]);
+
+  // --- Socket Connection Management ---
+
   useEffect(() => {
-    if (!lobbyId || !user) return;
+    if (!socket || !lobbyId || !user) return;
 
-    let realtimeChannel: RealtimeChannel;
-
-    const fetchLobby = async () => {
-      const { data, error } = await supabase
-        .from('games')
-        .select(
-          `
-          id,
-          name,
-          host_id,
-          status,
-          is_public,
-          lobby_code,
-          scenarios ( id, name, description ),
-          game_players ( user_id, username, is_ready, is_disconnected )
-        `,
-        )
-        .eq('id', lobbyId)
-        .single();
-
-      if (error || !data) {
-        console.error('Error fetching lobby:', error);
-        navigate('/app/lobbies', { replace: true });
-        return;
+    // Join the lobby
+    socket.emit('lobby:join', lobbyId, (success: boolean, message: string | { lobby: Lobby, players: Player[], scenario: Scenario }) => {
+      if (success && typeof message !== 'string') {
+        onLobbyState(message.lobby, message.players, message.scenario);
+      } else {
+        setError(message as string);
+        setLoading(false);
+        toast({ title: 'Failed to join lobby', description: message as string, variant: 'destructive' });
+        navigate('/lobbies');
       }
-      
-      if (data.status === 'active') {
-        navigate(`/app/game/${lobbyId}`, { replace: true });
-        return;
-      }
-      
-      setLobbyState(data as LobbyState);
-      setIsLoading(false);
-
-      realtimeChannel = supabase
-        .channel(`lobby:${lobbyId}`)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq:${lobbyId}` },
-          (payload) => {
-            console.log('Realtime update for game received:', payload);
-            if (payload.old.scenario_id !== payload.new.scenario_id) {
-              fetchLobby();
-            } else {
-              setLobbyState((prev) => (prev ? { ...prev, ...(payload.new as any) } : null));
-            }
-          },
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'game_players', filter: `game_id=eq:${lobbyId}` },
-          async () => {
-            console.log('Realtime update for players received:');
-            const { data: players, error } = await supabase
-              .from('game_players')
-              .select('user_id, username, is_ready, is_disconnected')
-              .eq('game_id', lobbyId);
-            
-            if (players) {
-              setLobbyState((prev) => (prev ? { ...prev, game_players: players } : null));
-            }
-          },
-        )
-        .subscribe((status, err) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('Subscribed to lobby realtime channel');
-          }
-          if (err) {
-            console.error('Realtime subscription error:', err);
-          }
-        });
-    };
-
-    fetchLobby();
-    
-    const onGameStarting = () => {
-      console.log('Game is starting! Navigating...');
-      navigate(`/app/game/${lobbyId}`, { replace: true });
-    };
-    
-    const onKicked = () => {
-      alert('You have been kicked from the lobby.');
-      navigate('/app/lobbies', { replace: true });
-    };
-
-    if(socket) {
-      socket.on('game:starting', onGameStarting);
-      socket.on('lobby:kicked', onKicked);
-    }
-
-    return () => {
-      if(socket) {
-        socket.off('game:starting', onGameStarting);
-        socket.off('lobby:kicked', onKicked);
-      }
-      if (realtimeChannel) {
-        supabase.removeChannel(realtimeChannel);
-      }
-    };
-  }, [socket, isConnected, lobbyId, user, navigate]);
-
-  const handleReadyToggle = () => {
-    if (!socket || !myPlayerState || !lobbyId) return;
-    const newReadyState = !myPlayerState.is_ready;
-    socket.emit('lobby:set_ready', {
-      gameId: lobbyId,
-      userId: user?.id,
-      isReady: newReadyState,
     });
+
+    // Register listeners
+    socket.on('lobby:state', onLobbyState);
+    socket.on('lobby:player_joined', onPlayerJoined);
+    socket.on('lobby:player_left', onPlayerLeft);
+    socket.on('lobby:player_ready', onPlayerReady);
+    socket.on('lobby:updated', onLobbyUpdate);
+    socket.on('lobby:scenario_updated', onScenarioUpdate);
+    socket.on('lobby:host_changed', onHostChanged);
+    socket.on('lobby:error', onLobbyError);
+    socket.on('game:started', onGameStarted);
+
+    // Cleanup
+    return () => {
+      socket.emit('lobby:leave', lobbyId);
+      socket.off('lobby:state', onLobbyState);
+      socket.off('lobby:player_joined', onPlayerJoined);
+      socket.off('lobby:player_left', onPlayerLeft);
+      socket.off('lobby:player_ready', onPlayerReady);
+      socket.off('lobby:updated', onLobbyUpdate);
+      socket.off('lobby:scenario_updated', onScenarioUpdate);
+      socket.off('lobby:host_changed', onHostChanged);
+      socket.off('lobby:error', onLobbyError);
+      socket.off('game:started', onGameStarted);
+    };
+  }, [socket, lobbyId, user, navigate, toast, onLobbyState, onPlayerJoined, onPlayerLeft, onPlayerReady, onLobbyUpdate, onScenarioUpdate, onHostChanged, onLobbyError, onGameStarted]);
+
+  // --- User Actions ---
+
+  const handleLeaveLobby = () => {
+    navigate('/lobbies'); // Socket cleanup will handle emission
+  };
+
+  const handleSetReady = () => {
+    const me = players.find(p => p.user_id === user?.id);
+    if (me && socket) {
+      socket.emit('lobby:set_ready', lobbyId, !me.is_ready);
+    }
   };
 
   const handleStartGame = () => {
-    if (!socket || !isHost || !lobbyId) return;
-    socket.emit('lobby:start_game', { gameId: lobbyId });
-  };
-  
-  const handleLeaveLobby = () => {
-    navigate('/app/lobbies');
-  };
-  
-  const handleKickPlayer = (kickUserId: string) => {
-    if (!socket || !isHost || !lobbyId) return;
-    if (window.confirm(`Are you sure you want to kick ${lobbyState?.game_players.find(p => p.user_id === kickUserId)?.username}?`)) {
-      socket.emit('lobby:kick', { gameId: lobbyId, kickUserId });
+    if (canStartGame && socket) {
+      socket.emit('lobby:start_game', lobbyId);
     }
   };
-  
-  const handleCopyCode = () => {
-    if (!lobbyState?.lobby_code) return;
-    navigator.clipboard.writeText(lobbyState.lobby_code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+
+  const handleScenarioChange = async (scenarioId: string) => {
+    if (socket && isHost) {
+      socket.emit('lobby:set_scenario', lobbyId, scenarioId);
+    }
+    setIsScenarioModalOpen(false);
   };
   
-  // FIX: Check user.profile here
-  if (isLoading || !lobbyState || !user?.profile || !lobbyId) { 
+  const copyLobbyCode = () => {
+    if (lobby?.lobby_code) {
+      navigator.clipboard.writeText(lobby.lobby_code);
+      toast({ title: 'Lobby Code Copied!' });
+    }
+  };
+
+  // --- Render Logic ---
+
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-brand-charcoal">
+      <div className="flex flex-col items-center justify-center min-h-full">
         <LoadingSpinner size="lg" />
-        <p className="ml-4 text-xl text-brand-cream">Joining Lobby...</p>
+        <p className="mt-4 text-lg text-gray-300">Joining Lobby...</p>
       </div>
-    )
+    );
   }
 
-  const allReady = lobbyState.game_players.every(p => p.is_ready);
-  const canStart = allReady && lobbyState.game_players.length >= 3 && lobbyState.game_players.length <= 6;
+  if (error || !lobby || !scenario) {
+    return (
+      <div className="flex justify-center items-center min-h-full p-4">
+        <Card className="game-card bg-red-900/30 border-red-700 text-red-300 p-6 text-center">
+          <AlertTriangle className="mx-auto h-12 w-12 text-red-400" />
+          <h3 className="mt-4 text-2xl font-bold">Lobby Error</h3>
+          <p className="mt-2">{error || 'Could not load lobby data.'}</p>
+          <Button variant="outline" onClick={() => navigate('/lobbies')} className="mt-4 btn-outline">
+            Back to Lobbies
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {isScenarioModalOpen && (
-        <ScenarioSelectionModal
-          gameId={lobbyId}
-          currentScenarioId={lobbyState.scenarios?.id || ''}
-          onClose={() => setIsScenarioModalOpen(false)}
-        />
-      )}
-      
-      {isInviteModalOpen && (
-        <InviteFriendModal
-          gameId={lobbyId}
-          lobbyName={lobbyState.name}
-          onClose={() => setIsInviteModalOpen(false)}
-        />
-      )}
+    <div className="mx-auto w-full max-w-6xl p-4 md:p-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left Column: Scenario & Lobby Info */}
+        <div className="lg:col-span-2">
+          <Card className="game-card">
+            <CardHeader>
+              <CardTitle className="game-title text-4xl">{scenario.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-300 text-lg mb-6">{scenario.description}</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Main Prophecy */}
+                <Card className="game-stat">
+                  <CardHeader className="flex flex-row items-center space-x-3 p-0 pb-2">
+                    <Shield className="w-6 h-6 text-green-400" />
+                    <h4 className="text-xl font-semibold text-white">Main Prophecy</h4>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <p className="text-gray-400">{scenario.mainProphecy.description}</p>
+                  </CardContent>
+                </Card>
 
-      <div className="mx-auto w-full max-w-5xl p-8">
-        <h1 className="mb-2 text-4xl font-bold text-white">{lobbyState.name}</h1>
-        <p className="mb-6 text-sm text-gray-400">
-          Hosted by {lobbyState.game_players.find(p => p.user_id === lobbyState.host_id)?.username || '...'}
-        </p>
+                {/* Doomsday Condition */}
+                <Card className="game-stat">
+                  <CardHeader className="flex flex-row items-center space-x-3 p-0 pb-2">
+                    <AlertTriangle className="w-6 h-6 text-red-400" />
+                    <h4 className="text-xl font-semibold text-white">Doomsday Condition</h4>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <p className="text-gray-400">{scenario.doomsdayCondition.description}</p>
+                  </CardContent>
+                </Card>
+              </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {/* Left Column: Players & Chat */}
-          <div className="md:col-span-2 space-y-6">
-            <Card className="game-card">
-              <CardHeader>
-                <CardTitle className="text-orange-400">Players ({lobbyState.game_players.length} / 6)</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {lobbyState.game_players.map((player) => {
-                  const isTargetHost = player.user_id === lobbyState.host_id;
-                  return (
-                    <div key={player.user_id} className="flex items-center justify-between rounded-lg bg-brand-navy/50 p-3">
-                      <div className="flex items-center">
-                        <User size={16} className={clsx("mr-2", player.is_disconnected ? "text-red-500" : "text-gray-400")} />
-                        
-                        <PlayerName
-                          player={{ userId: player.user_id, username: player.username }}
-                          isHost={isHost}
-                          isTargetHost={isTargetHost}
-                          allowKick={isHost}
-                          onKick={handleKickPlayer}
-                          className={clsx("text-lg", player.is_disconnected ? "text-gray-500 italic" : "text-gray-200")}
-                        />
-                        
-                        {player.is_disconnected && (
-                          <span className="ml-2 text-xs text-red-400">(Disconnected)</span>
-                        )}
-                        {isTargetHost && (
-                          <Crown size={16} className="ml-2 text-yellow-400" title="Host" />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {player.is_ready ? (
-                          <span className="flex items-center text-xs font-bold text-green-400">
-                            <Check size={16} className="mr-1" />
-                            Ready
-                          </span>
-                        ) : (
-                          <span className="flex items-center text-xs font-medium text-gray-400">
-                            <Loader size={16} className="mr-1 animate-spin" />
-                            Waiting
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-            
-            <Card className="game-card h-96">
-               <CardHeader>
-                 <CardTitle className="text-orange-400">Lobby Chat</CardTitle>
-               </CardHeader>
-               <CardContent className="h-full pb-6 pr-0 pl-0">
-                 <ChatBox 
-                  gameId={lobbyId}
-                  allowKick={isHost}
-                  onKick={handleKickPlayer}
-                 />
-               </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column: Actions & Settings */}
-          <div className="space-y-6">
-            <Card className="game-card">
-              <CardHeader>
-                <CardTitle className="text-gray-200">Lobby Info</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              {isHost && (
                 <Button 
-                  className="w-full btn-secondary"
-                  onClick={() => setIsInviteModalOpen(true)}
-                  disabled={!isHost}
-                  title={isHost ? "Invite a friend" : "Only the host can invite friends"}
+                  variant="outline" 
+                  className="btn-outline mt-6"
+                  onClick={() => setIsScenarioModalOpen(true)}
                 >
-                  <UserPlus size={18} className="mr-2" />
-                  Invite Friend
+                  <Settings className="mr-2 h-4 w-4" />
+                  Change Scenario
                 </Button>
-                
-                {!lobbyState.is_public && lobbyState.lobby_code ? (
-                  <div className="space-y-2">
-                    <Label className="text-sm text-gray-400">Private Code</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        readOnly
-                        value={lobbyState.lobby_code}
-                        className="flex-1 text-2xl font-bold tracking-widest text-center"
-                      />
-                      <Button variant="secondary" onClick={handleCopyCode} className="min-w-[80px]">
-                        {copied ? <Check size={18} /> : <Clipboard size={18} />}
-                      </Button>
-                    </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Players & Actions */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="game-card">
+            <CardHeader>
+              <CardTitle className="text-2xl text-white">Players ({players.length} / 6)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {players.map(player => (
+                <div 
+                  key={player.user_id} 
+                  className={clsx(
+                    "flex items-center justify-between p-3 rounded-lg",
+                    player.user_id === user?.id ? "bg-orange-900/50" : "bg-gray-800/60"
+                  )}
+                >
+                  <div className="flex items-center">
+                    {player.is_ready ? (
+                      <Check className="w-5 h-5 text-green-400 mr-2" />
+                    ) : (
+                      <X className="w-5 h-5 text-red-400 mr-2" />
+                    )}
+                    <span className="font-semibold text-white">{player.username}</span>
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-400">This is a public lobby.</p>
-                )}
-              </CardContent>
-            </Card>
-          
-            <Card className="game-card">
-              <CardHeader>
-                <CardTitle className="text-gray-200">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                  {player.user_id === lobby.host_id && (
+                    <Crown className="w-5 h-5 text-orange-400" title="Host" />
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="game-card">
+            <CardHeader>
+              <CardTitle className="text-2xl text-white">Lobby Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isHost ? (
                 <Button
-                  onClick={handleReadyToggle}
-                  className="w-full btn-lg"
-                  variant={myPlayerState?.is_ready ? 'secondary' : 'default'}
+                  onClick={handleStartGame}
+                  disabled={!canStartGame}
+                  className="w-full game-button text-lg"
+                  title={!canStartGame ? (players.length < 3 ? 'Need at least 3 players' : 'All players must be ready') : 'Start the game!'}
                 >
-                  {myPlayerState?.is_ready ? 'Set Not Ready' : 'Set Ready'}
+                  {players.length < 3 ? 'Need 3+ Players' : 'Start Game'}
                 </Button>
-                
-                {isHost && (
-                  <Button
-                    onClick={handleStartGame}
-                    className="w-full game-button btn-lg"
-                    disabled={!canStart}
-                    title={!canStart ? 'All players must be ready (min 3, max 6)' : 'Start the game'}
-                  >
-                    Start Game
-                  </Button>
-                )}
-                
-                <Button onClick={handleLeaveLobby} variant="outline" className="w-full btn-outline">
-                  <LogOut size={16} className="mr-2" />
-                  Leave Lobby
+              ) : (
+                <Button
+                  onClick={handleSetReady}
+                  variant={players.find(p => p.user_id === user?.id)?.is_ready ? "secondary" : "game"}
+                  className="w-full game-button text-lg"
+                >
+                  {players.find(p => p.user_id === user?.id)?.is_ready ? (
+                    <><X className="mr-2 h-5 w-5" /> Not Ready</>
+                  ) : (
+                    <><Check className="mr-2 h-5 w-5" /> Set Ready</>
+                  )}
                 </Button>
-              </CardContent>
-            </Card>
-            
-            {isHost && (
-              <Card className="game-card">
-                <CardHeader>
-                  <CardTitle className="text-orange-400">Host Controls</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                   <div className="space-y-1">
-                      <Label className="text-sm text-gray-400">Scenario</Label>
-                      <div className="flex items-center gap-2 text-brand-cream">
-                        <Shield size={18} />
-                        <span className="text-lg font-medium">{lobbyState.scenarios?.name || 'Loading...'}</span>
-                      </div>
-                   </div>
-                   <Button 
-                    className="w-full btn-secondary"
-                    onClick={() => setIsScenarioModalOpen(true)}
-                   >
-                     Change Scenario
-                   </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+              )}
+              
+              <Button 
+                variant="primary" 
+                className="w-full btn-secondary" // Using secondary style
+                onClick={() => setIsInviteModalOpen(true)}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Invite Friend
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full btn-outline"
+                onClick={copyLobbyCode}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy Lobby Code: {lobby.lobby_code}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={handleLeaveLobby}
+                className="w-full btn-outline border-red-500 text-red-400 hover:bg-red-900/50 hover:text-red-300"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Leave Lobby
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </>
+
+      {/* Modals */}
+      <InviteFriendModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        lobbyId={lobby.id}
+        lobbyCode={lobby.lobby_code}
+      />
+      <ScenarioSelectionModal
+        isOpen={isScenarioModalOpen}
+        onClose={() => setIsScenarioModalOpen(false)}
+        currentScenarioId={scenario.id}
+        onSelectScenario={handleScenarioChange}
+      />
+    </div>
   );
 };
 

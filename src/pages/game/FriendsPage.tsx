@@ -33,7 +33,6 @@ interface OutgoingRequest {
 
 type Tab = 'friends' | 'requests' | 'add';
 
-// FIX: Removed 'export'
 const FriendsPage: React.FC = () => {
   const [tab, setTab] = useState<Tab>('friends');
   const [friends, setFriends] = useState<FriendData[]>([]);
@@ -95,11 +94,12 @@ const FriendsPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl p-8">
+    // --- FIX: Improved mobile padding ---
+    <div className="mx-auto w-full max-w-4xl p-4 md:p-8">
       <h1 className="mb-6 text-5xl font-bold game-title">Friends</h1>
       
-      {/* Tab Navigation */}
-      <div className="mb-6 flex border-b border-gray-700">
+      {/* --- FIX: Tab Navigation container made scrollable --- */}
+      <div className="mb-6 flex border-b border-gray-700 overflow-x-auto no-scrollbar">
         <TabButton id="friends" label="My Friends" icon={User} activeTab={tab} setTab={setTab} />
         <TabButton id="requests" label="Pending Requests" icon={Mail} activeTab={tab} setTab={setTab} count={incoming.length} />
         <TabButton id="add" label="Add Friend" icon={UserPlus} activeTab={tab} setTab={setTab} />
@@ -140,7 +140,8 @@ const TabButton: React.FC<TabButtonProps> = ({ id, label, icon: Icon, activeTab,
   <button
     onClick={() => setTab(id)}
     className={clsx(
-      "flex items-center gap-2 px-6 py-3 font-medium text-lg border-b-2 transition-colors",
+      // --- FIX: Added 'flex-shrink-0' to prevent tabs from shrinking ---
+      "flex flex-shrink-0 items-center gap-2 px-6 py-3 font-medium text-lg border-b-2 transition-colors",
       activeTab === id
         ? 'border-brand-orange text-brand-orange'
         : 'border-transparent text-gray-400 hover:text-gray-200'
@@ -159,7 +160,7 @@ const TabButton: React.FC<TabButtonProps> = ({ id, label, icon: Icon, activeTab,
 // --- Friends List Component ---
 interface FriendsListProps {
   friends: FriendData[];
-  getStatus: (userId: string) => 'Online' | 'Offline' | 'In-Game'; // Adjusted
+  getStatus: (userId: string) => 'Online' | 'Offline' | 'In-Game';
   onRemove: (friendshipId: string, username: string) => void;
 }
 const FriendsList: React.FC<FriendsListProps> = ({ friends, getStatus, onRemove }) => {
@@ -253,7 +254,7 @@ const AddFriendForm: React.FC<{ onSent: () => void }> = ({ onSent }) => {
   const [username, setUsername] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [success, setSuccess] =TA[string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,5 +301,4 @@ const AddFriendForm: React.FC<{ onSent: () => void }> = ({ onSent }) => {
   );
 };
 
-// FIX: Added 'export default'
 export default FriendsPage;
