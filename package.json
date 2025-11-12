@@ -71,5 +71,8 @@
     "uuid": "^13.0.0",
     "vite": "^5.4.2",
     "vite-plugin-pwa": "^0.19.2"
+  },
+  "overrides": {
+    "@supabase/realtime-js": " "
   }
 }
