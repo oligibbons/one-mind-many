@@ -17,7 +17,7 @@ export const MainLayout: React.FC = () => {
   const [activeInvite, setActiveInvite] = useState<InviteData | null>(null);
   
   // Get auth state
-  const { loading, user }_ = useAuth(); 
+  const { loading, user } = useAuth(); 
 
   // --- Global Socket Listeners ---
   useEffect(() => {
