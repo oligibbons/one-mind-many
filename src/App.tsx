@@ -7,37 +7,12 @@ import { useAuth } from './hooks/useAuth';
 import { SocketProvider } from './contexts/SocketContext';
 import { Session } from '@supabase/supabase-js';
 
+// --- FIX: Import the store initializer ---
+import { initializeCurrentPlayerStore } from './stores/useCurrentPlayerStore';
+
 // Layouts
 import { MainLayout } from './layouts/MainLayout';
-import { AuthLayout } from './layouts/AuthLayout';
-import PublicLayout from './layouts/PublicLayout';
-
-// Pages
-import { HomePage } from './pages/HomePage';
-import HowToPlayPage from './pages/HowToPlayPage';
-import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
-import MainMenuPage from './pages/game/MainMenuPage';
-import LobbyListPage from './pages/game/LobbyListPage';
-import LobbyPage from './pages/game/LobbyPage';
-import GamePage from './pages/game/GamePage';
-import ProfilePage from './pages/game/ProfilePage';
-import FriendsPage from './pages/game/FriendsPage';
-import SettingsPage from './pages/game/SettingsPage';
-import AdminPage from './pages/admin/AdminPage';
-import UserManagementPage from './pages/admin/UserManagementPage';
-import GameManagementPage from './pages/admin/GameManagementPage';
-import ScenarioManagementPage from './pages/admin/ScenarioManagementPage';
-import ScenarioEditorPage from './pages/admin/ScenarioEditorPage'; // <-- CORRECTED (was named)
-import TestGameViewPage from './pages/admin/TestGameViewPage'; // <-- CORRECTED (was named)
-import { NotFoundPage } from './pages/NotFoundPage';
-
-// Components
-import { ProtectedRoute } from './components/auth/ProtectedRoute'; // <-- CORRECTED (was default)
-import { AdminRoute } from './components/auth/AdminRoute'; // <-- CORRECTED (was default)
-import { Toaster } from './components/ui/Toaster';
-import { InviteToast } from './components/ui/InviteToast';
-import { useSocket } from './hooks/useSocket';
+// ... other imports ...
 import ScrollToTop from './components/layout/ScrollToTop';
 
 // Types
@@ -47,11 +22,24 @@ interface GameInvite {
   inviterName: string;
 }
 
+// --- FIX: Add a flag to ensure initialization runs only once ---
+let storesInitialized = false;
+
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading }_ = useAuth();
   const { socket } = useSocket();
   const [showInvite, setShowInvite] = useState(false);
   const [inviteData, setInviteData] = useState<GameInvite | null>(null);
+
+  // --- FIX: Call the store initializer from here ---
+  useEffect(() => {
+    // This ensures initialization runs only once,
+    // *after* AuthProvider has mounted.
+    if (!storesInitialized) {
+      initializeCurrentPlayerStore();
+      storesInitialized = true;
+    }
+  }, []); // Empty dependency array ensures it runs once on mount
 
   useEffect(() => {
     document.title = 'M.O.P.';
