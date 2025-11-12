@@ -73,6 +73,9 @@
     "vite-plugin-pwa": "^0.19.2"
   },
   "overrides": {
-    "@supabase/realtime-js": " "
+    "@supabase/auth-ui-react": {
+      "@supabase/supabase-js": "$@supabase/supabase-js",
+      "@supabase/realtime-js": " "
+    }
   }
 }
