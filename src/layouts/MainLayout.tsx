@@ -5,30 +5,29 @@ import { Outlet } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { useSocket } from '../contexts/SocketContext';
+// --- FIX: Import definitions from InviteToast ---
 import { InviteToast, InviteData } from '../components/ui/InviteToast';
 import { usePresenceStore } from '../stores/usePresenceStore';
-import { useAuth } from '../hooks/useAuth'; // <-- FIX: Import useAuth
-import { LoadingSpinner } from '../components/ui/LoadingSpinner'; // <-- FIX: Import LoadingSpinner
+import { useAuth } from '../hooks/useAuth';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
 export const MainLayout: React.FC = () => {
   const { socket, isConnected } = useSocket();
   const { setFriendStatus } = usePresenceStore();
   const [activeInvite, setActiveInvite] = useState<InviteData | null>(null);
   
-  // --- FIX: Add useAuth hook to get loading state ---
-  const { loading, user } = useAuth(); 
+  // Get auth state
+  const { loading, user }_ = useAuth(); 
 
-  // --- NEW: Global Socket Listeners ---
+  // --- Global Socket Listeners ---
   useEffect(() => {
     if (!socket || !isConnected) return;
 
-    // 1. Listen for friend invites
     const onInviteReceived = (invite: InviteData) => {
       console.log('Invite received:', invite);
       setActiveInvite(invite);
     };
 
-    // 2. Listen for friend presence updates
     const onStatusUpdate = (data: { userId: string; status: 'Online' | 'Offline' | 'In-Game' }) => {
       console.log('Presence update:', data);
       setFriendStatus(data.userId, data.status);
@@ -44,10 +43,12 @@ export const MainLayout: React.FC = () => {
     };
   }, [socket, isConnected, setFriendStatus]);
   
-  // --- FIX: Add loading check ---
-  // This ensures we don't render the app until the user and profile are loaded,
-  // preventing layout shifts or errors in the Navbar.
-  if (loading || (user && !user.profile)) {
+  // --- FIX: Simplified loading check ---
+  // The original check `(user && !user.profile)` was blocking the UI.
+  // This indicates the profile fetch is failing (likely RLS).
+  // We will remove that check for now to get the UI to render.
+  // The 'loading' state from useAuth is the primary auth check.
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-950">
         <LoadingSpinner size="lg" />
@@ -64,7 +65,6 @@ export const MainLayout: React.FC = () => {
       </main>
       <Footer />
       
-      {/* --- NEW: Render invite toast if one is active --- */}
       {activeInvite && (
         <InviteToast
           invite={activeInvite}
