@@ -38,7 +38,8 @@ interface AuthStoreState {
 // Helper function to fetch profile
 const fetchUserProfile = async (authUser: User): Promise<UserProfile | null> => {
   try {
-    const { data: profile, error }_ = await supabase
+    // --- FIX: Removed the stray underscore after 'error' ---
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', authUser.id)
@@ -143,7 +144,6 @@ export const useAuth = create<AuthStoreState>((set, get) => ({
     // 2. Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // --- FIX: Removed the log that prints the session ---
         console.log('AuthStore: Auth state changed', event); 
         set({ session });
         const authUser = session?.user ?? null;
