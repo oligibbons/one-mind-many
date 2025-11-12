@@ -32,7 +32,7 @@ interface AuthStoreState {
   ) => Promise<{ success: boolean; error: string | null }>;
   handleSignOut: () => Promise<{ success: boolean; error: string | null }>;
   updateUser: (newProfileData: Profile) => void;
-  init: () => void; // Initialization function
+  init: () => () => void; // <-- FIX: Init will now return a cleanup function
 }
 
 // Helper function to fetch profile
@@ -72,8 +72,6 @@ const fetchUserProfile = async (authUser: User): Promise<UserProfile | null> => 
     };
   }
 };
-
-let initialized = false;
 
 export const useAuth = create<AuthStoreState>((set, get) => ({
   // --- Initial State ---
@@ -124,12 +122,9 @@ export const useAuth = create<AuthStoreState>((set, get) => ({
   },
 
   // --- Initialization ---
+  // FIX: This function now sets up listeners and returns a cleanup function
+  // This is required for React 18 StrictMode
   init: () => {
-    if (initialized) {
-      return; // Ensure this runs only once
-    }
-    initialized = true;
-
     // 1. Get initial session
     supabase.auth
       .getSession()
@@ -148,26 +143,33 @@ export const useAuth = create<AuthStoreState>((set, get) => ({
       });
 
     // 2. Listen for auth changes
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('AuthContext: Auth state changed', event, session);
-      set({ session });
-      const authUser = session?.user ?? null;
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('AuthStore: Auth state changed', event, session);
+        set({ session });
+        const authUser = session?.user ?? null;
 
-      if (authUser) {
-        // User signed in or session was refreshed
-        // Only re-fetch profile if user is different
-        if (get().user?.id !== authUser.id) {
-          set({ loading: true });
-          const userProfile = await fetchUserProfile(authUser);
-          set({ user: userProfile, loading: false });
+        if (authUser) {
+          // User signed in or session was refreshed
+          // We must set loading: true *before* fetching the profile
+          if (get().user?.id !== authUser.id) {
+             set({ loading: true });
+            const userProfile = await fetchUserProfile(authUser);
+            set({ user: userProfile, loading: false });
+          } else {
+             // Same user, no need to re-fetch, just ensure loading is false
+             set({ loading: false });
+          }
         } else {
-          // Same user, no need to re-fetch, just ensure loading is false
-          set({ loading: false });
+          // User signed out
+          set({ user: null, loading: false });
         }
-      } else {
-        // User signed out
-        set({ user: null, loading: false });
-      }
-    });
+      },
+    );
+
+    // 3. Return the cleanup function
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   },
 }));
